@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+.text-theme-switch {
+    @apply dark:text-white;
+}
+
+.theme-transition,
+.theme-transition * {
+    transition: background-color 0.5s, color 0.5s !important;
+}
+
+.option-text {
+    @apply hover:text-blue-500 dark:text-white dark:hover:text-purple-600;
+}
+
+.theme-border {
+    @apply dark:border-[#262626];
+}
+
+.color-mixed-button {
+    @apply bg-gradient-to-r from-[#7cb1e2] via-[#97a1e4] via-[#9a83d4] via-[#a267d5] to-[#ab60df] text-white font-bold py-2 px-6 rounded-lg shadow-lg hover:opacity-90 active:opacity-80 focus:ring-4 focus:ring-transparent;
+}
+
+.transparent-button {
+    @apply focus:ring-transparent bg-transparent border-[1px] border-[#514b62] py-3 px-6 rounded-xl dark:text-gray-200;
+}
+
+.bkg-theme-switch {
+    @apply bg-white dark:bg-[rgb(26,26,26)];
+}
+
+.text-hover {
+    @apply dark:text-[#cbcbc3] hover:text-blue-600 dark:hover:text-[#7478c5];
+}
+
+.box1 {
+    @apply shadow-xl border-[1px] dark:border-slate-900 dark:shadow-indigo-900;
+}
+
+.input1 {
+    @apply w-full px-4 py-3 rounded-lg outline-none
+    transition-all duration-300 ease-in-out
+        border-gray-100
+    dark:bg-gray-950 dark:text-white dark:placeholder-indigo-900
+    bg-white text-slate-900 placeholder-slate-500
+    border-2 dark:border-slate-900
+    focus:border-blue-500 dark:focus:border-indigo-900
+    hover:border-slate-300 dark:hover:border-indigo-800
+    shadow-sm hover:shadow-md
+    ring-offset-2 ring-offset-white dark:ring-offset-indigo-400
+    focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-indigo-900;
+}
+.btn1 {
+    @apply px-6 py-3 rounded-lg outline-none transition-all duration-300 ease-in-out
+    border-2 border-gray-100 dark:border-slate-900
+    bg-white text-slate-900 dark:bg-gray-950 dark:text-white
+    hover:bg-slate-100 dark:hover:bg-indigo-800
+    hover:border-slate-300 dark:hover:border-indigo-700
+    shadow-sm hover:shadow-md
+    focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-indigo-900
+    ring-offset-2 ring-offset-white dark:ring-offset-indigo-400;
+}

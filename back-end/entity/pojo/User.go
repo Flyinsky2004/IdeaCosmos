@@ -10,7 +10,7 @@ import "gorm.io/gorm"
 type User struct {
 	gorm.Model
 	Username   string `json:"username;" gorm:"type:varchar(50)"`
-	Password   string `json:"password;" gorm:"type:varchar(50)"`
+	Password   string `json:"password;" gorm:"type:varchar(1500)"`
 	Email      string `json:"email;" gorm:"type:varchar(50)"`
 	Tokens     int    `json:"tokens;" gorm:"type:MEDIUMINT"`
 	Permission uint8  `json:"permission;" gorm:"type:tinyint"`

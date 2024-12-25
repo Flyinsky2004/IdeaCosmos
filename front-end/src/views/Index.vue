@@ -1,47 +1,236 @@
 <script setup>
 
-import ThemeSwitcher from "@/components/ThemeSwitcher.vue";
-import logo from '@/assets/logo.webp'
+import ThemeSwitcher from "@/components/button/ThemeSwitcher.vue";
+import logo from '@/assets/img/logo.webp'
+import router from "@/router/index.js";
+import {useUserStore} from "@/stores/user.js";
+import {get} from "@/util/request.js";
+import {ElMessage} from "element-plus";
+import {useThemeStore} from "@/stores/theme.js";
+
+const themeStore = useThemeStore();
+const getFrontColor = () => {
+  return themeStore.isDark ? '#FFFFFF' : '#000000'
+}
+const topBarItems = [
+  {
+    name: '作品画廊',
+    path: '/',
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
+  <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 7.125C2.25 6.504 2.754 6 3.375 6h6c.621 0 1.125.504 1.125 1.125v3.75c0 .621-.504 1.125-1.125 1.125h-6a1.125 1.125 0 0 1-1.125-1.125v-3.75ZM14.25 8.625c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125v8.25c0 .621-.504 1.125-1.125 1.125h-5.25a1.125 1.125 0 0 1-1.125-1.125v-8.25ZM3.75 16.125c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125v2.25c0 .621-.504 1.125-1.125 1.125h-5.25a1.125 1.125 0 0 1-1.125-1.125v-2.25Z" />
+</svg>
+`
+  }, {
+    name: '订阅计划',
+    path: '/',
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
+  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" />
+</svg>
+`
+  }
+]
+
+const quickStartClickHandler = () => {
+  const userStore = useUserStore()
+  if (userStore.isLogin) {
+    router.push('/platform')
+  }
+  get('/api/user/me', {},
+      (message, data) => {
+        userStore.login(data)
+      },
+      (message, data) => {
+
+      },
+      (message, data) => {
+
+      }
+  )
+  if (!userStore.isLogin) {
+    ElMessage.info('您还尚未登录，请先登录！');
+    setTimeout(() => {
+      router.push('/auth/login')
+    }, 1000)
+  } else {
+    router.push('/platform')
+  }
+}
+const frameworks = [
+  {name: 'Express', icon: ``},
+  {name: 'Edge', icon: ``},
+  {
+    name: 'Instgram', icon: `<svg xmlns="http://www.w3.org/2000/svg"  version="1.1"
+          id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;"
+                   xml:space="preserve" width="64" height="64" fill="currentColor">
+<g>
+<path
+      d="M12,2.162c3.204,0,3.584,0.012,4.849,0.07c1.308,0.06,2.655,0.358,3.608,1.311c0.962,0.962,1.251,2.296,1.311,3.608   c0.058,1.265,0.07,1.645,0.07,4.849c0,3.204-0.012,3.584-0.07,4.849c-0.059,1.301-0.364,2.661-1.311,3.608   c-0.962,0.962-2.295,1.251-3.608,1.311c-1.265,0.058-1.645,0.07-4.849,0.07s-3.584-0.012-4.849-0.07   c-1.291-0.059-2.669-0.371-3.608-1.311c-0.957-0.957-1.251-2.304-1.311-3.608c-0.058-1.265-0.07-1.645-0.07-4.849   c0-3.204,0.012-3.584,0.07-4.849c0.059-1.296,0.367-2.664,1.311-3.608c0.96-0.96,2.299-1.251,3.608-1.311   C8.416,2.174,8.796,2.162,12,2.162 M12,0C8.741,0,8.332,0.014,7.052,0.072C5.197,0.157,3.355,0.673,2.014,2.014   C0.668,3.36,0.157,5.198,0.072,7.052C0.014,8.332,0,8.741,0,12c0,3.259,0.014,3.668,0.072,4.948c0.085,1.853,0.603,3.7,1.942,5.038   c1.345,1.345,3.186,1.857,5.038,1.942C8.332,23.986,8.741,24,12,24c3.259,0,3.668-0.014,4.948-0.072   c1.854-0.085,3.698-0.602,5.038-1.942c1.347-1.347,1.857-3.184,1.942-5.038C23.986,15.668,24,15.259,24,12   c0-3.259-0.014-3.668-0.072-4.948c-0.085-1.855-0.602-3.698-1.942-5.038c-1.343-1.343-3.189-1.858-5.038-1.942   C15.668,0.014,15.259,0,12,0z"/>
+  <path
+      d="M12,5.838c-3.403,0-6.162,2.759-6.162,6.162c0,3.403,2.759,6.162,6.162,6.162s6.162-2.759,6.162-6.162   C18.162,8.597,15.403,5.838,12,5.838z M12,16c-2.209,0-4-1.791-4-4s1.791-4,4-4s4,1.791,4,4S14.209,16,12,16z"/>
+  <circle cx="18.406" cy="5.594" r="1.44"/>
+</g>
+</svg>`
+  },
+  {
+    name: 'Napster', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 512 512" style="enable-background:new 0 0 512 512;" xml:space="preserve" width="64" height="64" fill="currentColor">
+<g id="XMLID_1_">
+ width="64" height="64" fill="currentColor"<path d="M451.95,316.03c0,0.02,0,0.04,0,0.07c-0.02,108.2-87.77,195.92-195.97,195.9c-108.23-0.02-195.93-87.74-195.91-195.97   c0-91.77,61.25-152.98,115.29-206.97C211.39,73.05,245.76,38.72,256,0c10.22,38.72,44.61,73.05,80.62,109.06   C390.68,163.05,451.93,224.26,451.95,316.03z M384.98,353.13c6.81-14.87,18.37-59.92-15.12-112.04   C336.36,188.97,256,112.73,256,112.73s-26.97,26.94-36.2,36.18c-7.36,7.36-23.23,21.44-4.76,41.38   c21.01,22.7,133.25,140.01,146.11,159.04c5.87,8.66,6.7,12.74,14.64,12.44C380.22,361.6,383.53,356.31,384.98,353.13z    M323.39,395.03c0.15-16.47-5.89-32.41-16.89-44.65c-12.65-14.1-50.5-56.51-50.5-56.51s-38.44,41.79-50.6,56.66   c-5.3,6.21-9.44,13.25-12.28,20.78c-2.84,7.53-4.38,15.55-4.51,23.72c0,37.23,30.18,67.39,67.39,67.39   C293.23,462.42,323.39,432.26,323.39,395.03z M223.7,269.5c1.81-1.81,1.79-4.75-0.04-6.57l-54.42-59.45   c-82.24,81.38-37.91,157.8-25.9,158.21c1.26,0.04,3.33,0.19,4.73-3.8c6.87-19.18,62.23-74.71,75.23-88.02   C223.45,269.76,223.57,269.63,223.7,269.5z"/>
+</g>
+</svg>`
+  },
+  {
+    name: 'Edge', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve"  width="64" height="64" fill="currentColor">
+<g id="XMLID_184_">
+ width="64" height="64" fill="currentColor"<path d="M23.498,6.186c-0.276-1.039-1.089-1.858-2.122-2.136C19.505,3.546,12,3.546,12,3.546s-7.505,0-9.377,0.504   C1.591,4.328,0.778,5.146,0.502,6.186C0,8.07,0,12,0,12s0,3.93,0.502,5.814c0.276,1.039,1.089,1.858,2.122,2.136   C4.495,20.454,12,20.454,12,20.454s7.505,0,9.377-0.504c1.032-0.278,1.845-1.096,2.122-2.136C24,15.93,24,12,24,12   S24,8.07,23.498,6.186z M9.546,15.569V8.431L15.818,12L9.546,15.569z"/>
+</g></svg>`
+  },{name: 'Edge', icon: ``},{name: 'Edge', icon: ``},{name: 'Edge', icon: ``},{name: 'Edge', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve" width="64" height="64" fill="currentColor">
+<g id="W_Mark_2_">
+\t<path d="M12,0.72c1.523,0,3,0.298,4.39,0.886c2.671,1.13,4.874,3.333,6.003,6.003C22.982,9,23.28,10.477,23.28,12   s-0.298,3-0.886,4.39c-1.116,2.639-3.35,4.881-6.003,6.003C15,22.982,13.523,23.28,12,23.28c-1.523,0-3-0.298-4.39-0.886   c-2.638-1.116-4.881-3.351-6.003-6.003C1.018,15,0.72,13.523,0.72,12c0-1.523,0.298-3,0.886-4.39   C2.736,4.939,4.94,2.735,7.61,1.606C9,1.018,10.477,0.72,12,0.72 M12,0C5.373,0,0,5.373,0,12c0,6.627,5.373,12,12,12   s12-5.373,12-12C24,5.373,18.627,0,12,0L12,0z"/>
+\t<path d="M2,12c0,3.958,2.3,7.379,5.636,9L2.866,7.93C2.311,9.174,2,10.55,2,12z M18.751,11.495c0-1.236-0.444-2.092-0.824-2.758   c-0.507-0.824-0.982-1.521-0.982-2.345c0-0.919,0.697-1.775,1.679-1.775c0.044,0,0.086,0.005,0.129,0.008   C16.974,2.995,14.603,2,12,2C8.506,2,5.433,3.793,3.645,6.507C3.88,6.515,4.101,6.519,4.288,6.519c1.046,0,2.665-0.127,2.665-0.127   c0.539-0.032,0.602,0.76,0.064,0.824c0,0-0.542,0.063-1.144,0.095l3.641,10.832l2.189-6.563l-1.558-4.269   C9.607,7.28,9.096,7.216,9.096,7.216C8.557,7.184,8.621,6.361,9.16,6.392c0,0,1.651,0.127,2.634,0.127   c1.046,0,2.666-0.127,2.666-0.127c0.539-0.032,0.602,0.76,0.064,0.824c0,0-0.542,0.063-1.144,0.095l3.614,10.749l1.032-3.269   C18.482,13.363,18.751,12.351,18.751,11.495z M12.176,12.874l-3.001,8.718C10.071,21.856,11.018,22,12,22   c1.164,0,2.282-0.201,3.321-0.567c-0.027-0.043-0.051-0.088-0.072-0.138L12.176,12.874z M20.775,7.202   c0.043,0.318,0.067,0.66,0.067,1.028c0,1.014-0.19,2.155-0.761,3.582l-3.054,8.831C20.001,18.91,22,15.689,22,12   C22,10.261,21.556,8.627,20.775,7.202z"/>
+</g>
+</svg>`},
+  {
+    name: 'Edge', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve"  width="64" height="64" fill="currentColor">
+<path id="Logo_00000038394049246713568260000012923108920998390947_" d="M21.543,7.104c0.014,0.211,0.014,0.423,0.014,0.636  c0,6.507-4.954,14.01-14.01,14.01v-0.004C4.872,21.75,2.252,20.984,0,19.539c0.389,0.047,0.78,0.07,1.172,0.071  c2.218,0.002,4.372-0.742,6.115-2.112c-2.107-0.04-3.955-1.414-4.6-3.42c0.738,0.142,1.498,0.113,2.223-0.084  c-2.298-0.464-3.95-2.483-3.95-4.827c0-0.021,0-0.042,0-0.062c0.685,0.382,1.451,0.593,2.235,0.616  C1.031,8.276,0.363,5.398,1.67,3.148c2.5,3.076,6.189,4.946,10.148,5.145c-0.397-1.71,0.146-3.502,1.424-4.705  c1.983-1.865,5.102-1.769,6.967,0.214c1.103-0.217,2.16-0.622,3.127-1.195c-0.368,1.14-1.137,2.108-2.165,2.724  C22.148,5.214,23.101,4.953,24,4.555C23.339,5.544,22.507,6.407,21.543,7.104z"/>
+</svg>`
+  },
+   {
+    name: 'Edge', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve"  width="64" height="64" fill="currentColor">
+<path d="M22.465,9.866c-2.139,0-4.122-0.684-5.74-1.846v8.385c0,4.188-3.407,7.594-7.594,7.594c-1.618,0-3.119-0.51-4.352-1.376  c-1.958-1.375-3.242-3.649-3.242-6.218c0-4.188,3.407-7.595,7.595-7.595c0.348,0,0.688,0.029,1.023,0.074v0.977v3.235  c-0.324-0.101-0.666-0.16-1.023-0.16c-1.912,0-3.468,1.556-3.468,3.469c0,1.332,0.756,2.489,1.86,3.07  c0.481,0.253,1.028,0.398,1.609,0.398c1.868,0,3.392-1.486,3.462-3.338L12.598,0h4.126c0,0.358,0.035,0.707,0.097,1.047  c0.291,1.572,1.224,2.921,2.517,3.764c0.9,0.587,1.974,0.93,3.126,0.93V9.866z"/>
+</svg>`
+  },
+  {
+    name: 'Edge', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve"  width="64" height="64" fill="currentColor">
+<g>
+ width="64" height="64" fill="currentColor"<g>
+ width="64" height="64" fill="currentColor" width="64" height="64" fill="currentColor"<g>
+ width="64" height="64" fill="currentColor" width="64" height="64" fill="currentColor" width="64" height="64" fill="currentColor"<path d="M12,0C5.373,0,0,5.373,0,12c0,6.628,5.373,12,12,12c6.628,0,12-5.372,12-12C24,5.373,18.628,0,12,0z M17.503,17.308     c-0.216,0.354-0.676,0.464-1.028,0.249c-2.818-1.722-6.365-2.111-10.542-1.157c-0.403,0.092-0.804-0.16-0.896-0.562     c-0.092-0.402,0.159-0.804,0.563-0.895c4.571-1.045,8.492-0.595,11.655,1.338C17.608,16.495,17.719,16.956,17.503,17.308z      M18.972,14.041c-0.271,0.44-0.847,0.578-1.287,0.308c-3.225-1.982-8.142-2.557-11.958-1.398C5.233,13.1,4.71,12.821,4.56,12.327     c-0.149-0.495,0.13-1.016,0.624-1.167c4.358-1.323,9.776-0.682,13.48,1.594C19.104,13.025,19.242,13.601,18.972,14.041z      M19.098,10.638C15.23,8.341,8.85,8.13,5.157,9.251c-0.593,0.18-1.22-0.155-1.4-0.748c-0.18-0.593,0.155-1.22,0.748-1.4     c4.239-1.287,11.285-1.038,15.738,1.605c0.533,0.317,0.708,1.005,0.392,1.538C20.32,10.779,19.63,10.955,19.098,10.638z"/>
+ width="64" height="64" fill="currentColor" width="64" height="64" fill="currentColor"</g>
+ width="64" height="64" fill="currentColor"</g>
+</g></svg>`
+  },
+  {
+    name: 'Edge', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve"  width="64" height="64" fill="currentColor">
+<g id="PRIMARY_-_GHOST">
+ width="64" height="64" fill="currentColor"<path d="M23.914,17.469c-0.167-0.454-0.484-0.697-0.846-0.898c-0.068-0.04-0.131-0.072-0.184-0.097   c-0.108-0.056-0.218-0.11-0.328-0.166c-1.127-0.598-2.008-1.352-2.619-2.246c-0.173-0.252-0.324-0.518-0.45-0.797   c-0.052-0.149-0.049-0.233-0.012-0.311c0.037-0.06,0.086-0.111,0.144-0.15c0.194-0.128,0.394-0.258,0.529-0.346   c0.241-0.157,0.433-0.28,0.556-0.368c0.463-0.324,0.787-0.668,0.989-1.052c0.286-0.537,0.323-1.172,0.104-1.74   c-0.307-0.807-1.069-1.308-1.992-1.308c-0.195,0-0.389,0.021-0.579,0.061c-0.051,0.011-0.102,0.023-0.151,0.036   c0.008-0.552-0.004-1.134-0.053-1.708c-0.174-2.016-0.88-3.072-1.616-3.915c-0.471-0.528-1.026-0.975-1.643-1.322   C14.647,0.505,13.38,0.181,12,0.181c-1.38,0-2.64,0.324-3.758,0.961C7.624,1.49,7.067,1.938,6.596,2.467   C5.86,3.309,5.154,4.368,4.98,6.382C4.931,6.955,4.919,7.541,4.927,8.089c-0.05-0.013-0.1-0.024-0.15-0.036   c-0.191-0.041-0.385-0.061-0.58-0.061c-0.924,0-1.687,0.501-1.993,1.308c-0.221,0.568-0.184,1.204,0.101,1.742   c0.203,0.385,0.526,0.728,0.99,1.052c0.123,0.086,0.315,0.21,0.556,0.368c0.13,0.085,0.321,0.209,0.508,0.332   c0.066,0.042,0.121,0.098,0.163,0.164c0.039,0.081,0.04,0.167-0.018,0.326c-0.124,0.273-0.272,0.534-0.442,0.78   C3.465,14.94,2.61,15.68,1.519,16.273c-0.578,0.307-1.179,0.511-1.433,1.201c-0.192,0.521-0.067,1.113,0.42,1.612   c0.178,0.186,0.385,0.343,0.613,0.464c0.474,0.26,0.978,0.462,1.5,0.6c0.108,0.028,0.21,0.074,0.303,0.136   c0.177,0.155,0.152,0.389,0.388,0.731c0.119,0.177,0.269,0.33,0.444,0.451c0.495,0.342,1.052,0.363,1.642,0.386   c0.533,0.02,1.137,0.044,1.827,0.271c0.286,0.094,0.583,0.277,0.927,0.491c0.826,0.508,1.957,1.202,3.849,1.202   c1.892,0,3.031-0.698,3.863-1.208c0.342-0.21,0.637-0.391,0.915-0.483c0.69-0.228,1.294-0.251,1.827-0.271   c0.59-0.022,1.147-0.044,1.642-0.386c0.207-0.144,0.38-0.333,0.505-0.552c0.17-0.289,0.165-0.491,0.325-0.632   c0.087-0.059,0.183-0.103,0.285-0.13c0.53-0.139,1.041-0.342,1.521-0.606c0.242-0.129,0.46-0.3,0.644-0.504l0.006-0.008   C23.986,18.552,24.101,17.977,23.914,17.469z M22.59,18.046c-0.03,0.093-0.133,0.202-0.358,0.327   c-1.026,0.567-1.708,0.506-2.238,0.848c-0.197,0.127-0.257,0.318-0.289,0.512c-0.014,0.08-0.022,0.161-0.034,0.238   c-0.025,0.161-0.063,0.305-0.188,0.391c-0.402,0.278-1.591-0.019-3.127,0.488c-1.267,0.419-2.075,1.623-4.353,1.623   c-2.279,0-3.068-1.202-4.356-1.626c-1.533-0.507-2.724-0.21-3.128-0.487c-0.327-0.225-0.061-0.851-0.511-1.141   c-0.531-0.341-1.213-0.281-2.238-0.844c-0.33-0.182-0.398-0.329-0.358-0.443c0-0.003,0.001-0.005,0.003-0.008   c0.043-0.109,0.184-0.188,0.29-0.239c1.742-0.843,2.798-1.902,3.43-2.809c0.127-0.182,0.236-0.357,0.331-0.524   c0.442-0.778,0.562-1.36,0.574-1.45c0.032-0.249,0.067-0.446-0.208-0.699c-0.265-0.246-1.443-0.975-1.77-1.203   c-0.223-0.156-0.454-0.343-0.578-0.592c-0.27-0.541,0.153-1.068,0.71-1.068c0.099,0,0.198,0.012,0.295,0.033   c0.593,0.129,1.17,0.426,1.503,0.506c0.22,0.053,0.364-0.047,0.351-0.276c-0.038-0.65-0.13-1.915-0.028-3.098   c0.05-0.581,0.167-1.171,0.381-1.721c0.206-0.529,0.535-1.001,0.906-1.426c0.3-0.343,1.705-1.828,4.395-1.828   c2.1,0,3.42,0.903,4.04,1.461c0.989,0.909,1.533,2.18,1.645,3.507c0.102,1.183,0.014,2.449-0.028,3.098   c-0.014,0.221,0.141,0.33,0.351,0.277c0.334-0.081,0.91-0.378,1.504-0.507c0.438-0.095,0.946,0.039,1.066,0.521   c0.099,0.413-0.141,0.759-0.638,1.106c-0.327,0.228-1.505,0.956-1.77,1.202c-0.275,0.254-0.239,0.45-0.207,0.7   c0.015,0.116,0.203,1.022,1.003,2.113c0.001,0.001,0.001,0.002,0.002,0.002c0.033,0.045,0.067,0.091,0.103,0.137   c0.18,0.234,0.389,0.476,0.63,0.719c0.624,0.628,1.466,1.266,2.597,1.812c0.093,0.045,0.2,0.101,0.261,0.187   C22.593,17.916,22.612,17.984,22.59,18.046z"/>
+</g></svg>`
+  },
+  {name: 'Edge', icon: ``},
+  {name: 'Edge', icon: ``},
+  {name: 'Edge', icon: ``},
+  {name: 'Express', icon: ``},
+  {name: 'Edge', icon: ``},  {name: 'Edge', icon: ``},  {name: 'Edge', icon: ``},  {name: 'Edge', icon: ``},
+]
 </script>
 
 <template>
-  <div class="h-fit flex flex-nowrap text-theme-switch font-sans border-b-[1px] theme-border">
-    <div class="flex flex-nowrap p-4">
-      <img :src="logo" class="w-8 h-8 rounded-full" />
+  <div
+      class="fixed top-0 left-0 w-full shadow-md z-50 flex flex-nowrap place-items-center text-theme-switch font-sans border-b-[1px] theme-border bkg-theme-switch">
+    <div class="w-1/12"></div>
+    <div class="flex flex-nowrap p-4 cursor-pointer" @click="router.push('/')">
+      <img :src="logo" class="w-8 h-8 rounded-full"/>
       <span class="my-auto ml-4">创剧星球</span>
     </div>
+    <div class="flex-grow"/>
+    <div class="h-full flex gap-4">
+      <div class="text-hover flex flex-nowrap cursor-pointer transition-all" v-for="item in topBarItems"
+           @click="router.push(item.path)">
+        <div v-html="item.icon" class="h-6 w-6 rounded-full"/>
+        <span>{{ item.name }}</span>
+      </div>
+      <ThemeSwitcher class="mx-auto my-auto"/>
+    </div>
+    <div class="w-1/12"></div>
   </div>
-  <div class="h-1/3 flex flex-col font-sans mt-32">
-    <div class="mx-auto text-theme-switch">
-      <span
-          class="text-7xl font-bold bg-gradient-to-b from-gray-100 via-gray-300 to-gray-400 text-transparent bg-clip-text">
-        内容创作者的
-      </span>
-    </div>
-    <div class="mx-auto text-theme-switch">
-      <span
-          class="text-6xl font-bold bg-gradient-to-b from-gray-400 via-gray-500 to-gray-600 text-transparent bg-clip-text">
-        得力助手
-      </span>
-    </div>
-    <div class="mx-auto text-[#a9a9a9] mt-8 text-xl">
-      一款集灵感激发、角色设计、剧本生成、团队协作于一体的智能创作平台，
-    </div>
-    <div class="mx-auto text-[#a9a9a9] mt-2">
-      支持版本控制、版权管理及内容优化输出，助力创作者高效创作。
-    </div>
-    <div class="mx-auto mt-4 flex flex-wrap gap-2">
-      <button class="color-mixed-button font-light hover:-translate-y-0.5 transition-all">立刻上手</button>
-      <button class="transparent-button font-light hover:-translate-y-0.5 transition-all">用户评价</button>
+  <div class="relative w-full h-screen overflow-hidden bg-[#f5f5f5] dark:bg-[#1a1a1a]">
+    <!-- 主背景容器 -->
+    <div class="absolute inset-0 overflow-hidden">
+      <!-- 发光的径向渐变基础 - 增强亮色模式的发光效果 -->
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px]">
+        <div
+            class="absolute inset-0 bg-gradient-to-r from-blue-500/30 to-violet-500/30 dark:from-blue-500/20 dark:to-violet-500/20 blur-[100px] dark:blur-[120px]"></div>
+      </div>
 
+      <!-- 线性光线 - 同样增强亮色模式的效果 -->
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+        <template v-for="i in 12" :key="i">
+          <div
+              class="absolute h-[2px] w-[400px] bg-gradient-to-r from-blue-500/15 to-transparent dark:from-blue-500/10"
+              :style="{
+              transform: `rotate(${(i - 1) * 30}deg)`,
+              transformOrigin: '0 50%'
+            }"
+          ></div>
+        </template>
+      </div>
+
+      <!-- 添加额外的发光层，仅在亮色模式显示 -->
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] dark:hidden">
+        <div class="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-violet-400/20 blur-[60px]"></div>
+      </div>
     </div>
 
+    <!-- 内容层 -->
+    <div class="relative z-10 flex flex-col items-center justify-center h-full font-sans">
+      <div class="mx-auto">
+        <span
+            class="text-7xl font-bold bg-gradient-to-b from-gray-700 via-gray-900 to-black dark:from-gray-100 dark:via-gray-300 dark:to-gray-400 text-transparent bg-clip-text">
+          内容创作者的
+        </span>
+      </div>
+
+      <div class="mx-auto">
+        <span
+            class="text-6xl font-bold bg-gradient-to-b from-gray-600 via-gray-700 to-gray-800 dark:from-gray-400 dark:via-gray-500 dark:to-gray-600 text-transparent bg-clip-text">
+          得力助手
+        </span>
+      </div>
+
+      <div class="mx-auto text-gray-600 dark:text-[#a9a9a9] mt-8 text-xl">
+        一款集灵感激发、角色设计、剧本生成、团队协作于一体的智能创作平台，
+      </div>
+
+      <div class="mx-auto text-gray-500 dark:text-[#a9a9a9] mt-2">
+        支持版本控制、版权管理及内容优化输出，助力创作者高效创作。
+      </div>
+
+      <div class="mx-auto mt-4 flex flex-wrap gap-2">
+        <button
+            @click="quickStartClickHandler"
+            class="px-6 py-2 rounded-2xl font-light bg-gradient-to-r from-blue-500 to-violet-500 text-white hover:-translate-y-0.5 transition-all">
+          立刻上手
+        </button>
+        <button
+            class="px-6 py-2 rounded-2xl font-light border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white hover:-translate-y-0.5 transition-all">
+          用户评价
+        </button>
+      </div>
+    </div>
   </div>
-  <div class="text-theme-switch">
-
-
-    <ThemeSwitcher/>
+  <div class="min-h-screen bg-[#f5f5f5] dark:bg-[#1a1a1a]">
+    <div class="container mx-auto px-4 py-16 font-sans">
+      <h1 class="text-5xl font-bold text-black dark:text-white text-center mb-4">
+        一次编发，处处开花
+      </h1>
+      <h1 class="text-3xl font-bold text-black dark:text-white text-center mb-16">
+        发布至任何您想分享的平台。
+      </h1>
+      <div class="grid grid-cols-7 gap-4 max-w-4xl mx-auto">
+        <template v-for="(item, index) in frameworks" :key="index">
+          <div
+              class="aspect-square border border-gray-300 dark:border-gray-950 hover:shadow-lg shadow-indigo-300 dark:shadow-indigo-800 rounded-xl bg-gradient-to-br from-white to-gray-200 dark:from-[#1c1919] dark:to-black p-4 flex items-center justify-center transition-transform hover:-translate-y-1 cursor-pointer"
+          >
+            <div v-if="item.icon !== ``" class="text-gray-900 dark:text-white" v-html="item.icon"></div>
+            <div class="font-bold" v-else></div>
+          </div>
+        </template>
+      </div>
+    </div>
   </div>
+
+
+
+
 </template>
 
 <style scoped>

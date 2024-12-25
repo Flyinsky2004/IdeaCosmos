@@ -16,7 +16,7 @@ import (
 var MysqlDataBase *gorm.DB
 
 func InitMysqlDataBase() {
-	dbc := "root:Wjywjy2333@@tcp(127.0.0.1:3306)/IdeaCosmos?charset=utf8mb4&parseTime=True&loc=Local"
+	dbc := "root:root@tcp(127.0.0.1:9998)/ideacosmos?charset=utf8mb4&parseTime=True&loc=Local"
 	db, err := gorm.Open(mysql.Open(dbc), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("连接数据库时发生错误:%v", err)

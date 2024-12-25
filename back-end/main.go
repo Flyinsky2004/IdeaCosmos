@@ -18,11 +18,10 @@ import (
 func main() {
 	printBanner()
 	config.InitMysqlDataBase()
-	config.InitRedis("localhost:9999", "131598", 0)
+	//config.InitRedis("localhost:9999", "131598", 0)
 	config.MysqlDataBase.AutoMigrate(&pojo.User{})
 	app := gin.Default()
 	app.Use(route.CorsHandler())
-	app.Use(gin.Logger())
 	route.RegisterRoutes(app)
 	app.Run(":8080")
 }
