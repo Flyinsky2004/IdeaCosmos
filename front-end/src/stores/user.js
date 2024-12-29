@@ -7,7 +7,7 @@ const useUserStore = defineStore('user', {
 
     actions: {
         login(user){
-            state.user = user
+            this.user = user
         }
     },
 

@@ -19,7 +19,7 @@ func main() {
 	printBanner()
 	config.InitMysqlDataBase()
 	//config.InitRedis("localhost:9999", "131598", 0)
-	config.MysqlDataBase.AutoMigrate(&pojo.User{})
+	config.MysqlDataBase.AutoMigrate(&pojo.User{}, &pojo.ImageUpload{}, &pojo.Team{}, &pojo.JoinRequest{})
 	app := gin.Default()
 	app.Use(route.CorsHandler())
 	route.RegisterRoutes(app)

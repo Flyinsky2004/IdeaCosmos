@@ -1,6 +1,5 @@
 import {createRouter, createWebHistory} from 'vue-router'
 import {useUserStore} from "@/stores/user.js";
-import {ElMessage} from "element-plus";
 import {get} from "@/util/request.js";
 
 const router = createRouter({
@@ -24,6 +23,29 @@ const router = createRouter({
                     component: () => import('@/views/public/auth.vue'),
                 }
             ]
+        }, {
+            path: '/workspace',
+            name: 'workspace',
+            component: () => import('@/views/workspace/framework.vue'),
+            children: [
+                {
+                    name: 'dataAnlysis',
+                    path: 'dataAnlysis',
+                    component: () => import('@/views/workspace/dataAnlysis.vue')
+                }, {
+                    name: 'personalInfo',
+                    path: 'personalInfo',
+                    component: () => import('@/views/workspace/personalInfo.vue')
+                }, {
+                    name: 'projects',
+                    path: 'projects',
+                    component: () => import('@/views/workspace/projects.vue')
+                }, {
+                    name: 'teams',
+                    path: 'teams',
+                    component: () => import('@/views/workspace/teams.vue')
+                }
+            ]
         }
 
     ],
@@ -37,20 +59,25 @@ router.beforeEach((to, from, next) => {
     } else {
         if (userStore.isLogin) {
             next()
+        } else {
+            get('/api/user/me', {},
+                (message, data) => {
+                    userStore.login(data)
+                    next()
+                }, (message, data) => {
+                    message.info('您还尚未登录，请先登录！');
+                    setTimeout(() => {
+                        next('/auth/login')
+                    }, 2000)
+                }, (message, data) => {
+                    message.info('您还尚未登录，请先登录！');
+                    setTimeout(() => {
+                        next('/auth/login')
+                    }, 2000)
+                }
+            )
         }
-        get('/api/user/me', {},
-            (message, data) => {
-                userStore.login(data)
-            }
-        )
-        if (!userStore.isLogin) {
-            ElMessage.info('您还尚未登录，请先登录！');
-            setTimeout(() => {
-                router.push('/auth/login')
-            }, 2000)
-        }else{
-            next()
-        }
+
     }
 })
 export default router

@@ -21,5 +21,17 @@ func RegisterRoutes(r *gin.Engine) {
 	userGroup := r.Group("/api/user", preHandler())
 	{
 		userGroup.GET("me", service.GetMyInfo)
+		userGroup.POST("updateInfo", service.UpdateUserInfo)
+	}
+
+	teamGroup := r.Group("/api/team", preHandler())
+	{
+		teamGroup.POST("createTeam", service.CreateTeam)
+		teamGroup.POST("updateTeam", service.UpdateTeam)
+		teamGroup.GET("getMyTeams", service.GetMyTeam)
+		teamGroup.GET("getMyJoinedTeams", service.GetMyJoinedTeam)
+		teamGroup.POST("requestJoin", service.RequestToJoin)
+		teamGroup.POST("updateRequest", service.UpdateRequest)
+		teamGroup.GET("getRequests", service.GetPendingRequests)
 	}
 }

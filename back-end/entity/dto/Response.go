@@ -28,6 +28,9 @@ func NewResponse[T any](code int, success bool, message string, data T) Response
 func SuccessResponse[T any](data T) Response[T] {
 	return NewResponse(200, true, "OK", data)
 }
+func SuccessResponseWithMessage[T any](data T, string string) Response[T] {
+	return NewResponse(200, true, string, data)
+}
 
 // ErrorResponse 快捷生成错误响应
 func ErrorResponse[T any](code int, message string) Response[T] {

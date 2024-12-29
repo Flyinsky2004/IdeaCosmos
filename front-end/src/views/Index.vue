@@ -5,8 +5,11 @@ import logo from '@/assets/img/logo.webp'
 import router from "@/router/index.js";
 import {useUserStore} from "@/stores/user.js";
 import {get} from "@/util/request.js";
-import {ElMessage} from "element-plus";
 import {useThemeStore} from "@/stores/theme.js";
+import {message} from "ant-design-vue";
+import {useFullPageScroll} from "@/util/useFullPageScroll.js";
+
+const { currentSection } = useFullPageScroll();
 
 const themeStore = useThemeStore();
 const getFrontColor = () => {
@@ -29,30 +32,37 @@ const topBarItems = [
 `
   }
 ]
-
 const quickStartClickHandler = () => {
   const userStore = useUserStore()
   if (userStore.isLogin) {
-    router.push('/platform')
-  }
-  get('/api/user/me', {},
-      (message, data) => {
-        userStore.login(data)
-      },
-      (message, data) => {
-
-      },
-      (message, data) => {
-
-      }
-  )
-  if (!userStore.isLogin) {
-    ElMessage.info('您还尚未登录，请先登录！');
-    setTimeout(() => {
-      router.push('/auth/login')
-    }, 1000)
-  } else {
-    router.push('/platform')
+    console.log(userStore.user)
+    message.success("欢迎回来,"+userStore.user.username+"!正在为您跳转...")
+    setTimeout(()=>{
+      router.push('/workspace')
+    },1000)
+  }else{
+    get('/api/user/me', {},
+        (messager, data) => {
+          message.success("欢迎回来,"+data.username+"!正在为您跳转...")
+          userStore.login(data)
+          setTimeout(()=>{
+            router.push('/workspace')
+          },1000)
+        },
+        (messager, data) => {
+          message.info(messager);
+          console.log(data);
+          setTimeout(() => {
+            router.push('/auth/login')
+          }, 1000)        },
+        (messager, data) => {
+          console.log(messager);
+          message.info(messager);
+          setTimeout(() => {
+            router.push('/auth/login')
+          }, 1000)
+        }
+    )
   }
 }
 const frameworks = [
@@ -72,35 +82,42 @@ const frameworks = [
 </svg>`
   },
   {
-    name: 'Napster', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 512 512" style="enable-background:new 0 0 512 512;" xml:space="preserve" width="64" height="64" fill="currentColor">
+    name: 'Napster', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 512 512" style="enable-background:new 0 0 512 512;" xml:space="preserve" width="64" height="64" fill="#3343aa">
 <g id="XMLID_1_">
  width="64" height="64" fill="currentColor"<path d="M451.95,316.03c0,0.02,0,0.04,0,0.07c-0.02,108.2-87.77,195.92-195.97,195.9c-108.23-0.02-195.93-87.74-195.91-195.97   c0-91.77,61.25-152.98,115.29-206.97C211.39,73.05,245.76,38.72,256,0c10.22,38.72,44.61,73.05,80.62,109.06   C390.68,163.05,451.93,224.26,451.95,316.03z M384.98,353.13c6.81-14.87,18.37-59.92-15.12-112.04   C336.36,188.97,256,112.73,256,112.73s-26.97,26.94-36.2,36.18c-7.36,7.36-23.23,21.44-4.76,41.38   c21.01,22.7,133.25,140.01,146.11,159.04c5.87,8.66,6.7,12.74,14.64,12.44C380.22,361.6,383.53,356.31,384.98,353.13z    M323.39,395.03c0.15-16.47-5.89-32.41-16.89-44.65c-12.65-14.1-50.5-56.51-50.5-56.51s-38.44,41.79-50.6,56.66   c-5.3,6.21-9.44,13.25-12.28,20.78c-2.84,7.53-4.38,15.55-4.51,23.72c0,37.23,30.18,67.39,67.39,67.39   C293.23,462.42,323.39,432.26,323.39,395.03z M223.7,269.5c1.81-1.81,1.79-4.75-0.04-6.57l-54.42-59.45   c-82.24,81.38-37.91,157.8-25.9,158.21c1.26,0.04,3.33,0.19,4.73-3.8c6.87-19.18,62.23-74.71,75.23-88.02   C223.45,269.76,223.57,269.63,223.7,269.5z"/>
 </g>
 </svg>`
   },
   {
-    name: 'Edge', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve"  width="64" height="64" fill="currentColor">
+    name: 'Edge', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve"  width="64" height="64" fill="#ea333d">
 <g id="XMLID_184_">
- width="64" height="64" fill="currentColor"<path d="M23.498,6.186c-0.276-1.039-1.089-1.858-2.122-2.136C19.505,3.546,12,3.546,12,3.546s-7.505,0-9.377,0.504   C1.591,4.328,0.778,5.146,0.502,6.186C0,8.07,0,12,0,12s0,3.93,0.502,5.814c0.276,1.039,1.089,1.858,2.122,2.136   C4.495,20.454,12,20.454,12,20.454s7.505,0,9.377-0.504c1.032-0.278,1.845-1.096,2.122-2.136C24,15.93,24,12,24,12   S24,8.07,23.498,6.186z M9.546,15.569V8.431L15.818,12L9.546,15.569z"/>
+ <path d="M23.498,6.186c-0.276-1.039-1.089-1.858-2.122-2.136C19.505,3.546,12,3.546,12,3.546s-7.505,0-9.377,0.504   C1.591,4.328,0.778,5.146,0.502,6.186C0,8.07,0,12,0,12s0,3.93,0.502,5.814c0.276,1.039,1.089,1.858,2.122,2.136   C4.495,20.454,12,20.454,12,20.454s7.505,0,9.377-0.504c1.032-0.278,1.845-1.096,2.122-2.136C24,15.93,24,12,24,12   S24,8.07,23.498,6.186z M9.546,15.569V8.431L15.818,12L9.546,15.569z"/>
 </g></svg>`
-  },{name: 'Edge', icon: ``},{name: 'Edge', icon: ``},{name: 'Edge', icon: ``},{name: 'Edge', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve" width="64" height="64" fill="currentColor">
+  },
+  {name: 'Edge', icon: ``},
+  {name: 'Edge', icon: ``},
+  {name: 'Edge', icon: ``},
+  {name: 'Edge', icon: ``},
+  {
+    name: 'Edge', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve" width="64" height="64" fill="#3f57e1">
 <g id="W_Mark_2_">
 \t<path d="M12,0.72c1.523,0,3,0.298,4.39,0.886c2.671,1.13,4.874,3.333,6.003,6.003C22.982,9,23.28,10.477,23.28,12   s-0.298,3-0.886,4.39c-1.116,2.639-3.35,4.881-6.003,6.003C15,22.982,13.523,23.28,12,23.28c-1.523,0-3-0.298-4.39-0.886   c-2.638-1.116-4.881-3.351-6.003-6.003C1.018,15,0.72,13.523,0.72,12c0-1.523,0.298-3,0.886-4.39   C2.736,4.939,4.94,2.735,7.61,1.606C9,1.018,10.477,0.72,12,0.72 M12,0C5.373,0,0,5.373,0,12c0,6.627,5.373,12,12,12   s12-5.373,12-12C24,5.373,18.627,0,12,0L12,0z"/>
 \t<path d="M2,12c0,3.958,2.3,7.379,5.636,9L2.866,7.93C2.311,9.174,2,10.55,2,12z M18.751,11.495c0-1.236-0.444-2.092-0.824-2.758   c-0.507-0.824-0.982-1.521-0.982-2.345c0-0.919,0.697-1.775,1.679-1.775c0.044,0,0.086,0.005,0.129,0.008   C16.974,2.995,14.603,2,12,2C8.506,2,5.433,3.793,3.645,6.507C3.88,6.515,4.101,6.519,4.288,6.519c1.046,0,2.665-0.127,2.665-0.127   c0.539-0.032,0.602,0.76,0.064,0.824c0,0-0.542,0.063-1.144,0.095l3.641,10.832l2.189-6.563l-1.558-4.269   C9.607,7.28,9.096,7.216,9.096,7.216C8.557,7.184,8.621,6.361,9.16,6.392c0,0,1.651,0.127,2.634,0.127   c1.046,0,2.666-0.127,2.666-0.127c0.539-0.032,0.602,0.76,0.064,0.824c0,0-0.542,0.063-1.144,0.095l3.614,10.749l1.032-3.269   C18.482,13.363,18.751,12.351,18.751,11.495z M12.176,12.874l-3.001,8.718C10.071,21.856,11.018,22,12,22   c1.164,0,2.282-0.201,3.321-0.567c-0.027-0.043-0.051-0.088-0.072-0.138L12.176,12.874z M20.775,7.202   c0.043,0.318,0.067,0.66,0.067,1.028c0,1.014-0.19,2.155-0.761,3.582l-3.054,8.831C20.001,18.91,22,15.689,22,12   C22,10.261,21.556,8.627,20.775,7.202z"/>
 </g>
-</svg>`},
+</svg>`
+  },
   {
-    name: 'Edge', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve"  width="64" height="64" fill="currentColor">
+    name: 'Edge', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve"  width="64" height="64" fill="#4894e2">
 <path id="Logo_00000038394049246713568260000012923108920998390947_" d="M21.543,7.104c0.014,0.211,0.014,0.423,0.014,0.636  c0,6.507-4.954,14.01-14.01,14.01v-0.004C4.872,21.75,2.252,20.984,0,19.539c0.389,0.047,0.78,0.07,1.172,0.071  c2.218,0.002,4.372-0.742,6.115-2.112c-2.107-0.04-3.955-1.414-4.6-3.42c0.738,0.142,1.498,0.113,2.223-0.084  c-2.298-0.464-3.95-2.483-3.95-4.827c0-0.021,0-0.042,0-0.062c0.685,0.382,1.451,0.593,2.235,0.616  C1.031,8.276,0.363,5.398,1.67,3.148c2.5,3.076,6.189,4.946,10.148,5.145c-0.397-1.71,0.146-3.502,1.424-4.705  c1.983-1.865,5.102-1.769,6.967,0.214c1.103-0.217,2.16-0.622,3.127-1.195c-0.368,1.14-1.137,2.108-2.165,2.724  C22.148,5.214,23.101,4.953,24,4.555C23.339,5.544,22.507,6.407,21.543,7.104z"/>
 </svg>`
   },
-   {
+  {
     name: 'Edge', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve"  width="64" height="64" fill="currentColor">
 <path d="M22.465,9.866c-2.139,0-4.122-0.684-5.74-1.846v8.385c0,4.188-3.407,7.594-7.594,7.594c-1.618,0-3.119-0.51-4.352-1.376  c-1.958-1.375-3.242-3.649-3.242-6.218c0-4.188,3.407-7.595,7.595-7.595c0.348,0,0.688,0.029,1.023,0.074v0.977v3.235  c-0.324-0.101-0.666-0.16-1.023-0.16c-1.912,0-3.468,1.556-3.468,3.469c0,1.332,0.756,2.489,1.86,3.07  c0.481,0.253,1.028,0.398,1.609,0.398c1.868,0,3.392-1.486,3.462-3.338L12.598,0h4.126c0,0.358,0.035,0.707,0.097,1.047  c0.291,1.572,1.224,2.921,2.517,3.764c0.9,0.587,1.974,0.93,3.126,0.93V9.866z"/>
 </svg>`
   },
   {
-    name: 'Edge', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve"  width="64" height="64" fill="currentColor">
+    name: 'Edge', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve"  width="64" height="64" fill="#65d46e">
 <g>
  width="64" height="64" fill="currentColor"<g>
  width="64" height="64" fill="currentColor" width="64" height="64" fill="currentColor"<g>
@@ -118,8 +135,8 @@ const frameworks = [
   {name: 'Edge', icon: ``},
   {name: 'Edge', icon: ``},
   {name: 'Edge', icon: ``},
-  {name: 'Express', icon: ``},
-  {name: 'Edge', icon: ``},  {name: 'Edge', icon: ``},  {name: 'Edge', icon: ``},  {name: 'Edge', icon: ``},
+  {name: 'Express', icon: ``}, {name: 'Edge', icon: ``}, {name: 'Edge', icon: ``},
+  {name: 'Edge', icon: ``}, {name: 'Edge', icon: ``}, {name: 'Edge', icon: ``}, {name: 'Edge', icon: ``},
 ]
 </script>
 
@@ -133,7 +150,7 @@ const frameworks = [
     </div>
     <div class="flex-grow"/>
     <div class="h-full flex gap-4">
-      <div class="text-hover flex flex-nowrap cursor-pointer transition-all" v-for="item in topBarItems"
+      <div class="text-hover flex flex-nowrap cursor-pointer transition-all my-auto" v-for="item in topBarItems"
            @click="router.push(item.path)">
         <div v-html="item.icon" class="h-6 w-6 rounded-full"/>
         <span>{{ item.name }}</span>
@@ -142,36 +159,47 @@ const frameworks = [
     </div>
     <div class="w-1/12"></div>
   </div>
-  <div class="relative w-full h-screen overflow-hidden bg-[#f5f5f5] dark:bg-[#1a1a1a]">
-    <!-- 主背景容器 -->
-    <div class="absolute inset-0 overflow-hidden">
-      <!-- 发光的径向渐变基础 - 增强亮色模式的发光效果 -->
-      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px]">
+  <div class="relative w-full h-screen overflow-hidden bg-black">
+    <div class="absolute inset-0 overflow-hidden bg-slate-50 dark:bg-slate-950">
+      <!-- 核心发光中心 -->
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32">
         <div
-            class="absolute inset-0 bg-gradient-to-r from-blue-500/30 to-violet-500/30 dark:from-blue-500/20 dark:to-violet-500/20 blur-[100px] dark:blur-[120px]"></div>
+            class="absolute inset-0 bg-gradient-to-r from-blue-400/50 via-violet-400/40 to-transparent dark:from-blue-400/30 dark:via-violet-400/25 blur-md"></div>
       </div>
 
-      <!-- 线性光线 - 同样增强亮色模式的效果 -->
+      <!-- 主渐变区域 -->
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px]">
+        <div
+            class="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-violet-500/40 to-transparent dark:from-blue-600/40 dark:via-violet-600/35 dark:to-slate-950/30 blur-3xl"></div>
+      </div>
+
+      <!-- 线性光线 -->
       <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
         <template v-for="i in 12" :key="i">
           <div
-              class="absolute h-[2px] w-[400px] bg-gradient-to-r from-blue-500/15 to-transparent dark:from-blue-500/10"
+              class="absolute h-px w-[400px] bg-gradient-to-r from-blue-400/20 via-violet-400/15 to-transparent dark:from-blue-400/15 dark:via-violet-400/10 dark:to-slate-950/5"
               :style="{
-              transform: `rotate(${(i - 1) * 30}deg)`,
-              transformOrigin: '0 50%'
-            }"
+          transform: `rotate(${(i - 1) * 30}deg)`,
+          transformOrigin: '0 50%'
+        }"
           ></div>
         </template>
       </div>
 
-      <!-- 添加额外的发光层，仅在亮色模式显示 -->
-      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] dark:hidden">
-        <div class="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-violet-400/20 blur-[60px]"></div>
+      <!-- 边缘渐隐效果 -->
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px]">
+        <div
+            class="absolute inset-0 bg-gradient-to-r from-blue-400/20 via-violet-400/15 to-transparent dark:from-blue-500/15 dark:via-violet-500/10 dark:to-slate-950/5 blur-[150px]"></div>
       </div>
     </div>
 
+
     <!-- 内容层 -->
-    <div class="relative z-10 flex flex-col items-center justify-center h-full font-sans">
+    <div class="relative animate__animated animate__backInDown z-10 flex flex-col items-center justify-center h-full font-sans">
+      <!--      <div class="mx-auto p-2 border rounded-3xl border-blue-500 dark:border-purple-900 text-theme-switch flex flex-nowrap">-->
+      <!--        <img :src="logo" class="w-4 h-4 rounded-full my-auto"/>-->
+      <!--        <span class="my-auto ml-2">现在就创作引人入胜的作品！</span>-->
+      <!--      </div>-->
       <div class="mx-auto">
         <span
             class="text-7xl font-bold bg-gradient-to-b from-gray-700 via-gray-900 to-black dark:from-gray-100 dark:via-gray-300 dark:to-gray-400 text-transparent bg-clip-text">
@@ -207,7 +235,7 @@ const frameworks = [
       </div>
     </div>
   </div>
-  <div class="min-h-screen bg-[#f5f5f5] dark:bg-[#1a1a1a]">
+  <div class="h-screen bg-[#f5f5f5] dark:bg-[#030616]">
     <div class="container mx-auto px-4 py-16 font-sans">
       <h1 class="text-5xl font-bold text-black dark:text-white text-center mb-4">
         一次编发，处处开花
@@ -215,10 +243,10 @@ const frameworks = [
       <h1 class="text-3xl font-bold text-black dark:text-white text-center mb-16">
         发布至任何您想分享的平台。
       </h1>
-      <div class="grid grid-cols-7 gap-4 max-w-4xl mx-auto">
+      <div class="grid grid-cols-8 gap-4 max-w-4xl mx-auto">
         <template v-for="(item, index) in frameworks" :key="index">
           <div
-              class="aspect-square border border-gray-300 dark:border-gray-950 hover:shadow-lg shadow-indigo-300 dark:shadow-indigo-800 rounded-xl bg-gradient-to-br from-white to-gray-200 dark:from-[#1c1919] dark:to-black p-4 flex items-center justify-center transition-transform hover:-translate-y-1 cursor-pointer"
+              class="aspect-square border border-gray-300 dark:border-gray-950 hover:shadow-lg shadow-indigo-300 dark:shadow-indigo-800 rounded-xl bg-gradient-to-br from-white to-gray-200 dark:from-[rgb(36,36,36)] dark:to-[#030616] p-4 flex items-center justify-center transition-transform hover:-translate-y-1 cursor-pointer"
           >
             <div v-if="item.icon !== ``" class="text-gray-900 dark:text-white" v-html="item.icon"></div>
             <div class="font-bold" v-else></div>
@@ -227,10 +255,18 @@ const frameworks = [
       </div>
     </div>
   </div>
+  <div class="bg-white dark:bg-black flex font-sans min-h-32 text-theme-switch">
+    <div class="mx-auto my-auto flex-col text-center">
+      <span class=" cursor-pointer hover:text-blue-600">
+      创剧星球IdeaCosmos
+    </span>
+      <br>
+      <span class="mx-auto my-auto cursor-pointer hover:text-blue-600">
+      使用Vue.js&Golang构建
+    </span>
+    </div>
 
-
-
-
+  </div>
 </template>
 
 <style scoped>

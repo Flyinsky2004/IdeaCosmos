@@ -1,10 +1,9 @@
 //net/index.js
 import axios from "axios";
-import {ElMessage} from "element-plus";
+import {message} from "ant-design-vue";
 
-
-const defaultError = () => ElMessage.error('发生错误，请联系管理员。')
-const defaultFailure = (message) => ElMessage.warning(message)
+const defaultError = () => message.error('发生错误，请联系管理员。')
+const defaultFailure = (message) => message.warning(message)
 function getAuthToken() {
     return localStorage.getItem('authToken') || '';
 }

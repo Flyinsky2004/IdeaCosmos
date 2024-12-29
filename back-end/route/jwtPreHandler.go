@@ -14,7 +14,7 @@ import (
  */
 func CorsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*") // 或者指定具体的域名，如 http://example.com
+		c.Header("Access-Control-Allow-Origin", "http://localhost:5173") // 或者指定具体的域名，如 http://example.com
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 		c.Header("Access-Control-Expose-Headers", "Content-Length, Content-Type")
@@ -38,13 +38,13 @@ func preHandler() gin.HandlerFunc {
 		}
 		token := c.GetHeader("Authorization")
 		if token == "" {
-			c.JSON(401, dto.ErrorResponse[string](401, "未提供令牌"))
+			c.JSON(200, dto.ErrorResponse[string](401, "未提供令牌"))
 			c.Abort()
 			return
 		}
 		claims, err := util.ParseToken(token)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, dto.ErrorResponse[string](401, "token不合法或已过期，请尝试重新登陆获取。"))
+			c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "token不合法或已过期，请尝试重新登陆获取。"))
 			c.Abort()
 			return
 		}

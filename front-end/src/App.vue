@@ -6,9 +6,9 @@ themeStore.initTheme()
 </script>
 
 <template>
-  <div class="container1 select-none h-screen darkBKG">
+  <div class="container1 select-none h-screen bkg-theme-switch">
 <!--       :class="themeStore.currentTheme === 'light' ? 'lightBKG' : 'darkBKG'">-->
-    <div class="h-full backdrop-blur-sm overflow-y-auto">
+    <div class="h-full backdrop-blur-sm overflow-y-auto font-sans">
       <RouterView/>
     </div>
   </div>
@@ -21,14 +21,5 @@ themeStore.initTheme()
   background-attachment: fixed; /* 背景图片固定不动 */
   background-position: center; /* 背景图片居中 */
   background-blend-mode: multiply;
-}
-.darkBKG{
-  background-image: url('@/assets/img/bkg.png'); /* 使用背景图片 */
-  background-color: rgba(128,128,128,0.95);
-  background-blend-mode: multiply;
-
-}
-.lightBKG{
-  background-image: url('@/assets/img/light-bkg.webp'); /* 使用背景图片 */
 }
 </style>

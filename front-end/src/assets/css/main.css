@@ -15,7 +15,7 @@
 }
 
 .theme-border {
-    @apply dark:border-[#262626];
+    @apply border-gray-200 dark:border-[#2b2b2e];
 }
 
 .color-mixed-button {
@@ -27,7 +27,7 @@
 }
 
 .bkg-theme-switch {
-    @apply bg-white dark:bg-[rgb(26,26,26)];
+    @apply bg-white dark:bg-[#16161a];
 }
 
 .text-hover {
@@ -60,4 +60,7 @@
     shadow-sm hover:shadow-md
     focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-indigo-900
     ring-offset-2 ring-offset-white dark:ring-offset-indigo-400;
+}
+.workspace-box{
+    @apply bg-white dark:bg-[#232429] border-gray-200 dark:border-[#2b2b2e] shadow dark:shadow-[#141418] rounded-xl;
 }

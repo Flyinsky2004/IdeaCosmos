@@ -25,21 +25,21 @@ type UserLoginBody struct {
 func Login(c *gin.Context) {
 	var body UserLoginBody
 	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(400, dto.ErrorResponse[string](400, "提交了错误的JSON"))
+		c.JSON(200, dto.ErrorResponse[string](400, "提交了错误的JSON"))
 		return
 	}
 	var user pojo.User
 	if err := config.MysqlDataBase.Where("username = ?", body.Username).First(&user).Error; err != nil {
-		c.JSON(400, dto.ErrorResponse[string](401, "用户名不存在"))
+		c.JSON(200, dto.ErrorResponse[string](401, "用户名不存在"))
 		return
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password)); err != nil {
-		c.JSON(400, dto.ErrorResponse[string](401, "用户名或密码错误"))
+		c.JSON(200, dto.ErrorResponse[string](401, "用户名或密码错误"))
 		return
 	}
 	var token, err = util.GenerateToken(int(user.ID), user.Username)
 	if err != nil {
-		c.JSON(400, dto.ErrorResponse[string](401, "生成用户token时发生错误，请再尝试一次，或联系管理员"))
+		c.JSON(200, dto.ErrorResponse[string](401, "生成用户token时发生错误，请再尝试一次，或联系管理员"))
 		return
 	}
 	c.JSON(200, dto.SuccessResponse(token))
@@ -81,25 +81,25 @@ type SendVerifyCodeRequestBody struct {
 func SendVerifyCode(c *gin.Context) {
 	var reqBody SendVerifyCodeRequestBody
 	if err := c.ShouldBindJSON(&reqBody); err != nil {
-		c.JSON(400, dto.ErrorResponse[string](400, "请求表单格式有误"))
+		c.JSON(200, dto.ErrorResponse[string](400, "请求表单格式有误"))
 		return
 	}
 	isHasExisted, err := CheckIfCodeExists(reqBody.Email)
 	if err != nil {
-		c.JSON(400, dto.ErrorResponse[string](400, "查询验证码时发生错误"))
+		c.JSON(200, dto.ErrorResponse[string](400, "查询验证码时发生错误"))
 		return
 	}
 	if isHasExisted {
-		c.JSON(400, dto.ErrorResponse[string](400, "你已经发送了一条未失效的验证码"))
+		c.JSON(200, dto.ErrorResponse[string](400, "你已经发送了一条未失效的验证码"))
 		return
 	}
 	code := util.GenerateCode(6)
 	if err := SaveCodeToRedis(reqBody.Email, code, time.Minute*3); err != nil {
-		c.JSON(400, dto.ErrorResponse[string](500, "缓存验证码时发生错误"))
+		c.JSON(200, dto.ErrorResponse[string](500, "缓存验证码时发生错误"))
 		return
 	}
 	if err := util.SendEmail(reqBody.Email, "OneAPIWay验证码", "您的验证码为："+code); err != nil {
-		c.JSON(400, dto.ErrorResponse[string](400, "邮件系统发送验证码时发生错误"))
+		c.JSON(200, dto.ErrorResponse[string](400, "邮件系统发送验证码时发生错误"))
 		return
 	}
 	c.JSON(200, dto.SuccessResponse("验证码已发送至您的邮箱，请前往查看～"))
@@ -107,30 +107,30 @@ func SendVerifyCode(c *gin.Context) {
 func Register(c *gin.Context) {
 	var registerBody RegisterRequestBody
 	if err := c.ShouldBindJSON(&registerBody); err != nil {
-		c.JSON(400, dto.ErrorResponse[string](400, "解构JSON时发生错误，请检查您的表单格式"))
+		c.JSON(200, dto.ErrorResponse[string](400, "解构JSON时发生错误，请检查您的表单格式"))
 		return
 	}
 	isHasExisted, err := CheckIfCodeExists(registerBody.Email)
 	if err != nil {
-		c.JSON(400, dto.ErrorResponse[string](400, "查询验证码时发生错误"))
+		c.JSON(200, dto.ErrorResponse[string](400, "查询验证码时发生错误"))
 		return
 	}
 	if !isHasExisted {
-		c.JSON(400, dto.ErrorResponse[string](400, "你需要先请求您的邮箱验证码"))
+		c.JSON(200, dto.ErrorResponse[string](400, "你需要先请求您的邮箱验证码"))
 		return
 	}
 	code, err := GetCodeFromRedis(registerBody.Email)
 	if err != nil {
-		c.JSON(400, dto.ErrorResponse[string](400, "查询验证码时发生错误"))
+		c.JSON(200, dto.ErrorResponse[string](400, "查询验证码时发生错误"))
 		return
 	}
 	if registerBody.Code != code {
-		c.JSON(400, dto.ErrorResponse[string](400, "您提交的验证码与邮件验证码不符"))
+		c.JSON(200, dto.ErrorResponse[string](400, "您提交的验证码与邮件验证码不符"))
 		return
 	}
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(registerBody.Password), bcrypt.DefaultCost)
 	if err != nil {
-		c.JSON(400, dto.ErrorResponse[string](400, "加密用户密码时发生错误，请稍后重试。"))
+		c.JSON(200, dto.ErrorResponse[string](400, "加密用户密码时发生错误，请稍后重试。"))
 		return
 	}
 
@@ -146,17 +146,17 @@ func Register(c *gin.Context) {
 	tx := config.MysqlDataBase.Begin()
 	if err := tx.Where("username = ?", user.Username).First(&user).Error; err == nil {
 		tx.Rollback()
-		c.JSON(400, dto.ErrorResponse[string](400, "用户名已存在，更换一个吧～"))
+		c.JSON(200, dto.ErrorResponse[string](400, "用户名已存在，更换一个吧～"))
 		return
 	}
 	if err := tx.Create(&user).Error; err != nil {
 		tx.Rollback()
-		c.JSON(400, dto.ErrorResponse[string](400, "创建用户时发生错误，请稍后重试。详细信息："+err.Error()))
+		c.JSON(200, dto.ErrorResponse[string](400, "创建用户时发生错误，请稍后重试。详细信息："+err.Error()))
 		return
 	}
 	if err := tx.Commit().Error; err != nil {
 		tx.Rollback()
-		c.JSON(400, dto.ErrorResponse[string](400, "创建用户时发生错误，请稍后重试。详细信息："+err.Error()))
+		c.JSON(200, dto.ErrorResponse[string](400, "创建用户时发生错误，请稍后重试。详细信息："+err.Error()))
 		return
 	}
 	c.JSON(200, dto.SuccessResponse("好极了！用户创建成功，欢迎您来到创剧星球!"))
