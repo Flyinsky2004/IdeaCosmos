@@ -169,7 +169,7 @@ func UploadImage(c *gin.Context) {
 		return
 	}
 	tx.Commit()
-	c.JSON(http.StatusOK, dto.SuccessResponseWithMessage[pojo.ImageUpload](imageUpload, "文件上传成功！"))
+	c.JSON(http.StatusOK, dto.SuccessResponseWithMessage[pojo.ImageUpload]("文件上传成功！", imageUpload))
 }
 func ensureDir(dirName string) error {
 	if _, err := os.Stat(dirName); os.IsNotExist(err) {

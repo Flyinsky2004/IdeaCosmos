@@ -33,5 +33,15 @@ func RegisterRoutes(r *gin.Engine) {
 		teamGroup.POST("requestJoin", service.RequestToJoin)
 		teamGroup.POST("updateRequest", service.UpdateRequest)
 		teamGroup.GET("getRequests", service.GetPendingRequests)
+		teamGroup.GET("myTeam", service.GetMyTeam)
+	}
+
+	projectGroup := r.Group("/api/project", preHandler())
+	{
+		projectGroup.GET("myProjects", service.GetProjectList)
+		projectGroup.POST("createProject", service.CreateProject)
+		projectGroup.POST("updateProject", service.UpdateProject)
+		projectGroup.POST("createCharacter", service.CreateCharacter)
+		projectGroup.POST("updateCharacter", service.UpdateCharacter)
 	}
 }

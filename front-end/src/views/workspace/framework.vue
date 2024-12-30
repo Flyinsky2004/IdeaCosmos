@@ -5,6 +5,7 @@ import {useUserStore} from "@/stores/user.js";
 import router from "@/router/index.js";
 import {message} from "ant-design-vue";
 import {useRoute} from "vue-router";
+import {useThemeStore} from "@/stores/theme.js";
 
 const [messageApi, contextHolder] = message.useMessage();
 const route = useRoute()
@@ -115,7 +116,8 @@ const sideBarMouseLeave = () => {
        :class="options.sideExpand ? 'grid-cols-[1fr,8fr]' : 'grid-cols-[1fr,19fr]' "
   >
     <div></div>
-    <div class="h-full w-full text-theme-switch dark:bg-[#16161a] p-4">
+    <div :class="useThemeStore().currentTheme === 'light' ? 'lightBKG' : 'darkBKG'"
+        class="h-screen overflow-auto w-full container1 text-theme-switch p-4 relative bg-slate-50 dark:bg-slate-950 before:absolute before:inset-0 before:bg-glow-effect before:blur-3xl before:z-[-1]">
       <RouterView/>
     </div>
   </div>
@@ -128,5 +130,20 @@ const sideBarMouseLeave = () => {
 
 .sideBefore {
   width: 5%;
+}
+.container1{
+  background-size: 100% 100%; /* 确保背景图片覆盖整个容器 */
+  background-attachment: fixed; /* 背景图片固定不动 */
+  background-position: center; /* 背景图片居中 */
+  background-blend-mode: multiply;
+}
+.darkBKG{
+  background-image: url('@/assets/img/darkbkg.png'); /* 使用背景图片 */
+  background-color: rgba(80, 79, 79, 0.3);
+
+}
+.lightBKG{
+  background-image: url('@/assets/img/lightbkg.png'); /* 使用背景图片 */
+  background-color: rgba(221, 221, 221, 0.1);
 }
 </style>

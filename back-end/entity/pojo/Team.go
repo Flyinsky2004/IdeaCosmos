@@ -11,7 +11,7 @@ type Team struct {
 	gorm.Model
 	TeamName        string `json:"username" gorm:"type:varchar(50)"`
 	TeamDescription string `json:"teamDescription" gorm:"type:varchar(50)"`
-	InviteCode      string `json:"password" gorm:"type:varchar(50)"`
+	InviteCode      string `json:"invite_code" gorm:"type:varchar(12)"`
 	LeaderId        uint   `json:"leaderId" gorm:"type:bigint"`
 }
 type JoinRequest struct {
@@ -20,6 +20,7 @@ type JoinRequest struct {
 	TeamId uint `json:"teamId" gorm:"not null"`
 	Status int8 `json:"status" gorm:"type:tinyint;default:0"` // 0: pending, 1: approved, 2: rejected
 	Team   Team `json:"team" gorm:"foreignKey:TeamId"`
+	User   User `json:"user" gorm:"foreignKey:UserId"`
 }
 type TeamUpdateBody struct {
 	ID              uint   `json:"id"`

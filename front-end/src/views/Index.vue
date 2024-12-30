@@ -200,20 +200,22 @@ const frameworks = [
       <!--        <img :src="logo" class="w-4 h-4 rounded-full my-auto"/>-->
       <!--        <span class="my-auto ml-2">现在就创作引人入胜的作品！</span>-->
       <!--      </div>-->
-      <div class="mx-auto">
+      <div class="mx-auto font-serif">
         <span
             class="text-7xl font-bold bg-gradient-to-b from-gray-700 via-gray-900 to-black dark:from-gray-100 dark:via-gray-300 dark:to-gray-400 text-transparent bg-clip-text">
           内容创作者的
         </span>
       </div>
 
-      <div class="mx-auto">
+      <div class="mx-auto font-serif">
         <span
             class="text-6xl font-bold bg-gradient-to-b from-gray-600 via-gray-700 to-gray-800 dark:from-gray-400 dark:via-gray-500 dark:to-gray-600 text-transparent bg-clip-text">
           得力助手
         </span>
       </div>
-
+      <div class="mx-auto font-serif text-gray-600 dark:text-[#a0a0a0] mt-8 text-2xl">
+        人人都可以是优秀的编剧。
+      </div>
       <div class="mx-auto text-gray-600 dark:text-[#a9a9a9] mt-8 text-xl">
         一款集灵感激发、角色设计、剧本生成、团队协作于一体的智能创作平台，
       </div>
@@ -237,10 +239,10 @@ const frameworks = [
   </div>
   <div class="h-screen bg-[#f5f5f5] dark:bg-[#030616]">
     <div class="container mx-auto px-4 py-16 font-sans">
-      <h1 class="text-5xl font-bold text-black dark:text-white text-center mb-4">
+      <h1 class="text-5xl font-bold font-serif text-black dark:text-white text-center mb-4">
         一次编发，处处开花
       </h1>
-      <h1 class="text-3xl font-bold text-black dark:text-white text-center mb-16">
+      <h1 class="text-3xl font-bold font-serif text-black dark:text-white text-center mb-16">
         发布至任何您想分享的平台。
       </h1>
       <div class="grid grid-cols-8 gap-4 max-w-4xl mx-auto">

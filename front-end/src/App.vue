@@ -1,11 +1,19 @@
 <script setup>
 import {RouterView} from "vue-router";
 import {useThemeStore} from "@/stores/theme.js";
+import {theme} from "ant-design-vue";
 const themeStore = useThemeStore()
+
 themeStore.initTheme()
 </script>
 
 <template>
+  <a-config-provider
+      :theme="{
+      algorithm: themeStore.isDark ?theme.darkAlgorithm:theme.defaultAlgorithm,
+    }"
+  >
+  </a-config-provider>
   <div class="container1 select-none h-screen bkg-theme-switch">
 <!--       :class="themeStore.currentTheme === 'light' ? 'lightBKG' : 'darkBKG'">-->
     <div class="h-full backdrop-blur-sm overflow-y-auto font-sans">

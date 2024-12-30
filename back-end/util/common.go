@@ -3,6 +3,7 @@ package util
 import (
 	"gopkg.in/gomail.v2"
 	"math/rand"
+	"strings"
 	"time"
 )
 
@@ -41,4 +42,19 @@ func SendEmail(to, subject, body string) error {
 	d := gomail.NewDialer(smtpHost, smtpPort, username, password)
 
 	return d.DialAndSend(m)
+}
+func GenerateRandomString(n int) string {
+	// 定义随机字符集合
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	// 初始化随机种子
+	rand.Seed(time.Now().UnixNano())
+
+	// 使用strings.Builder优化字符串拼接
+	var sb strings.Builder
+	sb.Grow(n)
+	for i := 0; i < n; i++ {
+		randomIndex := rand.Intn(len(charset))
+		sb.WriteByte(charset[randomIndex])
+	}
+	return sb.String()
 }

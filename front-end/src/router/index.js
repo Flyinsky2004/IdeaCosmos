@@ -36,10 +36,15 @@ const router = createRouter({
                     name: 'personalInfo',
                     path: 'personalInfo',
                     component: () => import('@/views/workspace/personalInfo.vue')
-                }, {
+                },
+                {
                     name: 'projects',
                     path: 'projects',
                     component: () => import('@/views/workspace/projects.vue')
+                }, {
+                    name: 'newProject',
+                    path: 'newProject',
+                    component: () => import('@/views/workspace/project/newProject.vue')
                 }, {
                     name: 'teams',
                     path: 'teams',

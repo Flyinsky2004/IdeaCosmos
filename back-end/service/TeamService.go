@@ -4,7 +4,9 @@ import (
 	"back-end/config"
 	"back-end/entity/dto"
 	"back-end/entity/pojo"
+	"back-end/util"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 	"net/http"
 	"strconv"
 )
@@ -14,11 +16,67 @@ import (
  * @email w2084151024@gmail.com
  * @date 2024/12/28 16:48
  */
+type CreateTeamRequestBody struct {
+	gorm.Model
+	TeamName        string `json:"team_name" gorm:"type:varchar(50)"`
+	TeamDescription string `json:"team_description" gorm:"type:varchar(50)"`
+}
+
+func GetUserTeams(c *gin.Context) {
+	// 从请求中获取 userId 参数（假设通过 JWT 或 Query 参数传递）
+	userIdStr := c.Query("userId") // 示例：从 URL 查询参数中获取
+	if userIdStr == "" {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "用户状态错误"))
+		return
+	}
+
+	userId, err := strconv.ParseUint(userIdStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "用户状态错误2"))
+		return
+	}
+
+	var teams []pojo.Team
+
+	// 子查询：用户创建的团队
+	createdTeamsSubQuery := config.MysqlDataBase.Model(&pojo.Team{}).
+		Select("id").
+		Where("leader_id = ?", userId)
+
+	// 子查询：用户加入的团队
+	joinedTeamsSubQuery := config.MysqlDataBase.Model(&pojo.JoinRequest{}).
+		Select("team_id").
+		Where("user_id = ? AND status = ?", userId, 1)
+
+	// 查询用户相关的团队
+	err = config.MysqlDataBase.Where("id IN (?) OR id IN (?)", createdTeamsSubQuery, joinedTeamsSubQuery).
+		Find(&teams).Error
+
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "数据库查询发生错误"))
+		return
+	}
+
+	// 返回团队信息
+	c.JSON(http.StatusOK, gin.H{
+		"userId": userId,
+		"teams":  teams,
+	})
+}
+
 func CreateTeam(c *gin.Context) {
-	var team pojo.Team
-	if err := c.ShouldBindJSON(&team); err != nil {
+	userId, _ := c.Get("userId")
+	userIdInt := userId.(int)
+	var reqBody CreateTeamRequestBody
+	if err := c.ShouldBindJSON(&reqBody); err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "提交了错误的表单"))
 		return
+	}
+	team := pojo.Team{
+		TeamName:        reqBody.TeamName,
+		TeamDescription: reqBody.TeamDescription,
+		LeaderId:        uint(userIdInt),
+		InviteCode:      util.GenerateRandomString(8),
 	}
 	tx := config.MysqlDataBase.Begin()
 	if err := tx.Create(&team).Error; err != nil {
@@ -32,6 +90,7 @@ func CreateTeam(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, dto.ErrorResponse[string](200, "团队创建成功！"))
 }
+
 func UpdateTeam(c *gin.Context) {
 	userId, _ := c.Get("userId")
 	var reqBody pojo.TeamUpdateBody

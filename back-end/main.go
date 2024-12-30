@@ -19,7 +19,15 @@ func main() {
 	printBanner()
 	config.InitMysqlDataBase()
 	//config.InitRedis("localhost:9999", "131598", 0)
-	config.MysqlDataBase.AutoMigrate(&pojo.User{}, &pojo.ImageUpload{}, &pojo.Team{}, &pojo.JoinRequest{})
+	config.MysqlDataBase.AutoMigrate(
+		&pojo.User{},
+		&pojo.ImageUpload{},
+		&pojo.Team{},
+		&pojo.JoinRequest{},
+		&pojo.Project{},
+		&pojo.Character{},
+		&pojo.CharacterRelationShip{},
+	)
 	app := gin.Default()
 	app.Use(route.CorsHandler())
 	route.RegisterRoutes(app)
@@ -49,3 +57,20 @@ func printBanner() {
 		fmt.Printf("读取文件时发生错误: %v\n", err)
 	}
 }
+
+//func AiTest() {
+//	//userInfo := util.Message{
+//	//	Role:    "user",
+//	//	Content: "写一个白雪公主大战奥特曼的故事",
+//	//}
+//	message := []util.Message{}
+//	resp, _ := util.ChatHandler(util.ChatRequest{
+//		Model:       "deepseek-chat",
+//		Messages:    message,
+//		Prompt:      "你是一个编剧",
+//		Question:    "写一个白雪公主大战奥特曼的故事",
+//		Temperature: 1.5,
+//	})
+//	jsonStr, _ := json.Marshal(resp)
+//	fmt.Printf(string(jsonStr))
+//}
