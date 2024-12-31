@@ -6,6 +6,17 @@ meta {
 
 post {
   url: http://localhost:8080/api/user/updateInfo
-  body: none
+  body: json
   auth: none
+}
+
+headers {
+  Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJ1c2VybmFtZSI6ImZseWluc2t5IiwiZXhwIjoxNzM1NzgxODMzLCJpYXQiOjE3MzUxNzcwMzN9.P__NfDezuwOMOhtIUszv4w_gsBmahWsz7G1ZB7_1Gyk
+}
+
+body:json {
+  {
+    "username":"flyinsky",
+    "Avatar": ""
+  }
 }

@@ -1,7 +1,7 @@
 <script setup>
 import {onMounted, reactive, ref} from "vue";
-import axios from "axios";
-import {get} from "@/util/request.js";
+import {get, post} from "@/util/request.js";
+import {message} from "ant-design-vue";
 
 const options = reactive({
   myTeam: []
@@ -14,6 +14,53 @@ const fetchMyTeam = () => {
 }
 onMounted(() => {
   fetchMyTeam()
+})
+const selectPeople = reactive({
+  tagsData: [
+    "儿童",
+    "青少年",
+    "大学生",
+    "年轻人",
+    "成年人",
+    "中老年人",
+    "家庭观众",
+    "男性",
+    "女性",
+    "情侣",
+    "科幻迷",
+    "奇幻迷",
+    "历史爱好者",
+    "冒险爱好者",
+    "恐怖爱好者",
+    "喜剧迷",
+    "文艺爱好者",
+    "悬疑迷",
+    "动作片爱好者",
+    "家庭伦理关注者",
+    "教育从业者",
+    "学生",
+    "职场新人",
+    "企业高管",
+    "创业者",
+    "社会活动家",
+    "心理学爱好者",
+    "哲学爱好者",
+    "音乐爱好者",
+    "电影迷",
+    "小说读者",
+    "旅行者",
+    "历史学者",
+    "文化研究者",
+    "游戏玩家",
+    "运动爱好者",
+    "环保主义者",
+    "科技爱好者",
+    "战争历史迷",
+    "未来主义者"
+  ],
+  selectTags: [
+    false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false]
+
 })
 const selectTags = reactive({
   tagsData: [
@@ -70,25 +117,46 @@ const project = reactive({
   resolved: "",
   style: [],
   types: "",
-  market_people: "",
+  market_people: [],
   custom_prompt: "",
   team_id: null,
 });
+const checkProjectValidate = (form) => {
+  // 遍历表单的每个属性进行检查
+  for (const key in form) {
+    if (Object.prototype.hasOwnProperty.call(form, key)) {
+      const value = form[key];
 
+      // 如果是数组类型，确保数组不为空
+      if (Array.isArray(value) && value.length === 0) {
+        message.info(value+"至少选择一个可选类型")
+        return false;
+      }
+
+      // 如果是字符串类型或其他基础类型，确保非空
+      if (typeof value === "string" && value.trim() === "") {
+        message.info(value+"不能为空哦")
+
+        return false;
+      }
+
+      // 如果是 null 类型，也视为未填写
+      if (value === null) {
+        message.info("请选择项目团队")
+        return false;
+      }
+    }
+  }
+
+  // 所有字段都通过了检查，返回 true
+  return true;
+}
 const fields = [
   {
     id: "projectName",
     label: "项目名称",
     model: "project_name",
     placeholder: "键入项目名称",
-    type: "text",
-    required: true
-  },
-  {
-    id: "types",
-    label: "项目类型",
-    model: "types",
-    placeholder: "项目类型...exp:",
     type: "text",
     required: true
   },
@@ -123,28 +191,25 @@ const fields = [
     placeholder: "故事的转折与结局方向...",
     type: "textarea",
     required: true
-  },
-  {
-    id: "目标群众",
-    label: "Market People",
-    model: "market_people",
-    placeholder: "键入目标群众...exp:'老人，儿童，亲子，青春...'",
-    type: "text",
-    required: false
   }
 ];
 
 const typesInput = ref("");
 
 const submitProject = async () => {
-  project.types = typesInput.value.split(",").map((type) => type.trim());
-  try {
-    const response = await axios.post("/api/project/create", project);
-    alert(response.data.message || "Project created successfully!");
-  } catch (error) {
-    console.error(error);
-    alert(error.response?.data?.message || "An error occurred!");
+  if (checkProjectValidate(project)){
+    post('/api/project/createProject',
+        project,
+        (messager, data) => {
+          message.success(messager)
+        },
+        (messager, data) => {
+          message.warning(messager);
+        }, (messager, data) => {
+          message.error(messager, data);
+        })
   }
+
 }
 const handleChange = (tag, checked) => {
   if (checked) {
@@ -152,7 +217,13 @@ const handleChange = (tag, checked) => {
   } else {
     project.style = project.style.filter(t => t !== tag);
   }
-
+};
+const handlePeopleChange = (tag, checked) => {
+  if (checked) {
+    project.market_people.push(tag)
+  } else {
+    project.market_people = project.market_people.filter(t => t !== tag);
+  }
 };
 </script>
 <template>
@@ -189,6 +260,34 @@ const handleChange = (tag, checked) => {
           :required="field.required"
       ></textarea>
     </div>
+    <div>
+      目标群众:
+      <a-checkable-tag
+          class="text-md font-bold ml-[1px] mt-2"
+          v-for="(tag, index) in selectPeople.tagsData"
+          :key="tag"
+          v-model:checked="selectPeople[index]"
+          @change="checked => handlePeopleChange(tag, checked)"
+      >
+        {{ tag }}
+      </a-checkable-tag>
+    </div>
+    <div class="mb-4 mt-4">
+      <span style="margin-right: 8px;">内容类型:</span>
+      <a-radio-group v-model:value="project.types">
+        <a-radio-button value="电影剧本">电影剧本</a-radio-button>
+        <a-radio-button value="短视频脚本">短视频脚本</a-radio-button>
+        <a-radio-button value="剧情短片脚本">剧情短片脚本</a-radio-button>
+        <a-radio-button value="连载小说">连载小说</a-radio-button>
+        <a-radio-button value="喜剧小品剧本">喜剧小品剧本</a-radio-button>
+        <a-radio-button value="Vlog脚本">Vlog脚本</a-radio-button>
+        <a-radio-button value="广告脚本">广告脚本</a-radio-button>
+        <a-radio-button value="商品测评视频脚本">商品测评视频脚本</a-radio-button>
+        <a-radio-button value="品牌故事视频">品牌故事视频</a-radio-button>
+        <a-radio-button value="创意动画脚本">创意动画脚本</a-radio-button>
+        <a-radio-button value="small">电竞或游戏视频脚本</a-radio-button>
+      </a-radio-group>
+    </div>
     <div class="mb-4">
       <span style="margin-right: 8px">风格类型:</span>
       <a-checkable-tag
@@ -220,6 +319,7 @@ const handleChange = (tag, checked) => {
     <button
         type="submit"
         class="btn1 w-full"
+        @click="submitProject"
     >
       创建新项目
     </button>
