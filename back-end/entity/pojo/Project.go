@@ -17,7 +17,7 @@ type Project struct {
 	Style        []string `json:"style" gorm:"type:json"`
 	Types        string   `json:"types" gorm:"type:varchar(40)"`
 	CoverImage   string   `json:"cover_image" binding:"omitempty" gorm:"type:varchar(200)"`
-	MarketPeople string   `json:"market_people" gorm:"type:varchar(20)"`
+	MarketPeople []string `json:"market_people" gorm:"type:json"`
 	CustomPrompt string   `json:"custom_prompt" gorm:"type:varchar(200)"`
 	TeamID       uint     `json:"team_id" gorm:"type:int(11)"`
 	Team         Team     `json:"team" gorm:"foreignKey:TeamID"`
