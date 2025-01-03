@@ -311,10 +311,9 @@ const handlePeopleChange = (tag, checked) => {
         项目团队:
       </label>
       <a-select
-          class="my-auto ml-2"
+          class="my-auto ml-2 w-64"
           ref="select"
           v-model:value="project.team_id"
-          style="width: 120px"
           @focus="focus"
       >
         <a-select-option :value="team.ID" v-for="team in options.myTeam">{{ team.username }}</a-select-option>
