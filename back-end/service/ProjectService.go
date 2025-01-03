@@ -49,7 +49,7 @@ func CreateProject(c *gin.Context) {
 	var project pojo.Project
 	userId, _ := c.Get("userId")
 	if err := c.ShouldBindJSON(&project); err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "请求参数错误"))
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "请求参数错误,错误:"+err.Error()))
 		return
 	}
 	var TeamRequest pojo.JoinRequest

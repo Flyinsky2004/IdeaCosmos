@@ -5,10 +5,11 @@ import (
 	"back-end/entity/dto"
 	"back-end/entity/pojo"
 	"back-end/util"
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	"net/http"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 /**
@@ -21,21 +22,28 @@ type CreateTeamRequestBody struct {
 	TeamName        string `json:"team_name" gorm:"type:varchar(50)"`
 	TeamDescription string `json:"team_description" gorm:"type:varchar(50)"`
 }
+type TeamWithCount struct {
+	pojo.Team
+	MemberCount int `json:"member_count"`
+}
 
+func teamBodyConvertor(teams []pojo.Team) []TeamWithCount {
+	var teamsWithCount []TeamWithCount
+	for _, team := range teams {
+		var count int64
+		config.MysqlDataBase.Model(&pojo.JoinRequest{}).
+			Where("team_id = ? AND status = ?", team.ID, StatusApproved).
+			Count(&count)
+
+		teamsWithCount = append(teamsWithCount, TeamWithCount{
+			Team:        team,
+			MemberCount: int(count) + 1, // +1 for the leader
+		})
+	}
+	return teamsWithCount
+}
 func GetUserTeams(c *gin.Context) {
-	// 从请求中获取 userId 参数（假设通过 JWT 或 Query 参数传递）
-	userIdStr := c.Query("userId") // 示例：从 URL 查询参数中获取
-	if userIdStr == "" {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "用户状态错误"))
-		return
-	}
-
-	userId, err := strconv.ParseUint(userIdStr, 10, 64)
-	if err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "用户状态错误2"))
-		return
-	}
-
+	userId, _ := c.Get("userId")
 	var teams []pojo.Team
 
 	// 子查询：用户创建的团队
@@ -49,7 +57,7 @@ func GetUserTeams(c *gin.Context) {
 		Where("user_id = ? AND status = ?", userId, 1)
 
 	// 查询用户相关的团队
-	err = config.MysqlDataBase.Where("id IN (?) OR id IN (?)", createdTeamsSubQuery, joinedTeamsSubQuery).
+	err := config.MysqlDataBase.Where("id IN (?) OR id IN (?)", createdTeamsSubQuery, joinedTeamsSubQuery).
 		Find(&teams).Error
 
 	if err != nil {
@@ -57,11 +65,8 @@ func GetUserTeams(c *gin.Context) {
 		return
 	}
 
-	// 返回团队信息
-	c.JSON(http.StatusOK, gin.H{
-		"userId": userId,
-		"teams":  teams,
-	})
+	res := teamBodyConvertor(teams)
+	c.JSON(http.StatusOK, dto.SuccessResponse(res))
 }
 
 func CreateTeam(c *gin.Context) {
@@ -88,7 +93,7 @@ func CreateTeam(c *gin.Context) {
 		tx.Rollback()
 		return
 	}
-	c.JSON(http.StatusOK, dto.ErrorResponse[string](200, "团队创建成功！"))
+	c.JSON(http.StatusOK, dto.SuccessResponseWithMessage[string]("团队创建成功！", "团队创建成功！"))
 }
 
 func UpdateTeam(c *gin.Context) {
@@ -133,23 +138,26 @@ func GetMyTeam(c *gin.Context) {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "查询团队信息时发生错误："+err.Error()))
 		return
 	}
-	c.JSON(http.StatusOK, dto.SuccessResponse[[]pojo.Team](teams))
+	res := teamBodyConvertor(teams)
+	c.JSON(http.StatusOK, dto.SuccessResponse(res))
 }
 func GetMyJoinedTeam(c *gin.Context) {
-	var requests []pojo.JoinRequest
+	var teams []pojo.Team
 	offset := c.PostForm("offset")
 	offsetInt, _ := strconv.Atoi(offset)
 	userId, _ := c.Get("userId")
-	if err := config.MysqlDataBase.Preload("Team").
-		Joins("JOIN teams ON join_requests.team_id = teams.id").
-		Where("teams.leader_id = ? AND status = ?", userId, 1).
+
+	if err := config.MysqlDataBase.
+		Joins("JOIN join_requests ON join_requests.team_id = teams.id").
+		Where("join_requests.user_id = ? AND join_requests.status = ?", userId, 1).
 		Offset(offsetInt).
 		Limit(10).
-		Find(&requests).Error; err != nil {
+		Find(&teams).Error; err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取团队信息时发生错误！"))
 		return
 	}
-	c.JSON(http.StatusOK, dto.SuccessResponse[[]pojo.JoinRequest](requests))
+	res := teamBodyConvertor(teams)
+	c.JSON(http.StatusOK, dto.SuccessResponse(res))
 }
 
 const (

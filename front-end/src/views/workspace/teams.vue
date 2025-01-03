@@ -74,6 +74,7 @@ hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:bg-gray-900/5 dark:active:
           <h1 class="text-sm font-bold text-blue-400">创建时间：</h1>
 
           <span class="text-sm">{{ parseDateTime(team.CreatedAt) }}</span>
+          <h1 class="text-sm font-bold text-blue-400">团队人数：{{team.member_count}}/50</h1>
         </div>
         <div class="border border-dashed rounded-xl dark:border-[rgb(118,118,118)] outline-[1px] min-h-56 place-items-center place-content-center text-gray-400
 hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:bg-gray-900/5 dark:active:bg-gray-900/10 cursor-pointer"

@@ -1,7 +1,8 @@
 <script setup>
 import {onMounted, reactive, ref} from "vue";
-import {get, post} from "@/util/request.js";
+import {get, post, postJSON} from "@/util/request.js";
 import {message} from "ant-design-vue";
+import router from "@/router/index.js";
 
 const options = reactive({
   myTeam: []
@@ -134,9 +135,14 @@ const checkProjectValidate = (form) => {
       }
 
       // 如果是字符串类型或其他基础类型，确保非空
-      if (typeof value === "string" && value.trim() === "") {
-        message.info(value+"不能为空哦")
-
+      if (  project.project_name.length > 6 &&
+          project.social_story.length > 6 &&
+          project.start.length > 6 &&
+          project.high_point.length > 6 &&
+          project.resolved.length > 6 &&
+          project.types.length > 6 &&
+          project.custom_prompt.length > 6) {
+        message.info("至少大于6个字符")
         return false;
       }
 
@@ -198,10 +204,11 @@ const typesInput = ref("");
 
 const submitProject = async () => {
   if (checkProjectValidate(project)){
-    post('/api/project/createProject',
+    postJSON('/api/project/createProject',
         project,
         (messager, data) => {
           message.success(messager)
+          router.push("/workspace/projects")
         },
         (messager, data) => {
           message.warning(messager);
@@ -209,7 +216,6 @@ const submitProject = async () => {
           message.error(messager, data);
         })
   }
-
 }
 const handleChange = (tag, checked) => {
   if (checked) {
@@ -289,7 +295,7 @@ const handlePeopleChange = (tag, checked) => {
       </a-radio-group>
     </div>
     <div class="mb-4">
-      <span style="margin-right: 8px">风格类型:</span>
+      <span style="margin-right: 8px">风格类型: </span>
       <a-checkable-tag
           class="text-md font-bold ml-[1px] mt-2"
           v-for="(tag, index) in selectTags.tagsData"
@@ -310,7 +316,6 @@ const handlePeopleChange = (tag, checked) => {
           v-model:value="project.team_id"
           style="width: 120px"
           @focus="focus"
-          @change="handleChange"
       >
         <a-select-option :value="team.ID" v-for="team in options.myTeam">{{ team.username }}</a-select-option>
         <

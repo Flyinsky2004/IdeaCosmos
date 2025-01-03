@@ -1,6 +1,7 @@
 package pojo
 
 import "gorm.io/gorm"
+import "gorm.io/datatypes"
 
 /**
  * @author Flyinsky
@@ -9,18 +10,18 @@ import "gorm.io/gorm"
  */
 type Project struct {
 	gorm.Model
-	ProjectName  string   `json:"project_name" gorm:"type:varchar(50)"`
-	SocialStory  string   `json:"social_story" gorm:"type:varchar(500)"`
-	Start        string   `json:"start" gorm:"type:varchar(400)"`
-	HighPoint    string   `json:"high_point" gorm:"type:varchar(400)"`
-	Resolved     string   `json:"resolved" gorm:"type:varchar(400)"`
-	Style        []string `json:"style" gorm:"type:json"`
-	Types        string   `json:"types" gorm:"type:varchar(40)"`
-	CoverImage   string   `json:"cover_image" binding:"omitempty" gorm:"type:varchar(200)"`
-	MarketPeople []string `json:"market_people" gorm:"type:json"`
-	CustomPrompt string   `json:"custom_prompt" gorm:"type:varchar(200)"`
-	TeamID       uint     `json:"team_id" gorm:"type:int(11)"`
-	Team         Team     `json:"team" gorm:"foreignKey:TeamID"`
+	ProjectName  string         `json:"project_name" gorm:"type:varchar(50)"`
+	SocialStory  string         `json:"social_story" gorm:"type:varchar(500)"`
+	Start        string         `json:"start" gorm:"type:varchar(400)"`
+	HighPoint    string         `json:"high_point" gorm:"type:varchar(400)"`
+	Resolved     string         `json:"resolved" gorm:"type:varchar(400)"`
+	Style        datatypes.JSON `json:"style" gorm:"type:json"`
+	Types        string         `json:"types" gorm:"type:varchar(40)"`
+	CoverImage   string         `json:"cover_image" binding:"omitempty" gorm:"type:varchar(200)"`
+	MarketPeople datatypes.JSON `json:"market_people" gorm:"type:json"`
+	CustomPrompt string         `json:"custom_prompt" gorm:"type:varchar(200)"`
+	TeamID       uint           `json:"team_id" gorm:"type:int(11)"`
+	Team         Team           `json:"team" bind:"omitempty" gorm:"foreignKey:TeamID"`
 }
 type Character struct {
 	gorm.Model
