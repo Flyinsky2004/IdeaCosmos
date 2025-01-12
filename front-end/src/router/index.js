@@ -1,6 +1,7 @@
 import {createRouter, createWebHistory} from 'vue-router'
 import {useUserStore} from "@/stores/user.js";
 import {get} from "@/util/request.js";
+import {message} from "ant-design-vue";
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -49,8 +50,36 @@ const router = createRouter({
                     name: 'teams',
                     path: 'teams',
                     component: () => import('@/views/workspace/teams.vue')
+                },{
+                    name: 'editProject',
+                    path: 'editProject',
+                    component: () => import('@/views/workspace/project/editProjectFramework.vue'),
+                    children:[
+                        {
+                            name:'index',
+                            path: 'index',
+                            component: () => import('@/views/workspace/project/basicInfo.vue')
+                        },{
+                            name:'chapters',
+                            path: 'chapters',
+                            component: () => import('@/views/workspace/project/chapters.vue')
+                        },{
+                            name:'characters',
+                            path: 'characters',
+                            component: () => import('@/views/workspace/project/characters.vue')
+                        },{
+                            name:'export',
+                            path: 'export',
+                            component: () => import('@/views/workspace/project/export.vue')
+                        }
+                    ]
                 }
             ]
+        },
+        {
+            name: 'test',
+            path: '/test',
+            component: () => import('@/views/test.vue')
         }
 
     ],
@@ -69,12 +98,12 @@ router.beforeEach((to, from, next) => {
                 (message, data) => {
                     userStore.login(data)
                     next()
-                }, (message, data) => {
+                }, (messager, data) => {
                     message.info('您还尚未登录，请先登录！');
                     setTimeout(() => {
                         next('/auth/login')
                     }, 2000)
-                }, (message, data) => {
+                }, (messager, data) => {
                     message.info('您还尚未登录，请先登录！');
                     setTimeout(() => {
                         next('/auth/login')

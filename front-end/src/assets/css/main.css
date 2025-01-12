@@ -64,3 +64,79 @@
 .workspace-box{
     @apply bg-slate-50/60 dark:bg-[#242424]/80 border-gray-200 dark:border-[#2b2b2e] shadow-xl dark:shadow-md dark:shadow-[#2a223d] rounded-xl;
 }
+
+.basic-blue-input {
+    @apply px-3 py-2 dark:text-white border dark:border-gray-800 rounded-md shadow-sm focus:outline-none focus:shadow focus:shadow-gray-400 dark:focus:shadow-blue-600 dark:bg-black transition-all;
+}
+
+.basic-success-button {
+    @apply w-fit p-2 rounded-md bg-green-500 hover:bg-green-600 active:bg-green-700 text-white;
+}
+.basic-prinary-button {
+    @apply w-fit p-2 rounded-md bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white;
+}
+.basic-error-button {
+    @apply w-fit p-2 rounded-md bg-red-500 hover:bg-red-600 active:bg-red-700 text-white;
+}
+.basic-info-button {
+    @apply w-fit p-2 rounded-md
+    bg-gray-50 dark:bg-[rgb(36,36,36)] dark:hover:bg-[rgb(32,32,32)] dark:active:bg-[rgb(28,28,28)] hover:bg-gray-200 active:bg-gray-300
+    border-[rgb(226,226,227)] dark:border-[rgb(36,36,36)] border-[1px] text-black dark:text-white;
+}
+.color-mixed-text{
+    @apply bg-gradient-to-r from-[#7cb1e2] via-[#97a1e4] via-[#9a83d4] via-[#a267d5] to-[#ab60df] text-transparent;
+}
+:root {
+    --scrollbar-track-bg: transparent;
+    --scrollbar-thumb-bg: rgba(28, 108, 255, 0.76);  /* gray-400 with 0.5 opacity */
+    --scrollbar-thumb-hover-bg: rgba(28, 108, 255, 0.89);  /* gray-400 with 0.7 opacity */
+}
+
+/* 暗色模式变量 */
+:root.dark {
+    --scrollbar-track-bg: transparent;
+    --scrollbar-thumb-bg: rgb(46, 123, 255,0.8);  /* gray-600 with 0.5 opacity */
+    --scrollbar-thumb-hover-bg: rgba(28, 108, 255, 0.89);  /* gray-500 with 0.7 opacity */
+}
+
+
+/* 全局滚动条样式 */
+::-webkit-scrollbar {
+    @apply w-2;  /* 8px */
+}
+
+/* 滚动条轨道 */
+::-webkit-scrollbar-track {
+    background-color: var(--scrollbar-track-bg);
+}
+
+/* 滚动条滑块 */
+::-webkit-scrollbar-thumb {
+    @apply rounded-full transition-all duration-300 ease-in-out;
+    background-color: var(--scrollbar-thumb-bg);
+}
+
+/* 滚动条滑块悬浮状态 */
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover-bg);
+}
+
+/* Firefox滚动条样式 */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb-bg) var(--scrollbar-track-bg);
+}
+
+/* 去除默认滚动条样式 */
+* {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: thin;  /* Firefox */
+}
+
+/* 设置所有可滚动容器的滚动条样式 */
+.scrollable-container {
+    @apply overflow-auto;
+    /* 使用与全局滚动条相同的样式 */
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb-bg) var(--scrollbar-track-bg);
+}

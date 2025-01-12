@@ -4,7 +4,9 @@ import (
 	"back-end/config"
 	"back-end/entity/pojo"
 	"back-end/route"
+	"back-end/util"
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -30,6 +32,7 @@ func main() {
 		&pojo.CharacterRelationShip{},
 	)
 	app := gin.Default()
+	app.Static("/api/uploads", "./uploads")
 	app.Use(route.CorsHandler())
 	route.RegisterRoutes(app)
 	app.Run(":8080")
@@ -59,19 +62,30 @@ func printBanner() {
 	}
 }
 
-//func AiTest() {
-//	//userInfo := util.Message{
-//	//	Role:    "user",
-//	//	Content: "写一个白雪公主大战奥特曼的故事",
-//	//}
-//	message := []util.Message{}
-//	resp, _ := util.ChatHandler(util.ChatRequest{
-//		Model:       "deepseek-chat",
-//		Messages:    message,
-//		Prompt:      "你是一个编剧",
-//		Question:    "写一个白雪公主大战奥特曼的故事",
-//		Temperature: 1.5,
-//	})
-//	jsonStr, _ := json.Marshal(resp)
-//	fmt.Printf(string(jsonStr))
-//}
+func AiTest() {
+	//prompt := "A futuristic city with flying cars at sunset"
+	//baseURL := "https://api1.zhtec.xyz"
+	//apiKey := "sk-SwmvMY9looEOO7KcEd1a18D8Ad8b413c8c019809586cB842"
+	//
+	//imageURL, err := util.GenerateImage(prompt, baseURL, apiKey)
+	//if err != nil {
+	//	fmt.Printf("Error generating image: %v\n", err)
+	//	return
+	//}
+	//
+	//fmt.Printf("Generated image URL: %s\n", imageURL)
+	//userInfo := util.Message{
+	//	Role:    "user",
+	//	Content: "写一个白雪公主大战奥特曼的故事",
+	//}
+	message := []util.Message{}
+	resp, _ := util.ChatHandler(util.ChatRequest{
+		Model:       "deepseek-chat",
+		Messages:    message,
+		Prompt:      "你是一个编剧",
+		Question:    "写一个白雪公主大战奥特曼的故事",
+		Temperature: 1.5,
+	})
+	jsonStr, _ := json.Marshal(resp)
+	fmt.Printf(string(jsonStr))
+}

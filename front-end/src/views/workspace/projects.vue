@@ -4,6 +4,8 @@ import {onMounted, reactive} from "vue";
 import {get} from "@/util/request.js";
 import {parseDateTime} from "@/util/common.js";
 import router from "@/router/index.js";
+import {useProjectStore} from "@/stores/project.js";
+import {imagePrefix} from "@/util/VARRIBLES.js";
 
 const options = reactive({
   projects: [],
@@ -26,6 +28,12 @@ const moveIn = (id) => {
 const moveOut = () => {
   options.nowHoverId = -1;
 }
+const projectStore = useProjectStore()
+const enterProject = (project) => {
+  projectStore.setProject(project)
+  localStorage.setItem("project", JSON.stringify(project))
+  router.push('/workspace/editProject/index')
+}
 </script>
 
 <template>
@@ -41,16 +49,29 @@ const moveOut = () => {
 hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:bg-gray-900/5 dark:active:bg-gray-900/10 cursor-pointer"
              @mouseover="moveIn(project.ID)" @mouseleave="moveOut()">
           <div class="p-2" v-if="options.nowHoverId !== project.ID">
+            <div class="w-full h-80 border theme-border rounded-xl">
+              <div v-if="project.cover_image === ''" class="w-full h-full flex bg-slate-50/20 dark:bg-[#242424]/50 rounded-xl">
+                <div class="mx-auto my-auto place-items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 ">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
+                  </svg>
+                  暂无封面
+                </div>
+              </div>
+              <img class="h-full w-auto border theme-border rounded-xl" :src="imagePrefix+project.cover_image" v-else alt="用户头像"/>
+            </div>
+            <h1 class="text-2xl text-blue-500">#{{ project.ID }}{{ project.project_name }}</h1>
+            <h1 class="text-sm text-blue-600">项目团队:{{ project.team.username }}</h1>
+          </div>
+          <div @click="enterProject(project)"
+              class="flex flex-col w-full h-full animate__animated animate__fadeIn animate__faster p-2
+          bg-gray-100/10 active:bg-gray-200/90 dark:bg-gray-950/10 dark:active:bg-gray-950/15 cursor-pointer" v-else>
             <h1 class="text-2xl text-blue-500">#{{ project.ID }}{{ project.project_name }}</h1>
             <h1 class="text-sm text-blue-600">项目团队:{{ project.team.username }}</h1>
             <h1 class="text-sm font-bold text-blue-400">项目简介：</h1>
             <h1 class="text-sm">{{ project.social_story }}...</h1>
             <h1 class="text-sm font-bold text-blue-400">创建时间：</h1>
             <span class="text-sm">{{ parseDateTime(project.CreatedAt) }}</span>
-          </div>
-          <div class="flex w-full h-full animate__animated animate__fadeIn animate__faster
-          bg-gray-100/50 active:bg-gray-200/90 dark:bg-gray-950/10 dark:active:bg-gray-950/15 cursor-pointer" v-else>
-
             <span class="mx-auto my-auto flex flex-nowrap">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                    stroke="currentColor" class="size-5">
@@ -61,14 +82,30 @@ hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:bg-gray-900/5 dark:active:
               进入项目空间</span>
           </div>
         </div>
-        <div class="border border-dashed rounded-xl dark:border-[rgb(118,118,118)] outline-[1px] min-h-56 place-items-center place-content-center text-gray-400
-hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:bg-gray-900/5 dark:active:bg-gray-900/10 cursor-pointer"
+        <div class="border border-dashed rounded-xl dark:border-[rgb(118,118,118)] outline-[1px] min-h-56 place-items-center place-content-center
+hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:dark:bg-gray-950/10 dark:active:bg-gray-900/10 cursor-pointer"
              @click="router.push('/workspace/newProject')">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                stroke="currentColor" class="size-16">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
           </svg>
         </div>
+        <div class="border border-dashed rounded-xl dark:border-[rgb(118,118,118)] outline-[1px] min-h-56 place-items-center place-content-center
+hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:dark:bg-gray-950/10 dark:active:bg-gray-900/10 cursor-pointer"
+             @click="router.push('/workspace/newProject')">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-14">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
+          </svg>
+        </div>
+        <div class="border border-dashed rounded-xl dark:border-[rgb(118,118,118)] outline-[1px] min-h-56 place-items-center place-content-center
+hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:dark:bg-gray-950/10 dark:active:bg-gray-900/10 cursor-pointer"
+             @click="router.push('/workspace/newProject')">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-14">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 7.5h-.75A2.25 2.25 0 0 0 4.5 9.75v7.5a2.25 2.25 0 0 0 2.25 2.25h7.5a2.25 2.25 0 0 0 2.25-2.25v-7.5a2.25 2.25 0 0 0-2.25-2.25h-.75m-6 3.75 3 3m0 0 3-3m-3 3V1.5m6 9h.75a2.25 2.25 0 0 1 2.25 2.25v7.5a2.25 2.25 0 0 1-2.25 2.25h-7.5a2.25 2.25 0 0 1-2.25-2.25v-.75" />
+          </svg>
+        </div>
+
+
       </div>
 
     </div>

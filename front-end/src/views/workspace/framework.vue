@@ -117,7 +117,7 @@ const sideBarMouseLeave = () => {
   >
     <div></div>
     <div :class="useThemeStore().currentTheme === 'light' ? 'lightBKG' : 'darkBKG'"
-        class="h-screen overflow-auto w-full container1 text-theme-switch p-4 relative bg-slate-50 dark:bg-slate-950 before:absolute before:inset-0 before:bg-glow-effect before:blur-3xl before:z-[-1]">
+        class="h-screen overflow-auto w-full container1 text-theme-switch p-2 relative bg-slate-50 dark:bg-slate-950 before:absolute before:inset-0 before:bg-glow-effect before:blur-3xl before:z-[-1]">
       <RouterView/>
     </div>
   </div>

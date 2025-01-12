@@ -26,8 +26,9 @@ type Project struct {
 type Character struct {
 	gorm.Model
 	ProjectID   uint    `json:"project_id" gorm:"type:bigint unsigned"`
-	Name        string  `json:"role_name" gorm:"type:varchar(50)"`
+	Name        string  `json:"name" gorm:"type:varchar(50)"`
 	Description string  `json:"description" gorm:"type:varchar(200)"`
+	Avatar      string  `json:"avatar" binding:"omitempty" gorm:"type:varchar(50)"`
 	Project     Project `json:"project" gorm:"foreignKey:ProjectID"`
 }
 type CharacterRelationShip struct {
@@ -36,5 +37,6 @@ type CharacterRelationShip struct {
 	SecondCharacterID uint      `json:"second_character_id" gorm:"type:bigint unsigned"`
 	FirstCharacter    Character `json:"first_character" gorm:"foreignKey:FirstCharacterID"`
 	SecondCharacter   Character `json:"second_character" gorm:"foreignKey:SecondCharacterID"`
+	Name              string    `json:"name" gorm:"type:varchar(50)"`
 	Content           string    `json:"content" gorm:"type:varchar(200)"`
 }

@@ -4,16 +4,194 @@ import (
 	"back-end/config"
 	"back-end/entity/dto"
 	"back-end/entity/pojo"
+	"back-end/util"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
 
-/**
- * @author Flyinsky
- * @email w2084151024@gmail.com
- * @date 2024/12/29 20:43
- */
-//获取某个用户创建或加入的项目
+// GenerateCharacterAvatar 生成封面
+func GenerateCharacterAvatar(c *gin.Context) {
+	characterId := c.PostForm("character_id")
+	var character pojo.Character
+	err := config.MysqlDataBase.Where("id = ?", characterId).First(&character).Error
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "没有找到对应角色"))
+		return
+	}
+	var project pojo.Project
+	err = config.MysqlDataBase.Where("id = ?", character.ProjectID).First(&project).Error
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "没有找到对应项目"))
+		return
+	}
+	prompt := "生成" + project.Types + "的角色海报，角色名称叫:" + character.Name + "角色介绍:" + character.Description + "这部作品的风格：" + project.Style.String() + "社会背景：" + project.SocialStory + "剧情初始：" + project.Start + "剧情高潮以及核心：" + project.HighPoint + "最后结局：" + project.Resolved
+	baseURL := "https://api1.zhtec.xyz"
+	apiKey := "sk-SwmvMY9looEOO7KcEd1a18D8Ad8b413c8c019809586cB842"
+	imageURL, err := util.GenerateImage(prompt, baseURL, apiKey)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "绘制海报时发生错误，请稍后重试"+"错误信息:"+err.Error()))
+		return
+	}
+	localName, err := util.DownloadImage(imageURL)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "保存海报时发生错误，请稍后重试 ERR1"+"错误信息:"+err.Error()))
+		return
+	}
+	character.Avatar = localName
+	tx := config.MysqlDataBase.Begin()
+	if err := tx.Save(&character).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "保存海报时发生错误，请稍后重试 ERR2"+"错误信息:"+err.Error()))
+		return
+	}
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "保存海报时发生错误，请稍后重试 ERR3"+"错误信息:"+err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, dto.SuccessResponseWithMessage("角色海报生成成功！", localName))
+}
+
+// CreateCharacterArray 批量创建角色
+func CreateCharacterArray(c *gin.Context) {
+	userId, _ := c.Get("userId")
+	var characters []pojo.Character
+	if err := c.ShouldBindJSON(&characters); err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "请求参数错误"))
+		return
+	}
+	var projectSource pojo.Project
+	if err := config.MysqlDataBase.Where("ID = ?", characters[0].ProjectID).First(&projectSource).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "项目不存在"))
+		return
+	}
+	var TeamRequest pojo.JoinRequest
+	var Team pojo.Team
+	if err := config.MysqlDataBase.Where("id = ?", projectSource.TeamID).First(&Team).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "团队不存在"))
+		return
+	}
+	if Team.LeaderId != uint(userId.(int)) {
+		if err := config.MysqlDataBase.Where("team_id = ? AND user_id = ? AND status = 1", projectSource.TeamID, userId).First(&TeamRequest).Error; err != nil {
+			c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "您尚未加入其项目工作团队"))
+			return
+		}
+	}
+	tx := config.MysqlDataBase.Begin()
+	if err := tx.Create(&characters).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "保存角色信息时发生错误。code : 1"))
+		return
+	}
+	if err := tx.Commit().Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "保存角色信息时发生错误。code : 2"))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponseWithMessage[string]("角色添加成功！", ""))
+}
+
+// GenerateCharacter Ai角色生成
+func GenerateCharacter(c *gin.Context) {
+	projectId := c.PostForm("project_id")
+	var project pojo.Project
+	err := config.MysqlDataBase.Where("id = ?", projectId).First(&project).Error
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "没有找到对应项目"))
+		return
+	}
+	var characters []pojo.Character
+	err = config.MysqlDataBase.Where("project_id = ?", projectId).Find(&characters).Error
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "寻找已有的角色时发生错误"))
+		return
+	}
+	var characterStr string
+	for _, character := range characters {
+		characterStr += character.Name + ":" + character.Description + ";"
+	}
+	prompt := "受众群体为:" + project.MarketPeople.String() + "现有的角色(可能为空，表示没有角色),请不要给出已有的角色:" + characterStr +
+		"内容风格为:" + project.Style.String() + "已有剧情以;隔开：social_story:" + project.SocialStory + ";start" + project.Start + ";high_point" + project.HighPoint + ";resolved" + project.Resolved
+	var message = []util.Message{}
+
+	res, err := util.ChatHandler(util.ChatRequest{
+		Model:    "deepseek-chat",
+		Messages: message,
+		Prompt: "你是一个" + project.Types + "角色设计师，我会提供现有的：社会背景(social_story),开始情景(start),高潮和冲突(high_point)和解决结局(resolved),你需要基于给出的剧情设计角色。最后，你需要返回一个json数组，包含生成的所有角色,角色属性如下，属性名为括号中的英文单词:" +
+			"姓名(name),描述(description)，对角色的描述包括但不限于性别，人物背景，经历...",
+		Question:    prompt,
+		Temperature: 1.5,
+	})
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "生成时发生错误，请重试"))
+		return
+	}
+	c.JSON(http.StatusOK, dto.SuccessResponse(res))
+}
+
+// GenerateInfo 补全信息
+func GenerateInfo(c *gin.Context) {
+	projectId := c.PostForm("project_id")
+	var project pojo.Project
+	err := config.MysqlDataBase.Where("id = ?", projectId).First(&project).Error
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "没有找到对应项目"))
+		return
+	}
+	prompt := "受众群体为:" + project.MarketPeople.String() + "内容风格为:" + project.Style.String() + "已有剧情以;隔开：social_story:" + project.SocialStory + ";start" + project.Start + ";high_point" + project.HighPoint + ";resolved" + project.Resolved
+	var message = []util.Message{}
+
+	res, err := util.ChatHandler(util.ChatRequest{
+		Model:       "deepseek-chat",
+		Messages:    message,
+		Prompt:      "你是一个" + project.Types + "补全师，我会提供现有的：社会背景(social_story),开始情景(start),高潮和冲突(high_point)和解决结局(resolved),你需要基于给出的剧情丰富内容，注意这只是故事大概，无需细化，每个属性最多400字。最后，你需要返回一个json,属性名称是括号中的英文单词。",
+		Question:    prompt,
+		Temperature: 1.5,
+	})
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "生成时发生错误，请重试"))
+		return
+	}
+	c.JSON(http.StatusOK, dto.SuccessResponse(res))
+}
+
+// GenerateProjectCover 生成封面
+func GenerateProjectCover(c *gin.Context) {
+	projectId := c.PostForm("project_id")
+	var project pojo.Project
+	err := config.MysqlDataBase.Where("id = ?", projectId).First(&project).Error
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "没有找到对应项目"))
+		return
+	}
+	prompt := "生成" + project.Types + "的封面，其风格为" + project.Style.String() + "社会背景：" + project.SocialStory + "剧情初始：" + project.Start + "剧情高潮以及核心：" + project.HighPoint + "最后结局：" + project.Resolved
+	baseURL := "https://api1.zhtec.xyz"
+	apiKey := "sk-SwmvMY9looEOO7KcEd1a18D8Ad8b413c8c019809586cB842"
+	imageURL, err := util.GenerateImage(prompt, baseURL, apiKey)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "生成封面时发生错误，请稍后重试"+"错误信息:"+err.Error()))
+		return
+	}
+	localName, err := util.DownloadImage(imageURL)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "保存封面时发生错误，请稍后重试 ERR1"+"错误信息:"+err.Error()))
+		return
+	}
+	project.CoverImage = localName
+	tx := config.MysqlDataBase.Begin()
+	if err := tx.Save(&project).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "保存封面时发生错误，请稍后重试 ERR2"+"错误信息:"+err.Error()))
+		return
+	}
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "保存封面时发生错误，请稍后重试 ERR3"+"错误信息:"+err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, dto.SuccessResponseWithMessage("封面生成成功！", localName))
+}
+
+// GetProjectsByUserId 获取某个用户创建或加入的项目
 func GetProjectsByUserId(userId uint) ([]pojo.Project, error) {
 	var projects []pojo.Project
 
@@ -33,7 +211,7 @@ func GetProjectsByUserId(userId uint) ([]pojo.Project, error) {
 	return projects, err
 }
 
-// 获取项目列表
+// GetProjectList 获取项目列表
 func GetProjectList(c *gin.Context) {
 	userId, _ := c.Get("userId")
 	prsm, err := GetProjectsByUserId(uint(userId.(int)))
@@ -124,6 +302,35 @@ func UpdateProject(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, dto.SuccessResponse[string]("更新成功"))
+}
+
+// GetCharacters 获取角色
+func GetCharacters(c *gin.Context) {
+	userId, _ := c.Get("userId")
+	projectId := c.PostForm("project_id")
+	var projectSource pojo.Project
+	if err := config.MysqlDataBase.Where("ID = ?", projectId).First(&projectSource).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "项目不存在"))
+		return
+	}
+	var TeamRequest pojo.JoinRequest
+	var Team pojo.Team
+	if err := config.MysqlDataBase.Where("id = ?", projectSource.TeamID).First(&Team).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "团队不存在"))
+		return
+	}
+	if Team.LeaderId != uint(userId.(int)) {
+		if err := config.MysqlDataBase.Where("team_id = ? AND user_id = ? AND status = 1", projectSource.TeamID, userId).First(&TeamRequest).Error; err != nil {
+			c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "您尚未加入其项目工作团队"))
+			return
+		}
+	}
+	var Characters []pojo.Character
+	if err := config.MysqlDataBase.Where("project_id = ?", projectId).Find(&Characters).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](501, "查询数据库时发生错误"))
+		return
+	}
+	c.JSON(http.StatusOK, dto.SuccessResponse(Characters))
 }
 
 // CreateCharacter 创建角色

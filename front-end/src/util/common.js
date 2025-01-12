@@ -24,4 +24,8 @@ function parseDateTime(dateTimeString) {
     seconds+ "秒";
 }
 
-export {parseDateTime};
+const washJSONStr = (raw) => {
+    return raw.replace(/\\"/g, '"').replace(/\\n/g, '').replace(/^"|"$|\\t/g, '').replace(/```json|```/g, '');
+}
+
+export {parseDateTime,washJSONStr};
