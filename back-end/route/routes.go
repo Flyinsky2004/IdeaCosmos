@@ -50,6 +50,13 @@ func RegisterRoutes(r *gin.Engine) {
 		projectGroup.POST("generateInfo", service.GenerateInfo)
 		projectGroup.POST("generateCharacter", service.GenerateCharacter)
 		projectGroup.POST("generateCharacterAvatar", service.GenerateCharacterAvatar)
-
+		projectGroup.POST("characterRS/create", service.CreateCharacterRelationship)
+		projectGroup.POST("characterRS/update", service.UpdateCharacterRelationship)
+		projectGroup.POST("characterRS/delete", service.DeleteCharacterRelationship)
+		projectGroup.GET("characterRS/getAll", service.GetCharacterRelationships)
+		projectGroup.POST("generateCharacterRS", service.GenerateCharacterRS)
+		projectGroup.POST("generateChapters", service.GenerateChapters)
+		projectGroup.GET("getAllChapters", service.GetAllChapters)
+		projectGroup.POST("createChapterMulti", service.CreateNewChapterMulti)
 	}
 }

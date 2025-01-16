@@ -1,6 +1,8 @@
 package util
 
 import (
+	"back-end/entity/pojo"
+	"fmt"
 	"gopkg.in/gomail.v2"
 	"math/rand"
 	"strings"
@@ -57,4 +59,64 @@ func GenerateRandomString(n int) string {
 		sb.WriteByte(charset[randomIndex])
 	}
 	return sb.String()
+}
+
+// ProjectToString 将 Project 转为字符串，包含所有信息
+func ProjectToString(project pojo.Project) string {
+	return fmt.Sprintf(
+		`%s 名称: %s; 
+社会背景: %s; 
+剧情初始: %s; 
+冲突/高光时刻: %s; 
+解决结局: %s; 
+风格: %s; 
+受众群体: %s;`,
+		project.Types,
+		project.ProjectName,
+		project.SocialStory,
+		project.Start,
+		project.HighPoint,
+		project.Resolved,
+		string(project.Style), // 风格 (JSON 格式)
+		string(project.MarketPeople))
+}
+
+// CharacterToString 将 Character 转为字符串
+func CharacterToString(character pojo.Character) string {
+	return fmt.Sprintf(
+		"角色名称: %s; 描述: %s;",
+		character.Name, character.Description,
+	)
+}
+
+// CharacterRelationShipToString 将 CharacterRelationShip 转为字符串
+func CharacterRelationShipToString(relation pojo.CharacterRelationShip) string {
+	return fmt.Sprintf(
+		"%s和%s的关系是: %s; 详细信息: %s;",
+		relation.FirstCharacter.Name, relation.SecondCharacter.Name, relation.Name, relation.Content,
+	)
+}
+
+// CharacterRelationShipsToString 将 CharacterRelationShip 数组转为字符串
+func CharacterRelationShipsToString(relations []pojo.CharacterRelationShip) string {
+	var result string
+	for _, relation := range relations {
+		result += fmt.Sprintf(
+			"%s和%s的关系是: %s; 详细信息: %s;\n",
+			relation.FirstCharacter.Name, relation.SecondCharacter.Name, relation.Name, relation.Content,
+		)
+	}
+	return result
+}
+
+// CharactersToString 将 Character 数组转为字符串
+func CharactersToString(characters []pojo.Character) string {
+	var result string
+	for _, character := range characters {
+		result += fmt.Sprintf(
+			"角色名称: %s; 描述: %s;\n",
+			character.Name, character.Description,
+		)
+	}
+	return result
 }

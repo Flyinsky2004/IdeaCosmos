@@ -7,7 +7,199 @@ import (
 	"back-end/util"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strconv"
 )
+
+func CreateNewChapterMulti(c *gin.Context) {
+	userId, _ := c.Get("userId")
+	var chapters []pojo.Chapter
+	err := c.ShouldBind(&chapters)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "提交了错误的表单"))
+		return
+	}
+	isValidPermission, err := checkProjectPermission(uint(userId.(int)), chapters[0].ProjectID)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "验证用户权限时发生错误"))
+		return
+	}
+	if !isValidPermission {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "没有权限访问项目"))
+		return
+	}
+	tx := config.MysqlDataBase.Begin()
+	err = tx.Where("project_id = ?", chapters[0].ProjectID).Delete(&pojo.Chapter{}).Error
+	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "清空原有篇章时发生错误"))
+		return
+	}
+	err = tx.Create(&chapters).Error
+	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "保存篇章时发生错误"))
+		return
+	}
+	err = tx.Commit().Error
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "提交篇章时发生错误"))
+		return
+	}
+	c.JSON(http.StatusOK, dto.SuccessResponse("应用成功！"))
+}
+
+// GetAllChapters 获取某个项目的所有章节
+func GetAllChapters(c *gin.Context) {
+	userId, _ := c.Get("userId")
+	projectId := c.Query("project_id")
+	prjIdUint, _ := strconv.ParseUint(projectId, 10, 64)
+	isValidPermission, err := checkProjectPermission(uint(userId.(int)), uint(prjIdUint))
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "验证用户权限时发生错误"))
+		return
+	}
+	if !isValidPermission {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "没有权限访问项目"))
+		return
+	}
+	var project pojo.Project
+	err = config.MysqlDataBase.Where("id = ?", projectId).First(&project).Error
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "没有找到对应项目"))
+		return
+	}
+
+	var chapters []pojo.Chapter
+
+	if err = config.MysqlDataBase.Where("project_id = ?", projectId).Find(&chapters).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "寻找已有的章节时发生错误"))
+		return
+	}
+	c.JSON(http.StatusOK, dto.SuccessResponse(chapters))
+
+}
+
+// GenerateChapters Ai章节生成
+func GenerateChapters(c *gin.Context) {
+	userId, _ := c.Get("userId")
+	projectId := c.PostForm("project_id")
+	prjIdUint, _ := strconv.ParseUint(projectId, 10, 64)
+	isValidPermission, err := checkProjectPermission(uint(userId.(int)), uint(prjIdUint))
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "验证用户权限时发生错误"))
+		return
+	}
+	if !isValidPermission {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "没有权限访问项目"))
+		return
+	}
+	var project pojo.Project
+	err = config.MysqlDataBase.Where("id = ?", projectId).First(&project).Error
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "没有找到对应项目"))
+		return
+	}
+
+	var characters []pojo.Character
+	err = config.MysqlDataBase.Where("project_id = ?", projectId).Find(&characters).Error
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "寻找已有的角色时发生错误1"))
+		return
+	}
+
+	// 查询属于指定项目的角色ID列表
+	var characterIDs []uint
+	if err := config.MysqlDataBase.Model(&pojo.Character{}).Where("project_id = ?", projectId).Pluck("id", &characterIDs).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "查询角色列表时发生错误"))
+		return
+	}
+	var relationships []pojo.CharacterRelationShip
+	// 查询角色关系表中包含这些角色ID的记录
+	if err := config.MysqlDataBase.Preload("FirstCharacter").Preload("SecondCharacter").
+		Where("first_character_id IN ? OR second_character_id IN ?", characterIDs, characterIDs).
+		Find(&relationships).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "查询角色关系时发生错误"))
+		return
+	}
+
+	projectStr := util.ProjectToString(project)
+	characterStr := util.CharactersToString(characters)
+	characterRrelationShipStr := util.CharacterRelationShipsToString(relationships)
+
+	prompt := "项目信息:" + projectStr + "角色信息:" + characterStr + "角色间的关系:" + characterRrelationShipStr
+	var message = []util.Message{}
+
+	res, err := util.ChatHandler(util.ChatRequest{
+		Model:    "deepseek-chat",
+		Messages: message,
+		Prompt: "你是一个" + project.Types + "大纲目录设计师，我会提供现有的剧情，角色信息，角色联系等等，你需要基于给出的剧情以及角色背景设计这个作品的章节目录。最后，你需要返回一个json，包含生成的章节目录信息数组,章节目录属性如下，属性名为括号中的英文单词:" +
+			"章节标题(Title),章节简述(Description)。其中标题不多于50字，简述不多余200字。",
+		Question:    prompt,
+		Temperature: 1.3,
+		MaxTokens:   8000,
+	})
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "生成时发生错误，请重试"))
+		return
+	}
+	c.JSON(http.StatusOK, dto.SuccessResponse(res))
+}
+
+// GenerateCharacterRS Ai角色关系生成
+func GenerateCharacterRS(c *gin.Context) {
+	userId, _ := c.Get("userId")
+	firstCharacterId := c.PostForm("firstCharacterId")
+	secondCharacterId := c.PostForm("secondCharacterId")
+	var firstCharacter, secondCharacter *pojo.Character
+	err := config.MysqlDataBase.Where("id = ?", firstCharacterId).First(&firstCharacter).Error
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "寻找已有的角色时发生错误1"))
+		return
+	}
+	err = config.MysqlDataBase.Where("id = ?", secondCharacterId).First(&secondCharacter).Error
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "寻找已有的角色时发生错误2"))
+		return
+	}
+	if firstCharacter.ProjectID != secondCharacter.ProjectID {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "不允许跨项目生成角色关系。"))
+		return
+	}
+	isValidPermisson, err := checkProjectPermission(uint(userId.(int)), firstCharacter.ProjectID)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "验证用户权限时发生错误"))
+		return
+	}
+	if !isValidPermisson {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "没有权限访问项目"))
+		return
+	}
+	var project pojo.Project
+	err = config.MysqlDataBase.Where("id = ?", firstCharacter.ProjectID).First(&project).Error
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "没有找到对应项目"))
+		return
+	}
+	var characterStr string
+	characterStr = "第一名角色姓名：" + firstCharacter.Name + "其简述为:" + firstCharacter.Description + "第二名角色姓名：" + secondCharacter.Name + "其简述为:" + secondCharacter.Description
+	prompt := "受众群体为:" + project.MarketPeople.String() + "两名角色信息为:" + characterStr +
+		"内容风格为:" + project.Style.String() + "已有剧情以;隔开：social_story:" + project.SocialStory + ";start" + project.Start + ";high_point" + project.HighPoint + ";resolved" + project.Resolved
+	var message = []util.Message{}
+
+	res, err := util.ChatHandler(util.ChatRequest{
+		Model:    "deepseek-chat",
+		Messages: message,
+		Prompt: "你是一个" + project.Types + "角色关系设计师，我会提供现有的：社会背景(social_story),开始情景(start),高潮和冲突(high_point)和解决结局(resolved),你需要基于给出的剧情以及角色背景设计两个角色之间的关系。最后，你需要返回一个json，包含生成的角色关系信息,角色关系属性如下，属性名为括号中的英文单词:" +
+			"关系名称(name),关系内容(content)，关系名称例如合作伙伴,兄弟,父子,同学等等，关系内容即两名角色之间的故事",
+		Question:    prompt,
+		Temperature: 1.5,
+	})
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "生成时发生错误，请重试"))
+		return
+	}
+	c.JSON(http.StatusOK, dto.SuccessResponse(res))
+}
 
 // GenerateCharacterAvatar 生成封面
 func GenerateCharacterAvatar(c *gin.Context) {
@@ -24,7 +216,7 @@ func GenerateCharacterAvatar(c *gin.Context) {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "没有找到对应项目"))
 		return
 	}
-	prompt := "生成" + project.Types + "的角色海报，角色名称叫:" + character.Name + "角色介绍:" + character.Description + "这部作品的风格：" + project.Style.String() + "社会背景：" + project.SocialStory + "剧情初始：" + project.Start + "剧情高潮以及核心：" + project.HighPoint + "最后结局：" + project.Resolved
+	prompt := "生成" + project.Types + "的角色头像，角色名称叫:" + character.Name + "角色介绍:" + character.Description + "这部作品的风格：" + project.Style.String() + "社会背景：" + project.SocialStory + "剧情初始：" + project.Start + "剧情高潮以及核心：" + project.HighPoint + "最后结局：" + project.Resolved
 	baseURL := "https://api1.zhtec.xyz"
 	apiKey := "sk-SwmvMY9looEOO7KcEd1a18D8Ad8b413c8c019809586cB842"
 	imageURL, err := util.GenerateImage(prompt, baseURL, apiKey)
@@ -442,185 +634,205 @@ func UpdateCharacter(c *gin.Context) {
 }
 
 // CreateCharacterRelationship 创建角色关系
-//func CreateCharacterRelationship(c *gin.Context) {
-//	userId, exists := c.Get("userId")
-//	if !exists {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "未登录或用户信息获取失败"))
-//		return
-//	}
-//
-//	var relationship pojo.CharacterRelationShip
-//	if err := c.ShouldBindJSON(&relationship); err != nil {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "请求参数错误"))
-//		return
-//	}
-//
-//	// 验证两个角色是否存在并获取项目ID
-//	var firstChar, secondChar pojo.Character
-//	if err := config.MysqlDataBase.First(&firstChar, relationship.FirstCharacterID).Error; err != nil {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "第一个角色不存在"))
-//		return
-//	}
-//	if err := config.MysqlDataBase.First(&secondChar, relationship.SecondCharacterID).Error; err != nil {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "第二个角色不存在"))
-//		return
-//	}
-//
-//	// 验证两个角色是否属于同一个项目
-//	if firstChar.ProjectID != secondChar.ProjectID {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "两个角色必须属于同一个项目"))
-//		return
-//	}
-//
-//	// 检查权限
-//	hasPermission, err := checkProjectPermission(uint(userId.(int)), firstChar.ProjectID)
-//	if err != nil {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "验证权限时发生错误"))
-//		return
-//	}
-//	if !hasPermission {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "您没有权限创建角色关系"))
-//		return
-//	}
-//
-//	tx := config.MysqlDataBase.Begin()
-//	if err := tx.Create(&relationship).Error; err != nil {
-//		tx.Rollback()
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "创建角色关系失败"))
-//		return
-//	}
-//	if err := tx.Commit().Error; err != nil {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "创建角色关系失败"))
-//		return
-//	}
-//
-//	c.JSON(http.StatusOK, dto.SuccessResponse[pojo.CharacterRelationShip](relationship))
-//}
-//
-//// UpdateCharacterRelationship 更新角色关系
-//func UpdateCharacterRelationship(c *gin.Context) {
-//	userId, exists := c.Get("userId")
-//	if !exists {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "未登录或用户信息获取失败"))
-//		return
-//	}
-//
-//	var relationship pojo.CharacterRelationShip
-//	relationshipId := c.Param("id")
-//
-//	// 获取原有关系信息
-//	if err := config.MysqlDataBase.First(&relationship, relationshipId).Error; err != nil {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "角色关系不存在"))
-//		return
-//	}
-//
-//	// 获取角色信息以验证权限
-//	var character pojo.Character
-//	if err := config.MysqlDataBase.First(&character, relationship.FirstCharacterID).Error; err != nil {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取角色信息失败"))
-//		return
-//	}
-//
-//	// 检查权限
-//	hasPermission, err := checkProjectPermission(uint(userId.(int)), character.ProjectID)
-//	if err != nil {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "验证权限时发生错误"))
-//		return
-//	}
-//	if !hasPermission {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "您没有权限修改角色关系"))
-//		return
-//	}
-//
-//	if err := c.ShouldBindJSON(&relationship); err != nil {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "请求参数错误"))
-//		return
-//	}
-//
-//	tx := config.MysqlDataBase.Begin()
-//	if err := tx.Model(&pojo.CharacterRelationShip{}).
-//		Where("id = ?", relationshipId).
-//		Updates(relationship).Error; err != nil {
-//		tx.Rollback()
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "更新角色关系失败"))
-//		return
-//	}
-//	if err := tx.Commit().Error; err != nil {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "更新角色关系失败"))
-//		return
-//	}
-//
-//	c.JSON(http.StatusOK, dto.SuccessResponse[string]("更新成功"))
-//}
-//
-//// GetProjectCharacters 获取项目下的所有角色
-//func GetProjectCharacters(c *gin.Context) {
-//	userId, exists := c.Get("userId")
-//	if !exists {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "未登录或用户信息获取失败"))
-//		return
-//	}
-//
-//	projectId := c.Param("id")
-//
-//	// 检查权限
-//	hasPermission, err := checkProjectPermission(uint(userId.(int)), uint(projectId))
-//	if err != nil {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "验证权限时发生错误"))
-//		return
-//	}
-//	if !hasPermission {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "您没有权限查看该项目的角色"))
-//		return
-//	}
-//
-//	var characters []pojo.Character
-//	if err := config.MysqlDataBase.Where("project_id = ?", projectId).
-//		Find(&characters).Error; err != nil {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取角色列表失败"))
-//		return
-//	}
-//
-//	c.JSON(http.StatusOK, dto.SuccessResponse[[]pojo.Character](characters))
-//}
-//
-//// GetCharacterRelationships 获取角色的所有关系
-//func GetCharacterRelationships(c *gin.Context) {
-//	userId, exists := c.Get("userId")
-//	if !exists {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "未登录或用户信息获取失败"))
-//		return
-//	}
-//
-//	characterId := c.Param("id")
-//
-//	// 获取角色信息以验证权限
-//	var character pojo.Character
-//	if err := config.MysqlDataBase.First(&character, characterId).Error; err != nil {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "角色不存在"))
-//		return
-//	}
-//
-//	// 检查权限
-//	hasPermission, err := checkProjectPermission(uint(userId.(int)), character.ProjectID)
-//	if err != nil {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "验证权限时发生错误"))
-//		return
-//	}
-//	if !hasPermission {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "您没有权限查看该角色的关系"))
-//		return
-//	}
-//
-//	var relationships []pojo.CharacterRelationShip
-//	if err := config.MysqlDataBase.
-//		Preload("FirstCharacter").
-//		Preload("SecondCharacter").
-//		Where("first_character_id = ? OR second_character_id = ?", characterId, characterId).
-//		Find(&relationships).Error; err != nil {
-//		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取角色关系失败"))
-//		return
-//	}
-//
-//	c.JSON(http.StatusOK, dto.SuccessResponse[[]pojo.CharacterRelationShip](relationships))
-//}
+func CreateCharacterRelationship(c *gin.Context) {
+	userId, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "未登录或用户信息获取失败"))
+		return
+	}
+
+	var relationship pojo.CharacterRelationShip
+	if err := c.ShouldBindJSON(&relationship); err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "请求参数错误"))
+		return
+	}
+	// 验证两个角色是否存在并获取项目ID
+	var firstChar, secondChar pojo.Character
+	if err := config.MysqlDataBase.First(&firstChar, relationship.FirstCharacterID).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "第一个角色不存在"))
+		return
+	}
+	if err := config.MysqlDataBase.First(&secondChar, relationship.SecondCharacterID).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "第二个角色不存在"))
+		return
+	}
+
+	// 验证两个角色是否属于同一个项目
+	if firstChar.ProjectID != secondChar.ProjectID {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "两个角色必须属于同一个项目"))
+		return
+	}
+
+	// 检查权限
+	hasPermission, err := checkProjectPermission(uint(userId.(int)), firstChar.ProjectID)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "验证权限时发生错误"))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "您没有权限创建角色关系"))
+		return
+	}
+
+	tx := config.MysqlDataBase.Begin()
+	if err := tx.Create(&relationship).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "创建角色关系失败"))
+		return
+	}
+	if err := tx.Commit().Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "创建角色关系失败"))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse[pojo.CharacterRelationShip](relationship))
+}
+
+// UpdateCharacterRelationship 更新角色关系
+func UpdateCharacterRelationship(c *gin.Context) {
+	userId, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "未登录或用户信息获取失败"))
+		return
+	}
+
+	var relationship pojo.CharacterRelationShip
+	relationshipId := c.Param("id")
+
+	// 获取原有关系信息
+	if err := config.MysqlDataBase.First(&relationship, relationshipId).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "角色关系不存在"))
+		return
+	}
+
+	// 获取角色信息以验证权限
+	var character pojo.Character
+	if err := config.MysqlDataBase.First(&character, relationship.FirstCharacterID).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取角色信息失败"))
+		return
+	}
+
+	// 检查权限
+	hasPermission, err := checkProjectPermission(uint(userId.(int)), character.ProjectID)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "验证权限时发生错误"))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "您没有权限修改角色关系"))
+		return
+	}
+
+	if err := c.ShouldBindJSON(&relationship); err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "请求参数错误"))
+		return
+	}
+
+	tx := config.MysqlDataBase.Begin()
+	if err := tx.Model(&pojo.CharacterRelationShip{}).
+		Where("id = ?", relationshipId).
+		Updates(relationship).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "更新角色关系失败"))
+		return
+	}
+	if err := tx.Commit().Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "更新角色关系失败"))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse[string]("更新成功"))
+}
+
+// DeleteCharacterRelationship 更新角色关系
+func DeleteCharacterRelationship(c *gin.Context) {
+	userId, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "未登录或用户信息获取失败"))
+		return
+	}
+
+	var relationship pojo.CharacterRelationShip
+	relationshipId := c.Param("id")
+
+	// 获取原有关系信息
+	if err := config.MysqlDataBase.First(&relationship, relationshipId).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "角色关系不存在"))
+		return
+	}
+
+	// 获取角色信息以验证权限
+	var character pojo.Character
+	if err := config.MysqlDataBase.First(&character, relationship.FirstCharacterID).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取角色信息失败"))
+		return
+	}
+
+	// 检查权限
+	hasPermission, err := checkProjectPermission(uint(userId.(int)), character.ProjectID)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "验证权限时发生错误"))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "您没有权限修改角色关系"))
+		return
+	}
+
+	if err := c.ShouldBindJSON(&relationship); err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "请求参数错误"))
+		return
+	}
+
+	tx := config.MysqlDataBase.Begin()
+	if err := tx.Delete(relationship).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "删除角色关系失败"))
+		return
+	}
+	if err := tx.Commit().Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "删除角色关系失败"))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse[string]("删除成功"))
+}
+
+// GetCharacterRelationships 获取角色的所有关系
+func GetCharacterRelationships(c *gin.Context) {
+	userId, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "未登录或用户信息获取失败"))
+		return
+	}
+
+	projectId := c.Query("project_id")
+	prjIdUint, _ := strconv.ParseUint(projectId, 10, 64)
+	// 检查权限
+	hasPermission, err := checkProjectPermission(uint(userId.(int)), uint(prjIdUint))
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "验证权限时发生错误"))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "您没有权限查看该角色的关系"))
+		return
+	}
+
+	// 查询属于指定项目的角色ID列表
+	var characterIDs []uint
+	if err := config.MysqlDataBase.Model(&pojo.Character{}).Where("project_id = ?", projectId).Pluck("id", &characterIDs).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "查询角色列表时发生错误"))
+		return
+	}
+	var relationships []pojo.CharacterRelationShip
+	// 查询角色关系表中包含这些角色ID的记录
+	if err := config.MysqlDataBase.Preload("FirstCharacter").Preload("SecondCharacter").
+		Where("first_character_id IN ? OR second_character_id IN ?", characterIDs, characterIDs).
+		Find(&relationships).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "查询角色关系时发生错误"))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(relationships))
+}

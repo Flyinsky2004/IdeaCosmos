@@ -30,6 +30,8 @@ func main() {
 		&pojo.Project{},
 		&pojo.Character{},
 		&pojo.CharacterRelationShip{},
+		&pojo.Chapter{},
+		&pojo.ChapterVersion{},
 	)
 	app := gin.Default()
 	app.Static("/api/uploads", "./uploads")

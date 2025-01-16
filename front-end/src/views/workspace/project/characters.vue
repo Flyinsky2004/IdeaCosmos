@@ -1,15 +1,17 @@
 <script setup>
 import {onMounted, reactive} from "vue";
-import {post, postJSON} from "@/util/request.js";
+import {get, post, postJSON} from "@/util/request.js";
 import {message} from "ant-design-vue";
 import router from "@/router/index.js";
 import Loader from "@/components/loader.vue";
 import {parseDateTime, washJSONStr} from "@/util/common.js";
 import {imagePrefix} from "@/util/VARRIBLES.js";
+import RelationShipGraph from "@/components/RelationShipGraph.vue";
 
 const project = JSON.parse(localStorage.getItem("project"));
 onMounted(() => {
   fetchCharacters()
+  fetchCharacterRs()
 })
 const options = reactive({
   characters: [],
@@ -17,8 +19,24 @@ const options = reactive({
   generateResults: [],
   currentMoveId: -1,
   isCharacterAvatarGenerating: false,
-  characterGeneratingId: -1
+  characterGeneratingId: -1,
+  isAddRSShow: false,
+  editRSMode: false,
+  currentRS: {},
+  isCharacterRSGenerating: false,
+  characterRSs:[]
 })
+const fetchCharacterRs = () => {
+  get('/api/project/characterRS/getAll', {
+    project_id: project.ID
+  }, (messager, data) => {
+    options.characterRSs = data
+  }, (messager, data) => {
+    message.warning(messager)
+  }, (messager, data) => {
+    message.error(messager)
+  })
+}
 const fetchCharacters = () => {
   post('/api/project/getCharacters', {
     project_id: project.ID
@@ -93,6 +111,51 @@ const generateAvatar = async (character) => {
 
   })
 }
+const editRSForm = reactive({
+  first_character_id: 1,
+  second_character_id: 2,
+  name: '',
+  content: ''
+})
+const generateCharacterRS = () => {
+  if (editRSForm.first_character_id === editRSForm.second_character_id) {
+    message.info("角色选择不合法")
+    return
+  }
+  options.isCharacterRSGenerating = true;
+  post('/api/project/generateCharacterRS', {
+    firstCharacterId: editRSForm.first_character_id,
+    secondCharacterId: editRSForm.second_character_id,
+  }, (messager, data) => {
+    const raw = data.choices[0].message.content
+    const washed = JSON.parse(washJSONStr(raw))
+    editRSForm.name = washed.name
+    editRSForm.content = washed.content
+    options.isCharacterRSGenerating = false
+    message.success("生成成功")
+  }, (messageer, data) => {
+    message.warning(messageer)
+  }, (messageer, data) => {
+    message.error(messageer)
+  })
+}
+const submitCharacterRS = () => {
+  if (options.editRSMode) {
+
+  } else {
+    postJSON('/api/project/characterRS/create', editRSForm,
+        (messager, data) => {
+          message.success(messager)
+          options.isAddRSShow = false
+          fetchCharacterRs()
+        }, (messageer, data) => {
+          message.warning(messageer)
+        }, (messageer, data) => {
+          message.error(messageer)
+        })
+  }
+}
+
 </script>
 
 <template>
@@ -111,7 +174,7 @@ hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:bg-gray-900/5 dark:active:
                 <button class="transparent-button">清空封面</button>
               </div>
             </template>
-            <div class="w-full h-full border theme-border rounded-xl">
+            <div class="w-full aspect-square border theme-border rounded-xl">
               <div v-if="options.isCharacterAvatarGenerating && options.characterGeneratingId === character.ID"
                    class="w-full h-full flex bg-slate-50/20 dark:bg-[#242424]/50 rounded-xl">
                 <div class="mx-auto my-auto place-items-center">
@@ -119,7 +182,7 @@ hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:bg-gray-900/5 dark:active:
                   <span class="font-sans font-bold">根据人物设定绘画中...</span>
                 </div>
               </div>
-              <div v-if="character.avatar === ''"
+              <div v-else-if="character.avatar === ''"
                    class="w-full aspect-square flex bg-slate-50/20 dark:bg-[#242424]/50 rounded-xl">
                 <div class="mx-auto my-auto place-items-center">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
@@ -217,9 +280,45 @@ hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:bg-gray-900/5 dark:active:
 
   </div>
   <div class="mt-3 mb-3">
-    <h1 class="text-3xl text-blue-500">角色管理</h1>
+    <h1 class="text-3xl text-blue-500">角色联系</h1>
     <div class="flex flex-nowrap gap-2">
-      <button class="basic-success-button my-auto" @click="addNewRealationShip">
+      <a-modal v-model:open="options.isAddRSShow" title="角色关系维护" @ok="submitCharacterRS()">
+        <div class="grid grid-cols-[1fr,2fr] w-fit gap-2 place-items-center">
+          <span>角色1：</span>
+          <a-select
+              ref="select"
+              v-model:value="editRSForm.first_character_id"
+              style="width: 120px"
+              @focus="focus"
+          >
+            <a-select-option v-for="character in options.characters" :value="character.ID">{{ character.name }}
+            </a-select-option>
+          </a-select>
+          <span>角色2：</span>
+          <a-select
+              ref="select"
+              v-model:value="editRSForm.second_character_id"
+              style="width: 120px"
+              @focus="focus"
+          >
+            <a-select-option v-for="character in options.characters" :value="character.ID">{{ character.name }}
+            </a-select-option>
+          </a-select>
+          <span>关系名称:</span> <input v-model="editRSForm.name" class="input1">
+          <span>人物故事:</span>
+        </div>
+        <textarea v-model="editRSForm.content" class="input1 mt-2"/>
+        <div class="flex w-full">
+          <div class="flex-grow"></div>
+          <button :disabled="options.isCharacterRSGenerating" class="color-mixed-button" @click="generateCharacterRS">
+            {{ options.isCharacterRSGenerating ? '正在努力思考中...' : 'AI生成' }}
+          </button>
+        </div>
+        {{ editRSForm }}
+
+      </a-modal>
+      <button class="basic-success-button my-auto"
+              @click="options.editRSMode = false;options.currentRS = {};options.isAddRSShow = true">
         添加关系
       </button>
       <button class="basic-prinary-button my-auto" @click="editRealationShip">
@@ -229,7 +328,9 @@ hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:bg-gray-900/5 dark:active:
         删除关系
       </button>
     </div>
+    <RelationShipGraph :relationships="options.characterRSs" class="border theme-border rounded-xl mt-6"/>
   </div>
+
 </template>
 
 <style scoped>

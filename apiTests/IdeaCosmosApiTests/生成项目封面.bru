@@ -1,0 +1,19 @@
+meta {
+  name: 生成项目封面
+  type: http
+  seq: 7
+}
+
+post {
+  url: http://localhost:8080/api/project/generateInfo
+  body: formUrlEncoded
+  auth: none
+}
+
+headers {
+  Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJ1c2VybmFtZSI6ImZseWluc2t5IiwiZXhwIjoxNzM2NTEyNjI1LCJpYXQiOjE3MzU5MDc4MjV9.eyW8e7nVWmWCzB0LvrWfrkZynUZQDgfRj28ounMOHBA
+}
+
+body:form-urlencoded {
+  project_id: 1
+}

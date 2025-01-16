@@ -38,5 +38,23 @@ type CharacterRelationShip struct {
 	FirstCharacter    Character `json:"first_character" gorm:"foreignKey:FirstCharacterID"`
 	SecondCharacter   Character `json:"second_character" gorm:"foreignKey:SecondCharacterID"`
 	Name              string    `json:"name" gorm:"type:varchar(50)"`
-	Content           string    `json:"content" gorm:"type:varchar(200)"`
+	Content           string    `json:"content" gorm:"type:varchar(1000)"`
+}
+
+type Chapter struct {
+	gorm.Model
+	ProjectID   uint   `json:"project_id" gorm:"type:bigint unsigned"`
+	Tittle      string `json:"Title" gorm:"type:varchar(50)"`
+	Description string `json:"Description" gorm:"type:varchar(200)"`
+	VersionID   uint   `json:"version_id" bind:"omitempty" gorm:"type:bigint unsigned"`
+}
+
+type ChapterVersion struct {
+	gorm.Model
+	UserId           uint    `json:"user_id" gorm:"type:bigint unsigned"`
+	ChapterID        uint    `json:"chapter_id" gorm:"type:bigint unsigned"`
+	Chapter          Chapter `json:"chapter" gorm:"foreignKey:ChapterID"`
+	User             User    `json:"user" gorm:"foreignKey:UserId"`
+	Content          string  `json:"content" gorm:"type:text"`
+	OptimizedContent string  `json:"optimized_content" gorm:"type:varchar(1000)"`
 }

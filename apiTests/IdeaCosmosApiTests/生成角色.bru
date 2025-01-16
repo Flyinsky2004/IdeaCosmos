@@ -1,0 +1,23 @@
+meta {
+  name: 生成角色
+  type: http
+  seq: 8
+}
+
+post {
+  url: http://localhost:8080/api/project/generateChapters?project_id=1
+  body: formUrlEncoded
+  auth: none
+}
+
+params:query {
+  project_id: 1
+}
+
+headers {
+  Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJ1c2VybmFtZSI6ImZseWluc2t5IiwiZXhwIjoxNzM3NTMwOTk4LCJpYXQiOjE3MzY5MjYxOTh9.sxmkX_24LdLyAIKfq5VxgM4BXOYK2XYagLXKAEkhuFM
+}
+
+body:form-urlencoded {
+  project_id: 1
+}
