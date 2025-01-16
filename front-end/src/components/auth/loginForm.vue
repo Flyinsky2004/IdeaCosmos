@@ -39,7 +39,7 @@ const loginHandler = () => {
     </div>
     <div class="w-full grid grid-cols-[1fr,2fr] mt-2 place-items-center">
       <span class="text-xl">密码:</span>
-      <input class="input1" v-model="loginForm.password"/>
+      <input type="password" class="input1" v-model="loginForm.password"/>
     </div>
     <div class="w-full flex mt-4">
       <button class="mx-auto btn1" @click="loginHandler()">

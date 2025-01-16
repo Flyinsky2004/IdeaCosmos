@@ -68,6 +68,10 @@ const router = createRouter({
                             path: 'characters',
                             component: () => import('@/views/workspace/project/characters.vue')
                         },{
+                            name:'writing',
+                            path: 'writing',
+                            component: () => import('@/views/workspace/project/writing.vue')
+                        },{
                             name:'export',
                             path: 'export',
                             component: () => import('@/views/workspace/project/export.vue')

@@ -62,6 +62,10 @@ const rejectChapter = () => {
   options.generatedChapters = []
   message.info("已清空生成章节目录。")
 }
+const goToWriting = (chapter) => {
+  localStorage.setItem("chapter",JSON.stringify(chapter))
+  router.push('/workspace/editProject/writing')
+}
 </script>
 
 <template>
@@ -102,6 +106,9 @@ hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:dark:bg-gray-950/10 dark:a
           <a-popover title="操作" placement="topLeft">
             <template #content>
               <div class="flex flex-nowrap gap-2">
+                <button class="basic-success-button" @click="goToWriting(gc)">
+                  创作篇章
+                </button>
                 <button class="basic-prinary-button">编辑篇章</button>
                 <button class="basic-error-button">删除篇章</button>
               </div>
