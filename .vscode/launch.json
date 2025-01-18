@@ -10,6 +10,15 @@
             "request": "launch",
             "mode": "auto",
             "program": "back-end"
+        },
+        {
+            "name": "front-end",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": ["run", "dev"],
+            "cwd": "${workspaceFolder}/front-end",
+            "console": "integratedTerminal"
         }
     ]
 }
