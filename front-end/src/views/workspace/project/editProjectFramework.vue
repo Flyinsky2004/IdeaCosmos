@@ -48,7 +48,7 @@ const routeList = [
   <div class="h-full w-full flex flex-col gap-2 workspace-box animate__animated animate__fadeIn font-serif p-2">
     <div class="mx-auto flex flex-nowrap gap-4 p-2 rounded-full bg-[#f1f4fa] dark:bg-gray-950/10 w-fit border theme-border">
       <div :class="route.path === rote.path ? 'bg-[#e8e5f9] dark:bg-[#282633]':''"
-           class="flex flex-nowrap hover:bg-[#e8e5f9] dark:hover:bg-[#282633] p-2 rounded-full cursor-pointer"
+           class="flex flex-nowrap gap-2 hover:bg-[#e8e5f9] dark:hover:bg-[#282633] p-2 rounded-full cursor-pointer"
            @click="router.push(route.path)"
            v-for="route in routeList">
         <div class="my-auto" v-html="route.icon"/>

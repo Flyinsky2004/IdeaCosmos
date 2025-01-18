@@ -51,7 +51,7 @@ type Client struct {
 func NewClient(apiKey string) *Client {
 	return &Client{
 		apiKey:  apiKey,
-		baseURL: "https://api.deepseek.com/chat/completions",
+		baseURL: "https://api.deepseek.com/beta/chat/completions",
 	}
 }
 

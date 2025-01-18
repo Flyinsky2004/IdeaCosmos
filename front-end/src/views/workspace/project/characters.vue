@@ -197,7 +197,7 @@ hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:bg-gray-900/5 dark:active:
                    alt="用户头像"/>
             </div>
           </a-popover>
-          <h1 class="text-2xl text-blue-500">角色姓名:{{ character.name }}</h1>
+          <h1 class="text-2xl text-blue-500 mt-2">{{ character.name }}</h1>
           <h1 class="text-sm">角色介绍:{{ character.description }}</h1>
         </div>
         <div @click="enterProject(project)"

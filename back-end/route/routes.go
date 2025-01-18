@@ -58,5 +58,7 @@ func RegisterRoutes(r *gin.Engine) {
 		projectGroup.POST("generateChapters", service.GenerateChapters)
 		projectGroup.GET("getAllChapters", service.GetAllChapters)
 		projectGroup.POST("createChapterMulti", service.CreateNewChapterMulti)
+		projectGroup.POST("generateNewChapterVersion", service.GenerateNewChapterVersion)
+		projectGroup.GET("getCurrentChapterVersion", service.GetCurrentChapterVersion)
 	}
 }

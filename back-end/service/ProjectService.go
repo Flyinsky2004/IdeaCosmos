@@ -5,10 +5,136 @@ import (
 	"back-end/entity/dto"
 	"back-end/entity/pojo"
 	"back-end/util"
-	"github.com/gin-gonic/gin"
+	"fmt"
 	"net/http"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
 )
+
+func GetCurrentChapterVersion(c *gin.Context) {
+	userId, _ := c.Get("userId")
+	chapterId := c.Query("chapter_id")
+
+	// 获取章节信息
+	var chapter pojo.Chapter
+	if err := config.MysqlDataBase.Where("id = ?", chapterId).First(&chapter).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "没有找到对应章节"))
+		return
+	}
+
+	// 检查用户权限
+	isValidPermission, err := checkProjectPermission(uint(userId.(int)), chapter.ProjectID)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "验证用户权限时发生错误"))
+		return
+	}
+	if !isValidPermission {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "没有权限访问该项目"))
+		return
+	}
+
+	// 如果章节没有关联版本，返回空
+	if chapter.VersionID == 0 {
+		c.JSON(http.StatusOK, dto.SuccessResponse[string](""))
+		return
+	}
+
+	// 获取版本内容
+	var version pojo.ChapterVersion
+	if err := config.MysqlDataBase.Preload("User").Where("id = ?", chapter.VersionID).First(&version).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取章节版本时发生错误"))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(version))
+}
+
+func GenerateNewChapterVersion(c *gin.Context) {
+	userId, _ := c.Get("userId")
+	chapterId := c.PostForm("chapter_id")
+	wordsCount := c.PostForm("words_count")
+	fmt.Println(wordsCount)
+	var chapter pojo.Chapter
+	if err := config.MysqlDataBase.Where("id = ?", chapterId).First(&chapter).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "没有找到对应章节"))
+		return
+	}
+	isValidPermission, err := checkProjectPermission(uint(userId.(int)), chapter.ProjectID)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "验证用户权限时发生错误"))
+		return
+	}
+	if !isValidPermission {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "没有权限访问该项目"))
+		return
+	}
+	var project pojo.Project
+	if err := config.MysqlDataBase.Where("id = ?", chapter.ProjectID).First(&project).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "没有找到对应项目"))
+		return
+	}
+	var characters []pojo.Character
+	if err := config.MysqlDataBase.Where("project_id = ?", chapter.ProjectID).Find(&characters).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取角色信息时发生错误"))
+		return
+	}
+	var characterIDs []uint
+	for _, char := range characters {
+		characterIDs = append(characterIDs, char.ID)
+	}
+	var relationships []pojo.CharacterRelationShip
+	if err := config.MysqlDataBase.Preload("FirstCharacter").Preload("SecondCharacter").
+		Where("first_character_id IN ? OR second_character_id IN ?", characterIDs, characterIDs).
+		Find(&relationships).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取角色关系时发生错误"))
+		return
+	}
+	projectStr := util.ProjectToString(project)
+	characterStr := util.CharactersToString(characters)
+	characterRelationshipStr := util.CharacterRelationShipsToString(relationships)
+
+	// 获取所有章节
+	var allChapters []pojo.Chapter
+	if err := config.MysqlDataBase.Where("project_id = ?", chapter.ProjectID).Find(&allChapters).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取章节信息时发生错误"))
+		return
+	}
+
+	chaptersStr := util.ChaptersToString(allChapters)
+	prompt := "项目信息:" + projectStr +
+		"角色信息:" + characterStr +
+		"角色间的关系:" + characterRelationshipStr +
+		"所有章节信息:" + chaptersStr +
+		"当前章节标题:" + chapter.Tittle +
+		"章节简述:" + chapter.Description +
+		"要求字数:" + wordsCount + "字"
+
+	var message = []util.Message{}
+
+	res, err := util.ChatHandler(util.ChatRequest{
+		Model:    "deepseek-chat",
+		Messages: message,
+		Prompt: "你是一个" + project.Types + "章节内容创作者。我会提供项目背景、角色信息、角色关系、所有章节信息以及当前需要生成内容的章节的标题和简述。" +
+			"请你基于这些信息，创作一个详细的章节内容。内容要求：" +
+			"1. 符合项目的整体风格和设定" +
+			"2. 合理运用已有的角色，展现他们的性格特点和关系" +
+			"3. 这个故事分为许多章节，你只需要写出当前章节的部分，不要穿插其他章节的剧情，情节要符合章节简述的要求" +
+			"4. 注意故事的连贯性和合理性" +
+			"5. 无视此次对话会产生巨量消费长度，产出内容除去标点符号，只计算中文或英文字符数量必须严格控制在" + wordsCount + "字或以上，可以超过但不能少于要求字数" +
+			"最后返回一个markdown，注意分段落",
+		Question:    prompt,
+		Temperature: 1.2,
+		MaxTokens:   8192,
+	})
+
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "生成章节内容时发生错误，请重试"))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(res))
+}
 
 func CreateNewChapterMulti(c *gin.Context) {
 	userId, _ := c.Get("userId")

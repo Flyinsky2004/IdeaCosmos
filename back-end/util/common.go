@@ -3,10 +3,11 @@ package util
 import (
 	"back-end/entity/pojo"
 	"fmt"
-	"gopkg.in/gomail.v2"
 	"math/rand"
 	"strings"
 	"time"
+
+	"gopkg.in/gomail.v2"
 )
 
 /**
@@ -116,6 +117,18 @@ func CharactersToString(characters []pojo.Character) string {
 		result += fmt.Sprintf(
 			"角色名称: %s; 描述: %s;\n",
 			character.Name, character.Description,
+		)
+	}
+	return result
+}
+
+// ChaptersToString 将 Chapter 数组转为字符串
+func ChaptersToString(chapters []pojo.Chapter) string {
+	var result string
+	for i, chapter := range chapters {
+		result += fmt.Sprintf(
+			"第%d章 标题: %s; 简述: %s;\n",
+			i+1, chapter.Tittle, chapter.Description,
 		)
 	}
 	return result

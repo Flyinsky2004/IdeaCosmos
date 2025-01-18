@@ -33,7 +33,7 @@ div{
 }
 
 .color-mixed-button {
-    @apply bg-gradient-to-r from-[#7cb1e2] via-[#97a1e4] via-[#9a83d4] via-[#a267d5] to-[#ab60df] text-white font-bold py-2 px-6 rounded-lg shadow-lg hover:opacity-90 active:opacity-80 focus:ring-4 focus:ring-transparent;
+    @apply bg-gradient-to-r from-[#7cb1e2] via-[#97a1e4] via-[#9a83d4] via-[#a267d5] to-[#ab60df] text-white font-bold p-2 rounded-lg shadow-lg hover:opacity-90 active:opacity-80 focus:ring-4 focus:ring-transparent w-fit;
 }
 
 .transparent-button {
