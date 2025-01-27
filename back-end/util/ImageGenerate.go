@@ -30,7 +30,8 @@ type Dalle3Request struct {
 // Dalle3Response represents the response from DALL-E 3 API
 type Dalle3Response struct {
 	Data []struct {
-		URL string `json:"url"`
+		URL            string `json:"url"`
+		Revised_Prompt string `json:"revised_prompt"`
 	} `json:"data"`
 }
 
@@ -91,6 +92,59 @@ func GenerateImage(prompt, baseURL, apiKey string) (string, error) {
 	// Return the first image URL
 	return dalleResponse.Data[0].URL, nil
 }
+
+// type GenerateResultData struct {
+// 	Prompt string `json:"revised_prompt"`
+// 	Url    string `json:"url"`
+// }
+// type GenerateResult struct {
+// 	Created int                  `json:"created"`
+// 	Data    []GenerateResultData `json:"data"`
+// }
+
+// func GenerateImageVAPI(prompt string) (string, error) {
+// 	url := "https://api.gpt.ge/v1/images/generations"
+// 	method := "POST"
+
+// 	payload := strings.NewReader(`{
+// 		"model": "dall-e-3",
+// 		"prompt": ` + prompt + `,
+// 		"n": 1,
+// 		"size": "1024x1024"
+// 	}`)
+
+// 	client := &http.Client{}
+// 	req, err := http.NewRequest(method, url, payload)
+
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	req.Header.Add("Content-Type", "application/json")
+// 	req.Header.Add("Authorization", "Bearer sk-hySadfvZfjMxfWx12b302e8c832c4aEeBf7e44C5138bE860")
+// 	res, err := client.Do(req)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	defer res.Body.Close()
+
+// 	body, err := ioutil.ReadAll(res.Body)
+// 	if err != nil {
+// 		return "", err
+// 	}
+
+// 	var result GenerateResult
+// 	err = json.Unmarshal(string(body), &result)
+// 	if err != nil {
+// 		return "", err
+// 	}
+
+// 	if len(result.Data) == 0 {
+// 		return "", fmt.Errorf("no image generated")
+// 	}
+
+// 	return result.Data[0].Url, nil
+// }
+
 func DownloadImage(imageURL string) (string, error) {
 	// Create the /uploads directory if it doesn't exist
 	uploadDir := "uploads"

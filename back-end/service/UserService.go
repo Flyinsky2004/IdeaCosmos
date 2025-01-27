@@ -4,8 +4,9 @@ import (
 	"back-end/config"
 	"back-end/entity/dto"
 	"back-end/entity/pojo"
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 /**
@@ -27,7 +28,7 @@ func GetMyInfo(c *gin.Context) {
 
 type UpdateUserRequest struct {
 	Username string `json:"username" binding:"omitempty,max=50"`
-	Avatar   string `json:"avatar" binding:"omitempty,max=80"`
+	Avatar   string `json:"avatar" binding:"omitempty,max=200"`
 }
 
 func UpdateUserInfo(c *gin.Context) {
@@ -59,7 +60,6 @@ func UpdateUserInfo(c *gin.Context) {
 		return
 	}
 	if err := tx.Commit().Error; err != nil {
-		tx.Rollback()
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "在保存用户信息时出错！详细信息:"+err.Error()))
 		return
 	}

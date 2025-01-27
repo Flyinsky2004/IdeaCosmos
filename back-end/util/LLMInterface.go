@@ -20,7 +20,7 @@ type ChatRequest struct {
 	MaxTokens   int       `json:"max_tokens,omitempty"`
 	Prompt      string    `json:"prompt,omitempty"`
 	Question    string    `json:"question,omitempty"`
-	Temperature float64   `json:"temperature,omitempty"`
+	Temperature float32   `json:"temperature,omitempty"`
 }
 
 // Message 定义消息结构
@@ -56,7 +56,7 @@ func NewClient(apiKey string) *Client {
 }
 
 // SendMessage 发送消息并获取 AI 回复
-func (c *Client) SendMessage(messages []Message, model string, maxToken int, temperature float64) (ChatResponse, error) {
+func (c *Client) SendMessage(messages []Message, model string, maxToken int, temperature float32) (ChatResponse, error) {
 	// 构建请求体
 	reqBody := ChatRequest{
 		Model:       model,
@@ -111,7 +111,7 @@ func (c *Client) SendMessage(messages []Message, model string, maxToken int, tem
 	//	return chatResp.Choices[0].Message.Content, nil
 	//}
 
-	return ChatResponse{}, fmt.Errorf("no response from API")
+	//return ChatResponse{}, fmt.Errorf("no response from API")
 }
 
 func ChatHandler(request ChatRequest) (ChatResponse, error) {

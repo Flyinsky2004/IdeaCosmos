@@ -4,8 +4,8 @@ meta {
   seq: 4
 }
 
-post {
-  url: http://localhost:8080/api/user/updateInfo
+get {
+  url: http://localhost:8080/ws/chat
   body: json
   auth: none
 }
@@ -16,7 +16,8 @@ headers {
 
 body:json {
   {
-    "username":"flyinsky",
-    "Avatar": ""
+    "query": "Hello, how are you?",
+    "context": "Some previous context"
   }
+  
 }

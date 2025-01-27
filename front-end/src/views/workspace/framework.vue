@@ -6,7 +6,7 @@ import router from "@/router/index.js";
 import {message} from "ant-design-vue";
 import {useRoute} from "vue-router";
 import {useThemeStore} from "@/stores/theme.js";
-
+import { BACKEND_DOMAIN } from "@/util/VARRIBLES";
 const [messageApi, contextHolder] = message.useMessage();
 const route = useRoute()
 const userStore = useUserStore()
@@ -75,7 +75,7 @@ const sideBarMouseLeave = () => {
       @mouseleave="sideBarMouseLeave"
   >
     <div class="w-full bg-[#ffffff] dark:bg-[rgb(18,18,18)] p-2 rounded-xl text-center">
-      <img :src="userStore.user.avator" alt="用户头像">
+      <img class="rounded-xl" :src="BACKEND_DOMAIN + userStore.user.avatar" alt="用户头像">
       <span v-if="options.sideExpand" class="text-sm font-bold">{{ userStore.user.username }}</span>
     </div>
     <div class="mt-2 theme-transition grid w-full my-auto  p-2 rounded-xl

@@ -9,35 +9,25 @@
 <style scoped>
 /* HTML: <div class="loader"></div> */
 .loader {
-  width: 60px;
+  width: 50px;
   aspect-ratio: 1;
-  background:
-      linear-gradient(#f77825 0 0),
-      linear-gradient(#f77825 0 0),
-      linear-gradient(#f77825 0 0),
-      linear-gradient(#f77825 0 0),
-      linear-gradient(#60B99A 0 0),
-      linear-gradient(#60B99A 0 0),
-      linear-gradient(#554236 0 0),
-      linear-gradient(#554236 0 0);
-  background-size: 25% 25%,25% 25%,25% 25%,25% 25%,25% 50%,25% 50%,50% 25%,50% 25%;
-  background-repeat: no-repeat;
-  animation: l20 1.5s infinite alternate;
+  display: grid;
+  --c:#CFF09E 25%,#79BD9A 0 50%,#0B486B 0 75%,#CFF09E 0;
 }
-@keyframes l20 {
-  0%,
-  10%  {background-position:
-      calc(1*100%/3) calc(1*100%/3),calc(2*100%/3) calc(1*100%/3),calc(1*100%/3) calc(2*100%/3),calc(2*100%/3) calc(2*100%/3),
-      calc(1*100%/3) 50%,calc(2*100%/3) 50%,50% calc(1*100%/3),50% calc(2*100%/3)}
-  33%  {background-position:
-      calc(0*100%/3) calc(0*100%/3),calc(3*100%/3) calc(0*100%/3),calc(0*100%/3) calc(3*100%/3),calc(3*100%/3) calc(3*100%/3),
-      calc(1*100%/3) 50%,calc(2*100%/3) 50%,50% calc(1*100%/3),50% calc(2*100%/3)}
-  66%  {background-position:
-      calc(0*100%/3) calc(0*100%/3),calc(3*100%/3) calc(0*100%/3),calc(0*100%/3) calc(3*100%/3),calc(3*100%/3) calc(3*100%/3),
-      calc(0*100%/3) 50%,calc(3*100%/3) 50%,50% calc(1*100%/3),50% calc(2*100%/3)}
-  90%,
-  100%  {background-position:
-      calc(0*100%/3) calc(0*100%/3),calc(3*100%/3) calc(0*100%/3),calc(0*100%/3) calc(3*100%/3),calc(3*100%/3) calc(3*100%/3),
-      calc(0*100%/3) 50%,calc(3*100%/3) 50%,50% calc(0*100%/3),50% calc(3*100%/3)}
+.loader:before,
+.loader:after {
+  content: "";
+  background:
+    linear-gradient( 90deg,var(--c)),
+    linear-gradient(-90deg,var(--c));
+  background-size: 400% 52%;
+  background-repeat: no-repeat;
+  animation: l13 2s infinite; 
+}
+@keyframes l13 {
+  0%       {background-position:calc(3*100%/3) 0,calc(0*100%/3) 100%}
+  23%,33%  {background-position:calc(2*100%/3) 0,calc(1*100%/3) 100%}
+  56%,66%  {background-position:calc(1*100%/3) 0,calc(2*100%/3) 100%}
+  90%,100% {background-position:calc(0*100%/3) 0,calc(3*100%/3) 100%}
 }
 </style>

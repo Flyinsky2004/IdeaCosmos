@@ -5,13 +5,9 @@ meta {
 }
 
 post {
-  url: http://localhost:8080/api/project/generateChapters?project_id=1
+  url: http://localhost:8080/api/project/generateNewChapterVersion
   body: formUrlEncoded
   auth: none
-}
-
-params:query {
-  project_id: 1
 }
 
 headers {
@@ -19,5 +15,6 @@ headers {
 }
 
 body:form-urlencoded {
-  project_id: 1
+  chapter_id: 32
+  words_count: 60000
 }
