@@ -4,15 +4,10 @@ import ThemeSwitcher from "@/components/button/ThemeSwitcher.vue";
 import logo from '@/assets/img/logo.webp'
 import router from "@/router/index.js";
 import LoginForm from "@/components/auth/loginForm.vue";
-import { initializeKinesis } from "@amineyarman/kinesis";
-import {onMounted} from "vue";
 import example from '@/assets/img/example.png'
 import {useRoute} from "vue-router";
 import RegisterForm from "@/components/auth/registerForm.vue";
 const route = useRoute()
-onMounted(() => {
-  initializeKinesis();
-})
 const topBarItems = [
   {
     name: '作品画廊',

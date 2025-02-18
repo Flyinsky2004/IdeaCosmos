@@ -8,7 +8,7 @@ import (
 
 const (
 	// OpenAIKey OpenAI API密钥
-	OpenAIKey = "sk-46feaaa3624147ff9505aa8a8518dd6c"
+	OpenAIKey = "sk-47c813ac284940f6bd25e0eb8b7537fc"
 	// OpenAIBaseURL OpenAI API基础URL
 	OpenAIBaseURL = "https://api.deepseek.com/v1"
 )
@@ -43,7 +43,6 @@ func StreamChatCompletion(ctx context.Context, request ChatRequest) (<-chan Stre
 			Model:       request.Model,
 			Messages:    messages,
 			Temperature: request.Temperature,
-			MaxTokens:   request.MaxTokens,
 			Stream:      true,
 		},
 	)

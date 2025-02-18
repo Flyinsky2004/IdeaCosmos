@@ -51,7 +51,7 @@ type Client struct {
 func NewClient(apiKey string) *Client {
 	return &Client{
 		apiKey:  apiKey,
-		baseURL: "https://api.deepseek.com/beta/chat/completions",
+		baseURL: "https://api.deepseek.com/v1/chat/completions",
 	}
 }
 
@@ -115,7 +115,7 @@ func (c *Client) SendMessage(messages []Message, model string, maxToken int, tem
 }
 
 func ChatHandler(request ChatRequest) (ChatResponse, error) {
-	client := NewClient("sk-46feaaa3624147ff9505aa8a8518dd6c")
+	client := NewClient("sk-47c813ac284940f6bd25e0eb8b7537fc")
 	systemMessage := []Message{
 		{
 			Role:    "system",

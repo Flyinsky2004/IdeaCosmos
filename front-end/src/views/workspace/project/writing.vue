@@ -192,6 +192,8 @@ const confirmAdoptContent = () => {
           options.currentVersion = data;
           chapter.version_id = data.ID;
           localStorage.setItem("chapter", JSON.stringify(chapter));
+          fetchCurrentChapterVersion();
+          fetchVersionHistory();
         },
         (messager) => {
           message.warning(messager);

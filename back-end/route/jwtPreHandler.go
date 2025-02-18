@@ -15,10 +15,10 @@ import (
 func CorsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "http://localhost:5173") // 或者指定具体的域名，如 http://example.com
-		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
-		c.Header("Access-Control-Expose-Headers", "Content-Length, Content-Type")
-		c.Header("Access-Control-Allow-Credentials", "true") // 是否允许携带 cookie
+		c.Header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, Authorization")
+		c.Header("Access-Control-Expose-Headers", "Content-Length")
+		c.Header("Access-Control-Allow-Credentials", "true")
 
 		// 对于预检请求，直接返回状态码 204
 		if c.Request.Method == http.MethodOptions {

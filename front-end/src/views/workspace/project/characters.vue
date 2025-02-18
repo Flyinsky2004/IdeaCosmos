@@ -1,5 +1,5 @@
 <script setup>
-import {onMounted, reactive} from "vue";
+import {onMounted, reactive, computed} from "vue";
 import {get, post, postJSON} from "@/util/request.js";
 import {message} from "ant-design-vue";
 import router from "@/router/index.js";
@@ -7,12 +7,14 @@ import Loader from "@/components/loader.vue";
 import {parseDateTime, washJSONStr} from "@/util/common.js";
 import {imagePrefix} from "@/util/VARRIBLES.js";
 import RelationShipGraph from "@/components/RelationShipGraph.vue";
+import SpinLoader from "@/components/spinLoader.vue";
 
 const project = JSON.parse(localStorage.getItem("project"));
 onMounted(() => {
   fetchCharacters()
   fetchCharacterRs()
 })
+
 const options = reactive({
   characters: [],
   isCharactersGenerating: false,
@@ -25,6 +27,13 @@ const options = reactive({
   currentRS: {},
   isCharacterRSGenerating: false,
   characterRSs:[]
+})
+const hoverState = reactive({
+  characterId: null,
+  showActions: false
+})
+const sortedCharacters = computed(() => {
+  return [...options.characters].sort((a, b) => a.name.localeCompare(b.name))
 })
 const fetchCharacterRs = () => {
   get('/api/project/characterRS/getAll', {
@@ -159,178 +168,231 @@ const submitCharacterRS = () => {
 </script>
 
 <template>
-  <div>
-    <h1 class="text-3xl text-blue-500">角色管理</h1>
-    <div class="w-full grid grid-cols-5 gap-2">
-      <div v-for="character in options.characters" class="border rounded-xl dark:border-[rgb(118,118,118)] outline-[1px] min-h-56 text-theme-switch
-hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:bg-gray-900/5 dark:active:bg-gray-900/10 cursor-pointer"
-           @mouseover="moveIn(character.ID)" @mouseleave="moveOut()">
-        <div class="p-2" v-if="options.nowHoverId !== project.ID">
-          <a-popover title="编辑作品封面">
-            <template #content>
-              <div class="flex flex-nowrap gap-2">
-                <button class="color-mixed-button" @click="generateAvatar(character)">AI生成</button>
-                <button class="btn1">手动上传</button>
-                <button class="transparent-button">清空封面</button>
-              </div>
-            </template>
-            <div class="w-full aspect-square border theme-border rounded-xl">
-              <div v-if="options.isCharacterAvatarGenerating && options.characterGeneratingId === character.ID"
-                   class="w-full h-full flex bg-slate-50/20 dark:bg-[#242424]/50 rounded-xl">
-                <div class="mx-auto my-auto place-items-center">
-                  <loader class="m-2"/>
-                  <span class="font-sans font-bold">根据人物设定绘画中...</span>
-                </div>
-              </div>
-              <div v-else-if="character.avatar === ''"
-                   class="w-full aspect-square flex bg-slate-50/20 dark:bg-[#242424]/50 rounded-xl">
-                <div class="mx-auto my-auto place-items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
-                    <path fill-rule="evenodd"
-                          d="M18.685 19.097A9.723 9.723 0 0 0 21.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 0 0 3.065 7.097A9.716 9.716 0 0 0 12 21.75a9.716 9.716 0 0 0 6.685-2.653Zm-12.54-1.285A7.486 7.486 0 0 1 12 15a7.486 7.486 0 0 1 5.855 2.812A8.224 8.224 0 0 1 12 20.25a8.224 8.224 0 0 1-5.855-2.438ZM15.75 9a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"
-                          clip-rule="evenodd"/>
-                  </svg>
-                  暂无角色画像
-                </div>
-              </div>
-              <img class="h-full w-auto border theme-border rounded-xl" :src="imagePrefix+character.avatar" v-else
-                   alt="用户头像"/>
-            </div>
-          </a-popover>
-          <h1 class="text-2xl text-blue-500 mt-2">{{ character.name }}</h1>
-          <h1 class="text-sm">角色介绍:{{ character.description }}</h1>
-        </div>
-        <div @click="enterProject(project)"
-             class="flex flex-col w-full h-full animate__animated animate__fadeIn animate__faster p-2
-          bg-gray-100/10 active:bg-gray-200/90 dark:bg-gray-950/10 dark:active:bg-gray-950/15 cursor-pointer" v-else>
-          <h1 class="text-2xl text-blue-500">#{{ project.ID }}{{ project.project_name }}</h1>
-          <h1 class="text-sm text-blue-600">项目团队:{{ project.team.username }}</h1>
-          <h1 class="text-sm font-bold text-blue-400">项目简介：</h1>
-          <h1 class="text-sm">{{ project.social_story }}...</h1>
-          <h1 class="text-sm font-bold text-blue-400">创建时间：</h1>
-          <span class="text-sm">{{ parseDateTime(project.CreatedAt) }}</span>
-          <span class="mx-auto my-auto flex flex-nowrap">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                   stroke="currentColor" class="size-5">
-  <path stroke-linecap="round" stroke-linejoin="round"
-        d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 0 1-2.448-2.448 14.9 14.9 0 0 1 .06-.312m-2.24 2.39a4.493 4.493 0 0 0-1.757 4.306 4.493 4.493 0 0 0 4.306-1.758M16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"/>
-</svg>
-
-              进入项目空间</span>
-        </div>
-      </div>
-      <div class="border border-dashed rounded-xl dark:border-[rgb(118,118,118)] outline-[1px] min-h-56 place-items-center place-content-center text-gray-400
-hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:dark:bg-gray-950/10 dark:active:bg-gray-900/10 cursor-pointer"
-           @click="router.push('/workspace/newProject')">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-             stroke="currentColor" class="size-16">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-        </svg>
-      </div>
-      <div v-if="options.generateResults.length === 0" @click="generateCharacter"
-           class="border border-dashed rounded-xl dark:border-[rgb(118,118,118)] outline-[1px] min-h-56 place-items-center place-content-center
-hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:dark:bg-gray-950/10 dark:active:bg-gray-900/10 cursor-pointer">
-        <div v-if="!options.isCharactersGenerating">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
-               class="size-7 dark:text-purple-400">
-            <path fill-rule="evenodd"
-                  d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.466 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5ZM16.5 15a.75.75 0 0 1 .712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 0 1 0 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 0 1-1.422 0l-.395-1.183a1.5 1.5 0 0 0-.948-.948l-1.183-.395a.75.75 0 0 1 0-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0 1 16.5 15Z"
-                  clip-rule="evenodd"/>
+  <div class="max-w-7xl mx-auto p-6 space-y-8">
+    <!-- 页面标题 -->
+    <div class="flex justify-between items-center">
+      <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
+        角色管理
+      </h1>
+      <div class="flex items-center gap-4">
+        <button 
+          @click="generateCharacter"
+          :disabled="options.isCharactersGenerating"
+          class="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:opacity-90 transition-all flex items-center gap-2"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-        </div>
-        <div v-else class="text-center place-items-center">
-          <loader class="mb-4"/>
-          <span>正在理解你的项目...</span>
-        </div>
+          AI 生成角色
+          <SpinLoader v-if="options.isCharactersGenerating" class="ml-2 h-5 w-5 mx-auto my-auto"/>
+        </button>
       </div>
     </div>
-    <div class="bg-green-300/10 rounded-xl">
-      <div class="w-full grid grid-cols-5 gap-2 mt-2 p-2 rounded-xl"
-           v-if="options.generateResults.length !== 0">
-        <div class="border rounded-xl dark:border-[rgb(118,118,118)] outline-[1px] min-h-56 text-theme-switch
-hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:bg-gray-900/5 dark:active:bg-gray-900/10 cursor-pointer p-2"
-             v-for="character in options.generateResults">
-          <div class="w-full h-80 border theme-border rounded-xl">
-            <div class="w-full h-full flex bg-slate-50/20 dark:bg-[#242424]/50 rounded-xl">
-              <div class="mx-auto my-auto place-items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
-                  <path fill-rule="evenodd"
-                        d="M18.685 19.097A9.723 9.723 0 0 0 21.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 0 0 3.065 7.097A9.716 9.716 0 0 0 12 21.75a9.716 9.716 0 0 0 6.685-2.653Zm-12.54-1.285A7.486 7.486 0 0 1 12 15a7.486 7.486 0 0 1 5.855 2.812A8.224 8.224 0 0 1 12 20.25a8.224 8.224 0 0 1-5.855-2.438ZM15.75 9a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"
-                        clip-rule="evenodd"/>
-                </svg>
-                暂无角色画像
-              </div>
+
+    <!-- 角色列表 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <!-- 现有角色卡片 -->
+      <div 
+        v-for="character in sortedCharacters" 
+        :key="character.ID"
+        class="group bg-white dark:bg-zinc-900 rounded-xl border theme-border overflow-hidden hover:shadow-lg dark:hover:shadow-zinc-800/20 transition-all duration-300"
+        @mouseenter="hoverState.characterId = character.ID"
+        @mouseleave="hoverState.characterId = null"
+      >
+        <!-- 角色头像区域 -->
+        <div class="relative aspect-square">
+          <div v-if="options.isCharacterAvatarGenerating && options.characterGeneratingId === character.ID"
+               class="absolute inset-0 bg-gray-900/60 flex items-center justify-center backdrop-blur-sm">
+            <div class="text-center">
+              <loader class="mx-auto mb-2"/>
+              <span class="text-sm text-white">根据人物设定绘画中...</span>
             </div>
           </div>
-          <h1 class="text-2xl text-blue-500">角色姓名:{{ character.name }}</h1>
-          <h1 class="text-sm">角色介绍:{{ character.description }}</h1>
+          <div v-else-if="!character.avatar" class="h-full flex items-center justify-center bg-gray-100 dark:bg-zinc-800">
+            <div class="text-center text-gray-400">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M18.685 19.097A9.723 9.723 0 0021.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 003.065 7.097A9.716 9.716 0 0012 21.75a9.716 9.716 0 006.685-2.653zm-12.54-1.285A7.486 7.486 0 0112 15a7.486 7.486 0 015.855 2.812A8.224 8.224 0 0112 20.25a8.224 8.224 0 01-5.855-2.438zM15.75 9a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+              </svg>
+              暂无角色画像
+            </div>
+          </div>
+          <img 
+            v-else 
+            :src="imagePrefix + character.avatar" 
+            :alt="character.name"
+            class="w-full h-full object-cover"
+          />
+          
+          <!-- 悬浮操作按钮 -->
+          <div 
+            v-show="hoverState.characterId === character.ID"
+            class="absolute inset-0 bg-black/60 flex items-center justify-center gap-4 animate__animated animate__fadeIn animate__faster"
+          >
+            <button 
+              @click="generateAvatar(character)"
+              class="px-3 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+              </svg>
+              AI 重绘
+            </button>
+            <button class="px-3 py-1.5 bg-white text-gray-700 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+              </svg>
+              上传
+            </button>
+          </div>
+        </div>
+
+        <!-- 角色信息 -->
+        <div class="p-4">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">{{ character.name }}</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-3">{{ character.description }}</p>
         </div>
       </div>
-      <div class="flex flex-nowrap gap-2 mb-2 p-2 place-items-center" v-if="options.generateResults.length !== 0">
-        <span>您是否要采用生成的角色?</span>
-        <button class="basic-prinary-button my-auto" @click="applyResult">
-          采用
-        </button>
-        <button class="basic-error-button" @click="dropResult">
-          丢弃
-        </button>
+
+      <!-- AI 生成的角色建议 -->
+      <div v-if="options.generateResults.length > 0" class="col-span-full">
+        <div class="bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800 p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-medium text-green-800 dark:text-green-400">AI 生成的角色建议</h2>
+            <div class="flex items-center gap-2">
+              <button 
+                @click="applyResult"
+                class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                应用建议
+              </button>
+              <button 
+                @click="dropResult"
+                class="px-4 py-2 border border-red-200 dark:border-red-800 text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                放弃建议
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div 
+              v-for="character in options.generateResults"
+              :key="character.name"
+              class="bg-white dark:bg-zinc-800 rounded-lg p-4"
+            >
+              <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">{{ character.name }}</h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400">{{ character.description }}</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-
-  </div>
-  <div class="mt-3 mb-3">
-    <h1 class="text-3xl text-blue-500">角色联系</h1>
-    <div class="flex flex-nowrap gap-2">
-      <a-modal v-model:open="options.isAddRSShow" title="角色关系维护" @ok="submitCharacterRS()">
-        <div class="grid grid-cols-[1fr,2fr] w-fit gap-2 place-items-center">
-          <span>角色1：</span>
-          <a-select
-              ref="select"
-              v-model:value="editRSForm.first_character_id"
-              style="width: 120px"
-              @focus="focus"
+    <!-- 角色关系图谱 -->
+    <div class="space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-2xl font-bold text-blue-500">角色关系</h2>
+        <div class="flex items-center gap-2">
+          <button 
+            @click="options.isAddRSShow = true"
+            class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
           >
-            <a-select-option v-for="character in options.characters" :value="character.ID">{{ character.name }}
-            </a-select-option>
-          </a-select>
-          <span>角色2：</span>
-          <a-select
-              ref="select"
-              v-model:value="editRSForm.second_character_id"
-              style="width: 120px"
-              @focus="focus"
-          >
-            <a-select-option v-for="character in options.characters" :value="character.ID">{{ character.name }}
-            </a-select-option>
-          </a-select>
-          <span>关系名称:</span> <input v-model="editRSForm.name" class="input1">
-          <span>人物故事:</span>
-        </div>
-        <textarea v-model="editRSForm.content" class="input1 mt-2"/>
-        <div class="flex w-full">
-          <div class="flex-grow"></div>
-          <button :disabled="options.isCharacterRSGenerating" class="color-mixed-button" @click="generateCharacterRS">
-            {{ options.isCharacterRSGenerating ? '正在努力思考中...' : 'AI生成' }}
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            添加关系
           </button>
         </div>
-        {{ editRSForm }}
+      </div>
 
-      </a-modal>
-      <button class="basic-success-button my-auto"
-              @click="options.editRSMode = false;options.currentRS = {};options.isAddRSShow = true">
-        添加关系
-      </button>
-      <button class="basic-prinary-button my-auto" @click="editRealationShip">
-        编辑关系
-      </button>
-      <button class="basic-error-button my-auto" @click="manageRealationShip">
-        删除关系
-      </button>
+      <!-- 关系图谱组件 -->
+      <div class="bg-white dark:bg-zinc-900 rounded-xl border theme-border p-6">
+        <RelationShipGraph 
+          :relationships="options.characterRSs" 
+          class="min-h-[400px]"
+        />
+      </div>
     </div>
-    <RelationShipGraph :relationships="options.characterRSs" class="border theme-border rounded-xl mt-6"/>
-  </div>
 
+    <!-- 添加关系弹窗 -->
+    <a-modal 
+      v-model:open="options.isAddRSShow" 
+      title="添加角色关系" 
+      @ok="submitCharacterRS"
+      :okButtonProps="{ 
+        class: 'bg-blue-500 hover:bg-blue-600 border-blue-500 hover:border-blue-600'
+      }"
+    >
+      <div class="space-y-4">
+        <div class="grid grid-cols-[120px,1fr] items-center gap-4">
+          <span class="text-gray-700 dark:text-gray-300">角色 1：</span>
+          <a-select
+            v-model:value="editRSForm.first_character_id"
+            class="w-full"
+            placeholder="选择第一个角色"
+          >
+            <a-select-option 
+              v-for="character in options.characters" 
+              :key="character.ID"
+              :value="character.ID"
+            >
+              {{ character.name }}
+            </a-select-option>
+          </a-select>
+
+          <span class="text-gray-700 dark:text-gray-300">角色 2：</span>
+          <a-select
+            v-model:value="editRSForm.second_character_id"
+            class="w-full"
+            placeholder="选择第二个角色"
+          >
+            <a-select-option 
+              v-for="character in options.characters" 
+              :key="character.ID"
+              :value="character.ID"
+            >
+              {{ character.name }}
+            </a-select-option>
+          </a-select>
+
+          <span class="text-gray-700 dark:text-gray-300">关系名称：</span>
+          <input 
+            v-model="editRSForm.name"
+            class="w-full px-4 py-2 border theme-border rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:bg-zinc-800/50"
+            placeholder="例如：师徒、恋人、敌对..."
+          >
+        </div>
+
+        <div class="space-y-2">
+          <span class="text-gray-700 dark:text-gray-300">关系描述：</span>
+          <textarea
+            v-model="editRSForm.content"
+            class="w-full px-4 py-2 border theme-border rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:bg-zinc-800/50 min-h-[100px]"
+            placeholder="描述两个角色之间的关系..."
+          />
+        </div>
+
+        <div class="flex justify-end">
+          <button 
+            :disabled="options.isCharacterRSGenerating"
+            @click="generateCharacterRS"
+            class="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:opacity-90 transition-all flex items-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+            </svg>
+            {{ options.isCharacterRSGenerating ? '生成中...' : 'AI 生成关系' }}
+          </button>
+        </div>
+      </div>
+    </a-modal>
+  </div>
 </template>
 
 <style scoped>

@@ -5,6 +5,7 @@ import (
 	"back-end/entity/dto"
 	"back-end/entity/pojo"
 	"bytes"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -13,6 +14,7 @@ import (
 	"image"
 	"image/jpeg"
 	"image/png"
+	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -176,4 +178,31 @@ func ensureDir(dirName string) error {
 		return os.MkdirAll(dirName, 0755)
 	}
 	return nil
+}
+
+// GetImageBase64 接收文件名，读取文件并转换为 Base64 编码
+func GetImageBase64(c *gin.Context) {
+	fileName := c.Query("filename")
+
+	// 检查文件是否存在
+	_, err := os.Stat("./uploads/" + fileName)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "图片资源不存在"))
+		return
+	}
+
+	// 读取文件内容
+	fileContent, err := ioutil.ReadFile("./uploads/" + fileName)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "无法读取文件内容"))
+		return
+	}
+
+	// 将文件内容转换为 Base64 编码
+	base64Content := base64.StdEncoding.EncodeToString(fileContent)
+
+	// 构造 data URI 格式
+	dataURI := "data:image/webp;base64," + base64Content
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(dataURI))
 }

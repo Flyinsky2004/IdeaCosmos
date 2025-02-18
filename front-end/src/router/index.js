@@ -84,6 +84,17 @@ const router = createRouter({
             name: 'test',
             path: '/test',
             component: () => import('@/views/test.vue')
+        },{
+            name: 'communityFramework',
+            path: '/community',
+            component: () => import('@/views/community/Framework.vue'),
+            children:[
+                {
+                    name: 'homeIndex',
+                    path: 'index',
+                    component: () => import('@/views/community/Index.vue')
+                }
+            ]
         }
 
     ],

@@ -1,7 +1,9 @@
 package pojo
 
-import "gorm.io/gorm"
-import "gorm.io/datatypes"
+import (
+	"gorm.io/datatypes"
+	"gorm.io/gorm"
+)
 
 /**
  * @author Flyinsky
@@ -22,6 +24,8 @@ type Project struct {
 	CustomPrompt string         `json:"custom_prompt" gorm:"type:varchar(200)"`
 	TeamID       uint           `json:"team_id" gorm:"type:int(11)"`
 	Team         Team           `json:"team" bind:"omitempty" gorm:"foreignKey:TeamID"`
+	Watches      uint           `json:"watches" gorm:"default:0"`
+	Favorites    uint           `json:"favorites" gorm:"default:0"`
 }
 type Character struct {
 	gorm.Model
@@ -43,18 +47,19 @@ type CharacterRelationShip struct {
 
 type Chapter struct {
 	gorm.Model
-	ProjectID   uint   `json:"project_id" gorm:"type:bigint unsigned"`
-	Tittle      string `json:"Title" gorm:"type:varchar(50)"`
-	Description string `json:"Description" gorm:"type:varchar(200)"`
-	VersionID   uint   `json:"version_id" bind:"omitempty" gorm:"type:bigint unsigned"`
+	ProjectID      uint           `json:"project_id" gorm:"type:bigint unsigned"`
+	Tittle         string         `json:"Title" gorm:"type:varchar(50)"`
+	Description    string         `json:"Description" gorm:"type:varchar(200)"`
+	VersionID      uint           `json:"version_id" bind:"omitempty" gorm:"type:bigint unsigned"`
+	CurrentVersion ChapterVersion `json:"current_version" gorm:"foreignKey:VersionID"`
 }
 
 type ChapterVersion struct {
 	gorm.Model
-	UserId           uint    `json:"user_id" gorm:"type:bigint unsigned"`
-	ChapterID        uint    `json:"chapter_id" gorm:"type:bigint unsigned"`
-	Chapter          Chapter `json:"chapter" gorm:"foreignKey:ChapterID"`
-	User             User    `json:"user" gorm:"foreignKey:UserId"`
-	Content          string  `json:"content" gorm:"type:text"`
-	OptimizedContent string  `json:"optimized_content" gorm:"type:varchar(1000)"`
+	UserId           uint   `json:"user_id" gorm:"type:bigint unsigned"`
+	ChapterID        uint   `json:"chapter_id" gorm:"type:bigint unsigned"`
+	User             User   `json:"user" gorm:"foreignKey:UserId"`
+	Content          string `json:"content" gorm:"type:text"`
+	OptimizedContent string `json:"optimized_content" gorm:"type:varchar(1000)"`
+	AudioPath        string `json:"audio_path" gorm:"type:varchar(20)"`
 }

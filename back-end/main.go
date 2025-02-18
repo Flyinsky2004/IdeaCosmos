@@ -8,9 +8,10 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"os"
-
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"os"
+	"time"
 )
 
 /**
@@ -34,8 +35,16 @@ func main() {
 		&pojo.ChapterVersion{},
 	)
 	app := gin.Default()
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:5173"}, // 允许的前端来源
+		AllowMethods:     []string{"GET", "POST", "OPTIONS"},
+		AllowHeaders:     []string{"Content-Type", "Content-Length", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour, // 预检请求的缓存时间
+	}))
 	app.Static("/api/uploads", "./uploads")
-	app.Use(route.CorsHandler())
+	app.Static("/api/audio", "./audio")
 	route.RegisterRoutes(app)
 	app.Run(":8080")
 }

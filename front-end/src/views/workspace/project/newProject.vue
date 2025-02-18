@@ -231,105 +231,225 @@ const handlePeopleChange = (tag, checked) => {
     project.market_people = project.market_people.filter(t => t !== tag);
   }
 };
+
+// 添加表单步骤控制
+const currentStep = ref(1)
+const totalSteps = 4
+
+const steps = [
+  { title: '基本信息', description: '设置项目的基本信息' },
+  { title: '故事架构', description: '构建故事的核心框架' },
+  { title: '目标受众', description: '定义项目的目标群体' },
+  { title: '创作设置', description: '设置创作风格和类型' }
+]
+
+const nextStep = () => {
+  if (currentStep.value < totalSteps) {
+    currentStep.value++
+  }
+}
+
+const prevStep = () => {
+  if (currentStep.value > 1) {
+    currentStep.value--
+  }
+}
+
+// 优化表单验证
+const validateStep = (step) => {
+  switch(step) {
+    case 1:
+      return project.project_name.length >= 6
+    case 2:
+      return project.social_story.length >= 6 &&
+             project.start.length >= 6 &&
+             project.high_point.length >= 6 &&
+             project.resolved.length >= 6
+    case 3:
+      return project.market_people.length > 0
+    case 4:
+      return project.types && project.style.length > 0 && project.team_id
+    default:
+      return false
+  }
+}
 </script>
 <template>
-  <div class="h-fit w-full workspace-box animate__animated animate__fadeIn p-8 font-serif">
-    <div class="flex flex-nowrap mb-6 gap-2">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
-           class="size-6 my-auto">
-        <path stroke-linecap="round" stroke-linejoin="round"
-              d="M12 10.5v6m3-3H9m4.06-7.19-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"/>
-      </svg>
-      <h2 class="text-3xl font-bold font-serif my-auto text-gray-800 dark:text-gray-100">
-        创建新项目
-      </h2>
+  <div class="max-w-4xl mx-auto animate__animated animate__fadeIn p-8">
+    <!-- 进度指示器 -->
+    <div class="mb-8">
+      <div class="flex justify-between items-center mb-4">
+        <div v-for="(step, index) in steps" :key="index"
+             class="flex-1 relative">
+          <div class="flex items-center">
+            <div class="mt-2" :class="[
+              'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium',
+              currentStep > index + 1 ? 'bg-blue-500 text-white' :
+              currentStep === index + 1 ? 'bg-blue-100 text-blue-600 border-2 border-blue-500' :
+              'bg-gray-100 text-gray-500 dark:bg-gray-800'
+            ]">
+              {{ index + 1 }}
+            </div>
+            <div class="ml-3">
+              <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ step.title }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">{{ step.description }}</p>
+            </div>
+          </div>
+          <div v-if="index < steps.length - 1" 
+               :class="[
+                 'absolute top-4 w-full h-0.5',
+                 currentStep > index + 1 ? 'bg-blue-500' : 'bg-gray-200 dark:bg-gray-700'
+               ]">
+          </div>
+        </div>
+      </div>
     </div>
-    <div v-for="field in fields" :key="field.id" class="mb-4">
-      <label :for="field.id" class="block text-gray-700 dark:text-gray-300 font-medium mb-2">
-        {{ field.label }}
-      </label>
-      <input
-          v-if="field.type === 'text'"
-          :type="field.inputType || 'text'"
-          v-model="project[field.model]"
-          :id="field.id"
-          :placeholder="field.placeholder"
-          class="input1"
-          :required="field.required"
-      />
-      <textarea
-          v-else
-          v-model="project[field.model]"
-          :id="field.id"
-          :placeholder="field.placeholder"
-          class="input1"
-          :required="field.required"
-      ></textarea>
+
+    <!-- 表单内容 -->
+    <div class="bg-white dark:bg-zinc-900 rounded-xl p-6 shadow-sm border theme-border">
+      <!-- 步骤 1: 基本信息 -->
+      <div v-if="currentStep === 1" class="space-y-6 animate__animated animate__fadeIn">
+        <div class="mb-6">
+          <label for="projectName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            项目名称
+          </label>
+          <input
+            v-model="project.project_name"
+            type="text"
+            id="projectName"
+            class="input1"
+            placeholder="请输入项目名称"
+          />
+          <p class="mt-1 text-sm text-gray-500">
+            至少输入6个字符
+          </p>
+        </div>
+      </div>
+
+      <!-- 步骤 2: 故事架构 -->
+      <div v-if="currentStep === 2" class="space-y-6 animate__animated animate__fadeIn">
+        <div v-for="field in fields.filter(f => f.model !== 'project_name')" 
+             :key="field.id" 
+             class="mb-6">
+          <label :for="field.id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {{ field.label }}
+          </label>
+          <textarea
+            v-model="project[field.model]"
+            :id="field.id"
+            :placeholder="field.placeholder"
+            class="input1 min-h-[120px]"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- 步骤 3: 目标受众 -->
+      <div v-if="currentStep === 3" class="animate__animated animate__fadeIn">
+        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">选择目标受众</h3>
+        <div class="space-y-2">
+          <div class="flex flex-wrap gap-2">
+            <a-checkable-tag
+              v-for="(tag, index) in selectPeople.tagsData"
+              :key="tag"
+              :checked="selectPeople.selectTags[index]"
+              @change="checked => handlePeopleChange(tag, checked)"
+              class="px-3 py-1.5 rounded-full text-sm"
+            >
+              {{ tag }}
+            </a-checkable-tag>
+          </div>
+          {{ selectTags }}
+        </div>
+      </div>
+
+      <!-- 步骤 4: 创作设置 -->
+      <div v-if="currentStep === 4" class="space-y-6 animate__animated animate__fadeIn">
+        <!-- 内容类型选择 -->
+        <div class="mb-6">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">内容类型</h3>
+          <a-radio-group v-model:value="project.types" class="flex flex-wrap gap-2">
+            <a-radio-button 
+              v-for="type in [
+                '电影剧本', '短视频脚本', '剧情短片脚本', '连载小说',
+                '喜剧小品剧本', 'Vlog脚本', '广告脚本', '商品测评视频脚本',
+                '品牌故事视频', '创意动画脚本', '电竞或游戏视频脚本'
+              ]" 
+              :key="type" 
+              :value="type"
+              class="mb-2"
+            >
+              {{ type }}
+            </a-radio-button>
+          </a-radio-group>
+        </div>
+
+        <!-- 风格类型选择 -->
+        <div class="mb-6">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">风格类型</h3>
+          <div class="flex flex-wrap gap-2">
+            <a-checkable-tag
+              v-for="(tag, index) in selectTags.tagsData"
+              :key="tag"
+              :checked="selectTags.selectTags[index]"
+              @change="checked => handleChange(tag, checked)"
+              class="px-3 py-1.5 rounded-full text-sm"
+            >
+              {{ tag }}
+            </a-checkable-tag>
+          </div>
+        </div>
+
+        <!-- 团队选择 -->
+        <div class="mb-6">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">选择项目团队</h3>
+          <a-select
+            v-model:value="project.team_id"
+            class="w-full"
+            placeholder="请选择项目团队"
+          >
+            <a-select-option 
+              v-for="team in options.myTeam"
+              :key="team.ID"
+              :value="team.ID"
+            >
+              {{ team.username }}
+            </a-select-option>
+          </a-select>
+        </div>
+      </div>
+
+      <!-- 导航按钮 -->
+      <div class="flex justify-between mt-8">
+        <button
+          v-if="currentStep > 1"
+          @click="prevStep"
+          class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+        >
+          上一步
+        </button>
+        <div class="ml-auto">
+          <button
+            v-if="currentStep < totalSteps"
+            @click="nextStep"
+            :disabled="!validateStep(currentStep)"
+            class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            下一步
+          </button>
+          <button
+            v-else
+            @click="submitProject"
+            :disabled="!validateStep(currentStep)"
+            class="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            创建项目
+          </button>
+        </div>
+      </div>
     </div>
-    <div>
-      目标群众:
-      <a-checkable-tag
-          class="text-md font-bold ml-[1px] mt-2"
-          v-for="(tag, index) in selectPeople.tagsData"
-          :key="tag"
-          v-model:checked="selectPeople[index]"
-          @change="checked => handlePeopleChange(tag, checked)"
-      >
-        {{ tag }}
-      </a-checkable-tag>
-    </div>
-    <div class="mb-4 mt-4">
-      <span style="margin-right: 8px;">内容类型:</span>
-      <a-radio-group v-model:value="project.types">
-        <a-radio-button value="电影剧本">电影剧本</a-radio-button>
-        <a-radio-button value="短视频脚本">短视频脚本</a-radio-button>
-        <a-radio-button value="剧情短片脚本">剧情短片脚本</a-radio-button>
-        <a-radio-button value="连载小说">连载小说</a-radio-button>
-        <a-radio-button value="喜剧小品剧本">喜剧小品剧本</a-radio-button>
-        <a-radio-button value="Vlog脚本">Vlog脚本</a-radio-button>
-        <a-radio-button value="广告脚本">广告脚本</a-radio-button>
-        <a-radio-button value="商品测评视频脚本">商品测评视频脚本</a-radio-button>
-        <a-radio-button value="品牌故事视频">品牌故事视频</a-radio-button>
-        <a-radio-button value="创意动画脚本">创意动画脚本</a-radio-button>
-        <a-radio-button value="small">电竞或游戏视频脚本</a-radio-button>
-      </a-radio-group>
-    </div>
-    <div class="mb-4">
-      <span style="margin-right: 8px">风格类型: </span>
-      <a-checkable-tag
-          class="text-md font-bold ml-[1px] mt-2"
-          v-for="(tag, index) in selectTags.tagsData"
-          :key="tag"
-          v-model:checked="selectTags[index]"
-          @change="checked => handleChange(tag, checked)"
-      >
-        {{ tag }}
-      </a-checkable-tag>
-    </div>
-    <div class="mb-4 flex flex-nowrap">
-      <label for="teamID" class="block text-gray-700 dark:text-gray-300 font-medium my-auto">
-        项目团队:
-      </label>
-      <a-select
-          class="my-auto ml-2 w-64"
-          ref="select"
-          v-model:value="project.team_id"
-          @focus="focus"
-      >
-        <a-select-option :value="team.ID" v-for="team in options.myTeam">{{ team.username }}</a-select-option>
-        <
-      </a-select>
-    </div>
-    <button
-        type="submit"
-        class="btn1 w-full"
-        @click="submitProject"
-    >
-      创建新项目
-    </button>
   </div>
 </template>
 
-<style>
+<style scoped>
 
 </style>

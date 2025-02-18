@@ -182,12 +182,12 @@ func GenerateNewChapterVersionStream(c *gin.Context) {
 		Messages:    []util.Message{},
 		Prompt:      systemPrompt,
 		Question:    prompt,
-		Temperature: 1.2,
+		Temperature: 0.6,
 		MaxTokens:   8192,
 	})
 
 	if err != nil {
-		ws.WriteJSON(dto.ErrorResponse[string](500, "启动流式生成失败"))
+		ws.WriteJSON(dto.ErrorResponse[string](500, "启动流式生成失败"+err.Error()))
 		return
 	}
 
@@ -348,7 +348,7 @@ func GetAllChapters(c *gin.Context) {
 
 	var chapters []pojo.Chapter
 
-	if err = config.MysqlDataBase.Where("project_id = ?", projectId).Find(&chapters).Error; err != nil {
+	if err = config.MysqlDataBase.Where("project_id = ?", projectId).Preload("CurrentVersion").Find(&chapters).Error; err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "寻找已有的章节时发生错误"))
 		return
 	}
@@ -578,14 +578,14 @@ func GenerateCharacter(c *gin.Context) {
 	for _, character := range characters {
 		characterStr += character.Name + ":" + character.Description + ";"
 	}
-	prompt := "受众群体为:" + project.MarketPeople.String() + "现有的角色(可能为空，表示没有角色),请不要给出已有的角色:" + characterStr +
+	prompt := "受众群体为:" + project.MarketPeople.String() + "现有的角色(可能为空，表示没有角色):" + characterStr +
 		"内容风格为:" + project.Style.String() + "已有剧情以;隔开：social_story:" + project.SocialStory + ";start" + project.Start + ";high_point" + project.HighPoint + ";resolved" + project.Resolved
 	var message = []util.Message{}
 
 	res, err := util.ChatHandler(util.ChatRequest{
 		Model:    "deepseek-chat",
 		Messages: message,
-		Prompt: "你是一个" + project.Types + "角色设计师，我会提供现有的：社会背景(social_story),开始情景(start),高潮和冲突(high_point)和解决结局(resolved),你需要基于给出的剧情设计角色。最后，你需要返回一个json数组，包含生成的所有角色,角色属性如下，属性名为括号中的英文单词:" +
+		Prompt: "你是一个" + project.Types + "角色设计师，我会提供现有的：社会背景(social_story),开始情景(start),高潮和冲突(high_point)和解决结局(resolved),你需要基于给出的剧情设计角色。最后，你需要返回一个json数组，包含生成的所有角色，注意，你生成的结果千万不要包含我给出已有的角色,角色属性如下，属性名为括号中的英文单词:" +
 			"姓名(name),描述(description)，对角色的描述包括但不限于性别，人物背景，经历...",
 		Question:    prompt,
 		Temperature: 1.5,
