@@ -16,7 +16,10 @@ const options = reactive({
   chapters: [],
   currentAudioFileName: '',
   isAudioPlaying: false,
-  audioUrl: ''
+  audioUrl: '',
+  activeTab: 'chapters',
+  audioGenerating: false,
+  exportLoading: false,
 })
 onMounted(() => {
   fetchChapters()
@@ -43,19 +46,33 @@ const chapterClickHandler = (chapter, versionID) => {
     message.info("该篇章还没有创作版本，请前往创作板块创作！")
   }
 }
-const generateAudio = () => {
-  get('/api/project/generateChapterAudio', {
-    chapterId: options.currentChapterId,
-    audioName: options.currentAudioName
-  }, (messageer, data) => {
-    message.success(messageer)
-    options.currentAudioFileName = data
-  }, (messageer, data) => {
-    message.warning(messageer)
-  }, (messageer, data) => {
-    message.warning(messageer)
-  })
-}
+const generateAudio = async () => {
+  if (!options.currentChapterId || !options.currentAudioName) {
+    message.warning('请先选择篇章和音频模型');
+    return;
+  }
+  
+  options.audioGenerating = true;
+  try {
+    await new Promise((resolve, reject) => {
+      get('/api/project/generateChapterAudio', {
+        chapterId: options.currentChapterId,
+        audioName: options.currentAudioName
+      }, (messageer, data) => {
+        options.currentAudioFileName = data;
+        message.success('音频生成成功');
+        resolve(data);
+      }, (messageer) => reject(messageer),
+         (messageer) => reject(messageer)
+      );
+    });
+    await fetchAudioResource();
+  } catch (error) {
+    message.error('音频生成失败');
+  } finally {
+    options.audioGenerating = false;
+  }
+};
 const playAudio = () => {
   options.isAudioPlaying = true
 }
@@ -78,174 +95,232 @@ const fetchAudioResource = async () => {
 </script>
 
 <template>
-  <div>
-    <h1 class="text-3xl text-blue-500">选择篇章</h1>
-    <div class="w-full grid grid-cols-5 gap-2">
-      <div
-          v-for="chapter in options.chapters"
-          :key="chapter.ID"
-          class="group aspect-square p-4 border-2 rounded-xl cursor-pointer transition-all duration-200"
-          :class="{
-      'bg-blue-50/70 dark:bg-blue-900/20 border-blue-400 dark:border-blue-800': chapter.ID === options.currentChapterId,
-      'hover:bg-gray-50 dark:hover:bg-gray-800/50 border-gray-200 dark:border-gray-700': chapter.ID !== options.currentChapterId,
-      'cursor-not-allowed' : chapter.version_id === 0
-    }"
-          @click="chapterClickHandler(chapter,chapter.version_id)"
-      >
-        <div class="flex flex-col h-full">
-          <!-- 标题和元信息 -->
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
-              {{ chapter.Title }}
-            </h3>
-            <span
-                class="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700/30 dark:text-gray-300">
-         版本 {{ chapter.current_version.ID }}
-        </span>
+  <div class="min-h-screen bg-gray-50 dark:bg-zinc-900/20 p-6">
+    <div class="max-w-7xl mx-auto space-y-8">
+      <!-- 标签页导航 -->
+      <div class="flex gap-4 border-b border-gray-200 dark:border-gray-700">
+        <button 
+          v-for="tab in [
+            { key: 'chapters', text: '选择篇章', icon: 'M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292' },
+            { key: 'audio', text: '音频导出', icon: 'M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a2.25 2.25 0 001.632-2.163zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 01-.99-3.467l2.31-.66A2.25 2.25 0 009 15.553z' },
+            { key: 'export', text: '文件导出', icon: 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z' }
+          ]"
+          :key="tab.key"
+          @click="options.activeTab = tab.key"
+          class="px-6 py-3 font-medium transition-colors relative"
+          :class="options.activeTab === tab.key ? 
+            'text-blue-600 dark:text-blue-400' : 
+            'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+        >
+          <div class="flex items-center gap-2">
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke-width="1.5" 
+              stroke="currentColor" 
+              class="w-5 h-5"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" :d="tab.icon" />
+            </svg>
+            {{ tab.text }}
           </div>
-
-          <!-- 描述 -->
-          <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 flex-1">
-            {{ chapter.Description }}
-          </p>
-
-          <!-- 底部元信息 -->
-          <div class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
-            <div class="flex flex-col justify-between text-xs text-gray-500 dark:text-gray-400">
-              <span>创建时间：{{ parseDateTime(chapter.CreatedAt) }}</span>
-              <span>更新时间：{{ parseDateTime(chapter.UpdatedAt) }}</span>
-            </div>
-          </div>
-        </div>
+          <div 
+            v-if="options.activeTab === tab.key"
+            class="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400"
+          />
+        </button>
       </div>
-    </div>
-  </div>
-  <div class="mt-4">
-    <h1 class="text-3xl text-blue-500">音频导出</h1>
-    <div class="w-full grid grid-cols-4 gap-2">
-      <div
-          v-for="(model, index) in audioModels"
-          :key="model.model"
-          class="flex flex-col group aspect-square p-4 border-2 rounded-xl cursor-pointer transition-all duration-200"
-          :class="{
-      'bg-blue-50/70 dark:bg-blue-900/20 border-blue-400 dark:border-blue-800': model.model === options.currentAudioName,
-      'hover:bg-gray-50 dark:hover:bg-gray-800/50 border-gray-200 dark:border-gray-700': model.model !== options.currentAudioName
-    }"
-          @click="options.currentAudioName = model.model"
-      >
-        <div class="flex items-start gap-4">
-          <!-- 头像 -->
-          <div class="shrink-0">
-            <div class="w-fit h-fit rounded-full bg-gradient-to-br p-1"
-                 :class="model.isMale
-            ? 'from-blue-400 to-blue-600 dark:from-blue-600 dark:to-blue-800'
-            : 'from-pink-400 to-rose-500 dark:from-rose-600 dark:to-rose-800'">
-              <div class="w-full h-full rounded-full bg-white dark:bg-gray-900 p-1.5">
-                <div v-html="model.isMale ? maleAvatar : femaleAvatar"
-                     class="text-gray-800 dark:text-gray-200"></div>
+
+      <!-- 篇章选择 -->
+      <div v-show="options.activeTab === 'chapters'" class="space-y-4">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          选择要导出的篇章
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div
+            v-for="chapter in options.chapters"
+            :key="chapter.ID"
+            class="group relative aspect-[4/3] rounded-xl overflow-hidden cursor-pointer"
+            :class="chapter.ID === options.currentChapterId ? 
+              'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-900' : 
+              'hover:ring-2 hover:ring-blue-500/50 hover:ring-offset-2 dark:hover:ring-offset-gray-900'"
+            @click="chapterClickHandler(chapter, chapter.version_id)"
+          >
+            <!-- 背景 -->
+            <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/60" />
+            
+            <!-- 内容 -->
+            <div class="absolute inset-0 p-4 flex flex-col justify-between">
+              <div>
+                <h3 class="text-lg font-semibold text-white">
+                  {{ chapter.Title }}
+                </h3>
+                <p class="mt-2 text-sm text-gray-200 line-clamp-2">
+                  {{ chapter.Description }}
+                </p>
+              </div>
+              
+              <div class="flex items-center justify-between text-xs text-gray-200">
+                <span>版本 {{ chapter.current_version?.ID || '未创作' }}</span>
+                <span>{{ parseDateTime(chapter.UpdatedAt) }}</span>
               </div>
             </div>
           </div>
-          <!-- 内容 -->
-          <div class="flex-1 min-w-0">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              {{ model.name }}
-              <span class="text-sm ml-2 px-2 py-0.5 rounded-full"
-                    :class="model.isMale
-              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
-              : 'bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300'">
-            {{ model.isMale ? '男声' : '女声' }}
-          </span>
-            </h3>
+        </div>
+      </div>
 
-            <p class="text-sm mt-1 text-gray-600 dark:text-gray-400 line-clamp-2">
-              {{ model.description }}
-            </p>
+      <!-- 音频导出 -->
+      <div v-show="options.activeTab === 'audio'" class="space-y-6">
+        <div class="flex items-center justify-between">
+          <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            选择音频模型
+          </h2>
+          <a-button 
+            type="primary"
+            :loading="options.audioGenerating"
+            :disabled="!options.currentChapterId || !options.currentAudioName"
+            @click="generateAudio"
+          >
+            生成音频
+          </a-button>
+        </div>
 
-            <!-- 风格标签 -->
-            <div class="mt-2 flex flex-wrap gap-2">
-              <template v-if="Array.isArray(model.style)">
-            <span v-for="(style, i) in model.style"
-                  :key="i"
-                  class="text-xs px-2 py-1 rounded-full border"
-                  :class="index === options.currentAudioId
-                    ? 'bg-blue-100/50 border-blue-400 text-blue-800 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300'
-                    : 'bg-gray-200 border-gray-200 text-gray-700 dark:bg-gray-700/30 dark:border-gray-600 dark:text-gray-300'">
-              {{ style }}
-            </span>
-              </template>
-              <span v-else class="text-xs px-2 py-1 rounded-full border"
-                    :class="index === options.currentAudioId
-                  ? 'bg-blue-100/50 border-blue-200 text-blue-800 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300'
-                  : 'bg-gray-100 border-gray-200 text-gray-700 dark:bg-gray-700/30 dark:border-gray-600 dark:text-gray-300'">
-            {{ model.style }}
-          </span>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div
+            v-for="(model, index) in audioModels"
+            :key="model.model"
+            class="group relative p-4 border theme-border rounded-xl transition-all duration-200 cursor-pointer"
+            :class="model.model === options.currentAudioName ? 
+              'bg-blue-50/70 dark:bg-blue-900/20 border-blue-400 dark:border-blue-800' :
+              'hover:bg-gray-50 dark:hover:bg-gray-800/50'"
+            @click="options.currentAudioName = model.model"
+          >
+            <!-- 音频模型卡片内容 -->
+            <div class="flex items-start gap-4">
+              <div class="shrink-0">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br p-1"
+                     :class="model.isMale ? 
+                       'from-blue-400 to-blue-600' : 
+                       'from-pink-400 to-rose-500'"
+                >
+                  <div class="w-full h-full rounded-full bg-white dark:bg-gray-900 p-1.5">
+                    <div v-html="model.isMale ? maleAvatar : femaleAvatar" />
+                  </div>
+                </div>
+              </div>
+              
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    {{ model.name }}
+                  </h3>
+                  <span class="text-sm px-2 py-0.5 rounded-full"
+                        :class="model.isMale ? 
+                          'bg-blue-100 text-blue-800' : 
+                          'bg-rose-100 text-rose-800'"
+                  >
+                    {{ model.isMale ? '男声' : '女声' }}
+                  </span>
+                </div>
+
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  {{ model.description }}
+                </p>
+
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <template v-if="Array.isArray(model.style)">
+                    <span 
+                      v-for="style in model.style" 
+                      :key="style"
+                      class="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                    >
+                      {{ style }}
+                    </span>
+                  </template>
+                </div>
+              </div>
+            </div>
+
+            <!-- 音频预览 -->
+            <div class="mt-4 pt-4 border-t theme-border">
+              <audio 
+                :id="`audio-${index}`"
+                class="w-full" 
+                controls
+                preload="none"
+              >
+                <source :src="`${FRONTEND_DOMAIN}/audio/models/${model.model}.wav`" type="audio/wav">
+              </audio>
             </div>
           </div>
         </div>
-        <div class="flex flex-grow"></div>
-        <audio controls>
-          <source :src="FRONTEND_DOMAIN + '/audio/models/' + model.model + '.wav'" type="audio/wav">
-        </audio>
+
+        <!-- 生成的音频预览 -->
+        <div v-if="options.audioUrl" class="mt-8 p-6 border theme-border rounded-xl">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            生成的音频
+          </h3>
+          <div class="flex items-center gap-6">
+            <kinesis-container 
+              class="w-32 h-32"
+              :playAudio="options.isAudioPlaying"
+              :audio="options.audioUrl"
+            >
+              <kinesis-audio :audioIndex="17">
+                <kinesis-element :strength="10" type="depth">
+                  <img 
+                    class="w-full h-full rounded-xl object-cover"
+                    :src="BACKEND_DOMAIN + userStore.user.avatar" 
+                    alt="用户头像"
+                  >
+                </kinesis-element>
+              </kinesis-audio>
+            </kinesis-container>
+
+            <div class="flex-1">
+              <audio 
+                class="w-full" 
+                controls
+                :src="options.audioUrl"
+              />
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-    <div>
-      <!--      <audio controls crossorigin="anonymous">-->
-      <!--        <source src="http://localhost:8080/api/audio/20250129_vi5mms.mp3" type="audio/mpeg">-->
-      <!--        Your browser does not support the audio element.-->
-      <!--      </audio>-->
-      <div class="w-fit p-4 bg-red-500 flex">
-        <kinesis-container class="mx-auto my-auto" :playAudio="options.isAudioPlaying"
-                           :audio="options.audioUrl">
-          <kinesis-audio
-              :audioIndex="17">
-            <kinesis-element
-                :strength="10"
-                type="depth">
-              <img class="rounded-xl w-32 aspect-square" :src="BACKEND_DOMAIN + userStore.user.avatar" alt="用户头像">
-            </kinesis-element>
-          </kinesis-audio>
-        </kinesis-container>
-      </div>
-      <div>
-        <button
-            @click="playAudio"
-            :disabled="options.isAudioPlaying"
-        >
-          Play
-        </button>
-        <button
-            @click="stopAudio"
-            :disabled="!options.isAudioPlaying"
-        >
-          Stop
-        </button>
-      </div>
-      <button class="basic-prinary-button" @click="generateAudio">
-        generateAudio
-      </button>
-    </div>
-  </div>
-  <div class="mt-4">
-    <h1 class="text-3xl text-blue-500">文件导出</h1>
-    <div class="grid grid-cols-5 gap-4">
-      <div class="border border-dashed rounded-xl dark:border-[rgb(118,118,118)] outline-[1px] min-h-56 place-items-center place-content-center text-gray-400
-hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:dark:bg-gray-950/10 dark:active:bg-gray-900/10 cursor-pointer"
-           @click="exportScript(project,project.project_name,options.currentChapter.Title,options.currentChapter.current_version.content,'pdf')">
-        <h1 class="text-5xl">PDF</h1>
-        <span class="font-bold text-theme-switch">导出为PDF文档</span>
-      </div>
-      <div class="border border-dashed rounded-xl dark:border-[rgb(118,118,118)] outline-[1px] min-h-56 place-items-center place-content-center text-gray-400
-hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:dark:bg-gray-950/10 dark:active:bg-gray-900/10 cursor-pointer"
-           @click="exportScript(project,project.project_name,options.currentChapter.Title,options.currentChapter.current_version.content,'word')">
-        <h1 class="text-5xl">DOCX</h1>
-        <span class="font-bold text-theme-switch">导出为Word文档</span>
-      </div>
-      <div class="border border-dashed rounded-xl dark:border-[rgb(118,118,118)] outline-[1px] min-h-56 place-items-center place-content-center text-gray-400
-hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:dark:bg-gray-950/10 dark:active:bg-gray-900/10 cursor-pointer"
-           @click="exportScript(project,project.project_name,options.currentChapter.Title,options.currentChapter.current_version.content,'markdown')">
-        <h1 class="text-5xl">Markdown</h1>
-        <span class="font-bold text-theme-switch">导出为富文本</span>
+
+      <!-- 文件导出 -->
+      <div v-show="options.activeTab === 'export'" class="space-y-6">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          选择导出格式
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div
+            v-for="format in [
+              { key: 'pdf', name: 'PDF', icon: 'PDF', desc: '导出为PDF文档' },
+              { key: 'word', name: 'Word', icon: 'DOCX', desc: '导出为Word文档' },
+              { key: 'markdown', name: 'Markdown', icon: 'MD', desc: '导出为富文本' }
+            ]"
+            :key="format.key"
+            class="group relative p-6 border border-dashed theme-border rounded-xl hover:border-blue-500 transition-all cursor-pointer"
+            @click="exportScript(project, project.project_name, options.currentChapter?.Title, options.currentChapter?.current_version?.content, format.key)"
+          >
+            <div class="text-center space-y-4">
+              <span class="block text-4xl font-bold text-gray-400 group-hover:text-blue-500 transition-colors">
+                {{ format.icon }}
+              </span>
+              <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  {{ format.name }}
+                </h3>
+                <p class="mt-1 text-sm text-gray-500">
+                  {{ format.desc }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

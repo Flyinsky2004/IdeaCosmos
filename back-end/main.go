@@ -8,10 +8,11 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
 	"os"
 	"time"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 )
 
 /**
@@ -20,9 +21,13 @@ import (
  * @date 2024/12/24 09:10
  */
 func main() {
-	printBanner()
+	//printBanner()
 	config.InitMysqlDataBase()
 	//config.InitRedis("localhost:9999", "131598", 0)
+
+	// 禁用外键检查
+	//config.MysqlDataBase.Exec("SET FOREIGN_KEY_CHECKS = 0")
+
 	config.MysqlDataBase.AutoMigrate(
 		&pojo.User{},
 		&pojo.ImageUpload{},
@@ -31,9 +36,16 @@ func main() {
 		&pojo.Project{},
 		&pojo.Character{},
 		&pojo.CharacterRelationShip{},
-		&pojo.Chapter{},
 		&pojo.ChapterVersion{},
+		&pojo.Chapter{},
+		&pojo.ProjectComment{},
+		&pojo.AuthorComment{},
+		&pojo.ReaderComment{},
 	)
+
+	// 重新启用外键检查
+	//config.MysqlDataBase.Exec("SET FOREIGN_KEY_CHECKS = 1")
+
 	app := gin.Default()
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:5173"}, // 允许的前端来源

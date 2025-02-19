@@ -90,13 +90,27 @@ const router = createRouter({
             component: () => import('@/views/community/Framework.vue'),
             children:[
                 {
-                    name: 'homeIndex',
-                    path: 'index',
+                    path: '',
                     component: () => import('@/views/community/Index.vue')
+                  },
+                  {
+                    path: 'hot',
+                    component: () => import('@/views/community/Hot.vue')
+                  },
+                  {
+                    path: 'categories',
+                    component: () => import('@/views/community/Categories.vue')
+                  },
+                  {
+                    path: 'search/:keyword',
+                    component: () => import('@/views/community/Search.vue')
+                  },{
+                    path: 'project/:id',
+                    name: 'ProjectDetail',
+                    component: () => import('@/views/community/ProjectDetail.vue')
                 }
             ]
-        }
-
+        },
     ],
 })
 

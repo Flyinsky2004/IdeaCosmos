@@ -1,11 +1,10 @@
 package util
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
-	"io/ioutil"
-	"net/http"
+
+	"github.com/sashabaranov/go-openai"
 )
 
 /**
@@ -41,81 +40,77 @@ type ChatResponse struct {
 	} `json:"usage"`
 }
 
-// Client 定义 ChatGPT API 客户端
+// Client 使用 OpenAI SDK 客户端
 type Client struct {
-	apiKey  string
+	client  *openai.Client
 	baseURL string
 }
 
-// NewClient 创建一个新的 ChatGPT API 客户端
+// NewClient 创建一个新的客户端
 func NewClient(apiKey string) *Client {
+	config := openai.DefaultConfig(apiKey)
+	config.BaseURL = OpenAIBaseURL // 使用与 stream_chat.go 相同的 URL
+
 	return &Client{
-		apiKey:  apiKey,
-		baseURL: "https://api.deepseek.com/v1/chat/completions",
+		client:  openai.NewClientWithConfig(config),
+		baseURL: OpenAIBaseURL,
 	}
 }
 
-// SendMessage 发送消息并获取 AI 回复
+// SendMessage 使用 OpenAI SDK 发送消息
 func (c *Client) SendMessage(messages []Message, model string, maxToken int, temperature float32) (ChatResponse, error) {
-	// 构建请求体
-	reqBody := ChatRequest{
-		Model:       model,
-		Messages:    messages,
-		MaxTokens:   maxToken,
-		Temperature: temperature,
+	// 转换消息格式
+	openaiMessages := make([]openai.ChatCompletionMessage, len(messages))
+	for i, msg := range messages {
+		openaiMessages[i] = openai.ChatCompletionMessage{
+			Role:    msg.Role,
+			Content: msg.Content,
+		}
 	}
 
-	// 将请求体转换为 JSON
-	jsonReqBody, err := json.Marshal(reqBody)
+	// 创建请求
+	resp, err := c.client.CreateChatCompletion(
+		context.Background(),
+		openai.ChatCompletionRequest{
+			Model:       model,
+			Messages:    openaiMessages,
+			MaxTokens:   maxToken,
+			Temperature: float32(temperature),
+		},
+	)
 	if err != nil {
-		return ChatResponse{}, fmt.Errorf("failed to marshal request: %v", err)
+		return ChatResponse{}, fmt.Errorf("failed to create chat completion: %v", err)
 	}
 
-	// 创建 HTTP 请求
-	req, err := http.NewRequest("POST", c.baseURL, bytes.NewBuffer(jsonReqBody))
-	if err != nil {
-		return ChatResponse{}, fmt.Errorf("failed to create request: %v", err)
+	// 转换响应格式为原有的 ChatResponse 结构
+	chatResp := ChatResponse{
+		Choices: []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		}{
+			{
+				Message: struct {
+					Content string `json:"content"`
+				}{
+					Content: resp.Choices[0].Message.Content,
+				},
+			},
+		},
+		Usage: struct {
+			TotalTokens int `json:"total_tokens"`
+		}{
+			TotalTokens: resp.Usage.TotalTokens,
+		},
 	}
 
-	// 设置请求头
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.apiKey)
-
-	// 发送请求
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return ChatResponse{}, fmt.Errorf("failed to send request: %v", err)
-	}
-	defer resp.Body.Close()
-	// 读取响应体
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return ChatResponse{}, fmt.Errorf("failed to read response: %v", err)
-	}
-
-	// 检查响应状态码
-	if resp.StatusCode != http.StatusOK {
-		return ChatResponse{}, fmt.Errorf("API error: %s", body)
-	}
-
-	// 解析响应
-	var chatResp ChatResponse
-	err = json.Unmarshal(body, &chatResp)
-	if err != nil {
-		return ChatResponse{}, fmt.Errorf("failed to unmarshal response: %v", err)
-	}
 	return chatResp, nil
-	// 返回第一个消息的内容
-	//if len(chatResp.Choices) > 0 {
-	//	return chatResp.Choices[0].Message.Content, nil
-	//}
-
-	//return ChatResponse{}, fmt.Errorf("no response from API")
 }
 
+// ChatHandler 保持原有函数签名和行为不变
 func ChatHandler(request ChatRequest) (ChatResponse, error) {
-	client := NewClient("sk-47c813ac284940f6bd25e0eb8b7537fc")
+	client := NewClient(OpenAIKey) // 使用与 stream_chat.go 相同的 key
+
 	systemMessage := []Message{
 		{
 			Role:    "system",

@@ -3,6 +3,7 @@ import { get } from '@/util/request';
 import { message } from 'ant-design-vue';
 import { onMounted, reactive, ref } from 'vue'
 import { imagePrefix } from '@/util/VARRIBLES';
+import router from '@/router';
 const options = reactive({
   projects: [],
   pageIndex: 0
@@ -48,7 +49,8 @@ const posts = ref([
       <div 
         v-for="project in options.projects" 
         :key="project.ID" 
-        class="group bg-white/90 dark:bg-zinc-900 border theme-border rounded-xl overflow-hidden hover:shadow-lg dark:hover:shadow-zinc-800 transition-all duration-300 hover:-translate-y-1"
+        @click="router.push('/community/project/' + project.ID)"
+        class="group hover:cursor-pointer bg-white/90 dark:bg-zinc-900 border theme-border rounded-xl overflow-hidden hover:shadow-lg dark:hover:shadow-zinc-800 transition-all duration-300 hover:-translate-y-1"
       >
         <div class="aspect-video overflow-hidden bg-gray-100 dark:bg-zinc-800">
           <img 

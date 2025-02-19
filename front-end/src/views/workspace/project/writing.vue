@@ -1,7 +1,8 @@
 <script setup>
 import { onMounted, reactive, ref, h } from "vue";
-import { MdPreview } from "md-editor-v3";
+import { MdPreview,MdEditor } from "md-editor-v3";
 import "md-editor-v3/lib/preview.css";
+import 'md-editor-v3/lib/style.css';
 import { useThemeStore } from "@/stores/theme";
 import Loader from "@/components/loader.vue";
 import { get, post , postJSON } from "@/util/request";
@@ -53,6 +54,8 @@ const options = reactive({
   currentVersion: {},
   isGenerating: false,
   generatedContent: "",
+  isEditing: false,
+  editingContent: "",
 });
 
 const processContent = (content) => {
@@ -250,144 +253,246 @@ const switchToVersion = (version) => {
   chapter.version_id = version.ID;
   localStorage.setItem("chapter", JSON.stringify(chapter));
 };
+
+const startEditing = () => {
+  options.isEditing = true;
+  options.editingContent = options.generatedContent || options.currentVersion.content || "";
+};
+
+const cancelEditing = () => {
+  options.isEditing = false;
+  options.editingContent = "";
+};
+
+const submitEditing = () => {
+  postJSON(
+    "/api/project/createNewChapterVersion",
+    {
+      chapter_id: chapter.ID,
+      content: options.editingContent,
+    },
+    (messager, data) => {
+      message.success("保存成功！");
+      options.isEditing = false;
+      options.editingContent = "";
+      fetchVersionHistory();
+      fetchCurrentChapterVersion();
+    },
+    (messager) => {
+      message.warning(messager);
+    },
+    (messager) => {
+      message.error(messager);
+    }
+  );
+};
 </script>
 
 <template>
-  <div class="h-full w-full grid grid-cols-[4fr,1fr] gap-2">
-    <div class="flex flex-col gap-2">
-      <div class="h-fit border theme-border p-4 rounded-xl flex flex-col gap-2">
-        <span class="text-blue-500 font-bold text-xl">工具栏</span>
-        <div class="w-full flex flex-nowrap gap-2">
-          <button
-            class="color-mixed-button"
-            @click="showWordsCountDialog"
-            :disabled="options.isGenerating"
-          >
-            剧匠AI创作
-          </button>
-          <button
-            class="basic-info-button cursor-pointer"
-            @click="showOptimizeDialog"
-            :disabled="options.isGenerating || !options.generatedContent"
-          >
-            优化内容
-          </button>
-          <button class="basic-prinary-button">编辑模式</button>
-          <button class="basic-success-button">应用当前版本</button>
+  <div class="h-full w-full grid grid-cols-[4fr,1fr] gap-4 p-4">
+    <!-- 主编辑区域 -->
+    <div class="flex flex-col gap-4">
+      <!-- 章节信息 -->
+      <div class="bg-white dark:bg-zinc-900 border theme-border rounded-xl p-4">
+        <h1 class="text-xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent mb-2">
+          {{ chapter.Title }}
+        </h1>
+        <p class="text-sm text-gray-600 dark:text-gray-400">{{ chapter.Description }}</p>
+      </div>
+
+      <!-- 工具栏 -->
+      <div class="bg-white dark:bg-zinc-900 border theme-border rounded-xl p-4">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold text-blue-500">创作工具</h2>
+          <div class="flex items-center gap-2">
+            <button
+              @click="showWordsCountDialog"
+              :disabled="options.isGenerating"
+              class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+              </svg>
+              AI 创作
+            </button>
+            <button
+              @click="showOptimizeDialog"
+              :disabled="options.isGenerating || !options.generatedContent"
+              class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-800 border theme-border rounded-lg hover:border-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+              </svg>
+              优化内容
+            </button>
+            <button
+              @click="startEditing"
+              :disabled="options.isGenerating"
+              class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-800 border theme-border rounded-lg hover:border-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              手动编辑
+            </button>
+          </div>
         </div>
       </div>
-      <div
-        class="flex flex-grow flex-col dark:bg-indigo-950/10 border theme-border rounded-xl"
-      >
-        <div class="flex flex-col flex-grow relative">
-          <span
-            v-if="options.generatedContent !== ''"
-            class="text-blue-500 font-bold text-xl mt-4 ml-4"
-            >剧匠AI版本</span
-          >
-          <MdPreview
-            v-if="options.generatedContent !== ''"
-            style="background: transparent"
-            :theme="themeStore.currentTheme"
-            editorId="preview-only"
-            :modelValue="options.generatedContent"
-          />
-          <span class="text-blue-500 font-bold text-xl mt-4 ml-4"
-            >当前版本</span
-          >
-          <div
-            class="mx-auto my-auto"
-            v-if="chapter.version_id === 0"
-          >
-            <span class="text-gray-600">此篇章还没有内容哦</span>
-          </div>
-          <MdPreview
-            v-else-if="chapter.version_id !== 0"
-            style="background: transparent"
-            :theme="themeStore.currentTheme"
-            editorId="preview-only"
-            :modelValue="options.currentVersion.content"
-          />
 
-          <!-- 添加确认按钮区域 -->
-          <div
-            v-if="options.generatedContent"
-            class="sticky bottom-0 mx-auto px-8 bg-white dark:bg-indigo-950/90 w-fit rounded-xl border theme-border p-4 border-t theme-border flex justify-center gap-4"
-          >
-            <button
-              class="basic-success-button px-8 flex flex-nowrap"
-              @click="confirmAdoptContent"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                class="size-4"
-              >
-                <path
-                  d="M1 8.25a1.25 1.25 0 1 1 2.5 0v7.5a1.25 1.25 0 1 1-2.5 0v-7.5ZM11 3V1.7c0-.268.14-.526.395-.607A2 2 0 0 1 14 3c0 .995-.182 1.948-.514 2.826-.204.54.166 1.174.744 1.174h2.52c1.243 0 2.261 1.01 2.146 2.247a23.864 23.864 0 0 1-1.341 5.974C17.153 16.323 16.072 17 14.9 17h-3.192a3 3 0 0 1-1.341-.317l-2.734-1.366A3 3 0 0 0 6.292 15H5V8h.963c.685 0 1.258-.483 1.612-1.068a4.011 4.011 0 0 1 2.166-1.73c.432-.143.853-.386 1.011-.814.16-.432.248-.9.248-1.388Z"
-                />
-              </svg>
-
-              采纳这个版本
-            </button>
-            <button
-              class="basic-error-button flex flex-nowrap"
-              @click="options.generatedContent = ''"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                class="size-4"
-              >
-                <path
-                  d="M18.905 12.75a1.25 1.25 0 1 1-2.5 0v-7.5a1.25 1.25 0 0 1 2.5 0v7.5ZM8.905 17v1.3c0 .268-.14.526-.395.607A2 2 0 0 1 5.905 17c0-.995.182-1.948.514-2.826.204-.54-.166-1.174-.744-1.174h-2.52c-1.243 0-2.261-1.01-2.146-2.247.193-2.08.651-4.082 1.341-5.974C2.752 3.678 3.833 3 5.005 3h3.192a3 3 0 0 1 1.341.317l2.734 1.366A3 3 0 0 0 13.613 5h1.292v7h-.963c-.685 0-1.258.482-1.612 1.068a4.01 4.01 0 0 1-2.166 1.73c-.432.143-.853.386-1.011.814-.16.432-.248.9-.248 1.388Z"
-                />
-              </svg>
-              放弃这个版本
-            </button>
+      <!-- 内容编辑/预览区域 -->
+      <div class="flex-grow bg-white dark:bg-zinc-900 border theme-border rounded-xl overflow-hidden">
+        <div class="relative h-full">
+          <!-- 编辑模式 -->
+          <div v-if="options.isEditing" class="h-full p-4">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold text-blue-500">编辑内容</h3>
+              <div class="flex items-center gap-2">
+                <button
+                  @click="submitEditing"
+                  class="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  保存
+                </button>
+                <button
+                  @click="cancelEditing"
+                  class="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  取消
+                </button>
+              </div>
+            </div>
+            <MdEditor
+              v-model="options.editingContent"
+              :theme="themeStore.currentTheme"
+              previewTheme="github"
+              :preview="false"
+              style="height: calc(100% - 60px)"
+              showCodeRowNumber
+              :toolbars="[
+                'bold', 'italic', 'strikethrough', '|',
+                'title', 'quote', 'unorderedList', 'orderedList', '|',
+                'codeRow', 'code', 'link', 'image', '|',
+                'preview'
+              ]"
+            />
           </div>
+
+          <!-- 预览模式 (当不在编辑模式时显示) -->
+          <template v-else>
+            <!-- AI生成的内容 -->
+            <div v-if="options.generatedContent || options.isGenerating" class="border-b theme-border p-4">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent flex items-center gap-2">
+                  AI 创作内容
+                  <span v-if="options.isGenerating" 
+                        class="text-sm font-normal text-blue-500 animate-pulse">
+                    正在创作...
+                  </span>
+                </h3>
+                <div class="flex items-center gap-2">
+                  <button
+                    @click="confirmAdoptContent"
+                    :disabled="options.isGenerating"
+                    class="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                    采纳
+                  </button>
+                  <button
+                    @click="options.generatedContent = ''"
+                    :disabled="options.isGenerating"
+                    class="flex items-center gap-2 px-4 py-2 border border-red-200 dark:border-red-800 text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    放弃
+                  </button>
+                </div>
+              </div>
+              <MdPreview
+                style="background: transparent"
+                :theme="themeStore.currentTheme"
+                editorId="ai-preview"
+                :modelValue="options.generatedContent"
+              />
+            </div>
+
+            <!-- 当前版本内容 -->
+            <div class="p-4" :class="{ 'h-[calc(100%-200px)]': options.generatedContent || options.isGenerating }">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">当前版本</h3>
+              <div v-if="chapter.version_id === 0" class="flex items-center justify-center h-64 text-gray-500">
+                <div class="text-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                  </svg>
+                  <p>此章节暂无内容</p>
+                </div>
+              </div>
+              <MdPreview
+                v-else
+                style="background: transparent"
+                :theme="themeStore.currentTheme"
+                editorId="current-preview"
+                :modelValue="options.currentVersion.content"
+              />
+            </div>
+          </template>
         </div>
       </div>
     </div>
-    <div class="border theme-border p-2 rounded-xl flex flex-col gap-2">
-      <h1 class="text-xl font-bold text-blue-500">历史版本</h1>
-      <div class="flex flex-col gap-2 overflow-y-auto">
-        <div v-if="options.historyVersions.length === 0" class="text-center py-4">
-          <span class="text-gray-600 dark:text-gray-400">还没有历史版本哦</span>
+
+    <!-- 历史版本侧边栏 -->
+    <div class="bg-white dark:bg-zinc-900 border theme-border rounded-xl p-4">
+      <h2 class="text-lg font-semibold text-blue-500 mb-4">历史版本</h2>
+      <div class="space-y-4 max-h-[calc(100vh-10rem)] overflow-y-auto">
+        <div v-if="options.historyVersions.length === 0" 
+             class="flex items-center justify-center h-32 text-gray-500">
+          <p>暂无历史版本</p>
         </div>
-        <div
-          v-for="version in options.historyVersions"
-          :key="version.ID"
-          @click="switchToVersion(version)"
-          class="p-4 border theme-border rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200"
-          :class="{'bg-blue-50 dark:bg-blue-900/20': version.ID === chapter.version_id}"
+        
+        <div v-for="version in options.historyVersions"
+             :key="version.ID"
+             @click="switchToVersion(version)"
+             class="p-4 rounded-xl cursor-pointer transition-all duration-200"
+             :class="[
+               version.ID === chapter.version_id 
+                 ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' 
+                 : 'hover:bg-gray-50 dark:hover:bg-gray-800/50 border-transparent',
+               'border'
+             ]"
         >
-          <div class="flex items-center gap-2">
-            <img
-              :src="BACKEND_DOMAIN + version.user.avatar || ''"
-              alt="avatar"
-              class="w-8 h-8 rounded-full object-cover"
-            />
-            <div class="flex flex-col">
-              <span class="text-sm font-medium dark:text-gray-200">
+          <div class="flex items-center gap-3 mb-2">
+            <img :src="BACKEND_DOMAIN + version.user.avatar" 
+                 class="w-8 h-8 rounded-full object-cover"
+                 :alt="version.user.nickname || version.user.username">
+            <div>
+              <p class="text-sm font-medium text-gray-900 dark:text-gray-100">
                 {{ version.user.nickname || version.user.username }}
-              </span>
-              <span class="text-xs text-gray-500 dark:text-gray-400">
+              </p>
+              <p class="text-xs text-gray-500">
                 {{ new Date(version.CreatedAt).toLocaleString() }}
-              </span>
+              </p>
             </div>
           </div>
-          <div class="mt-2">
-            <p class="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
-              {{ version.content.substring(0, 100) + '...' }}
-            </p>
-          </div>
+          <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+            {{ version.content.substring(0, 100) + '...' }}
+          </p>
         </div>
       </div>
     </div>
   </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+/* 编辑器主题相关样式 */
+
+</style>

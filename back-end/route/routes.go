@@ -22,6 +22,10 @@ func RegisterRoutes(r *gin.Engine) {
 	publicGroup := r.Group("/api/public")
 	{
 		publicGroup.GET("getIndexProject", service.GetIndexCoverList)
+		publicGroup.GET("getProjectDetail", service.GetProjectDetail)
+		publicGroup.GET("getProjectCharacters", service.GetProjectCharacters)
+		publicGroup.GET("getProjectChapters", service.GetProjectChapters)
+		publicGroup.GET("getProjectComments", service.GetProjectComments)
 	}
 
 	userGroup := r.Group("/api/user", preHandler())
@@ -30,6 +34,7 @@ func RegisterRoutes(r *gin.Engine) {
 		userGroup.POST("updateInfo", service.UpdateUserInfo)
 		userGroup.POST("uploadImage", service.UploadImage)
 		userGroup.GET("getWebpImageBase64", service.GetImageBase64)
+		userGroup.POST("addProjectComment", service.AddProjectComment)
 	}
 
 	teamGroup := r.Group("/api/team", preHandler())

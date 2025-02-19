@@ -50,7 +50,7 @@ type Chapter struct {
 	ProjectID      uint           `json:"project_id" gorm:"type:bigint unsigned"`
 	Tittle         string         `json:"Title" gorm:"type:varchar(50)"`
 	Description    string         `json:"Description" gorm:"type:varchar(200)"`
-	VersionID      uint           `json:"version_id" bind:"omitempty" gorm:"type:bigint unsigned"`
+	VersionID      uint           `json:"version_id" bind:"omitempty" gorm:"type:bigint unsigned;default:null"`
 	CurrentVersion ChapterVersion `json:"current_version" gorm:"foreignKey:VersionID"`
 }
 

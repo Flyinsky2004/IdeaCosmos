@@ -2,6 +2,7 @@ import './assets/css/main.css'
 import 'animate.css';
 import "@flaticon/flaticon-uicons/css/all/all.css";
 import Antd from 'ant-design-vue';
+import '@/assets/css/remixicon.css';
 import 'ant-design-vue/dist/reset.css';
 
 import {createApp} from 'vue'

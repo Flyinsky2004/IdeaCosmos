@@ -8,6 +8,8 @@ import {get} from "@/util/request.js";
 import {useThemeStore} from "@/stores/theme.js";
 import {message} from "ant-design-vue";
 import {useFullPageScroll} from "@/util/useFullPageScroll.js";
+import * as echarts from "echarts";
+import { ref, onMounted, onUnmounted, watch } from "vue";
 
 const { currentSection } = useFullPageScroll();
 
@@ -112,11 +114,6 @@ const frameworks = [
 </svg>`
   },
   {
-    name: 'Edge', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve"  width="64" height="64" fill="currentColor">
-<path d="M22.465,9.866c-2.139,0-4.122-0.684-5.74-1.846v8.385c0,4.188-3.407,7.594-7.594,7.594c-1.618,0-3.119-0.51-4.352-1.376  c-1.958-1.375-3.242-3.649-3.242-6.218c0-4.188,3.407-7.595,7.595-7.595c0.348,0,0.688,0.029,1.023,0.074v0.977v3.235  c-0.324-0.101-0.666-0.16-1.023-0.16c-1.912,0-3.468,1.556-3.468,3.469c0,1.332,0.756,2.489,1.86,3.07  c0.481,0.253,1.028,0.398,1.609,0.398c1.868,0,3.392-1.486,3.462-3.338L12.598,0h4.126c0,0.358,0.035,0.707,0.097,1.047  c0.291,1.572,1.224,2.921,2.517,3.764c0.9,0.587,1.974,0.93,3.126,0.93V9.866z"/>
-</svg>`
-  },
-  {
     name: 'Edge', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve"  width="64" height="64" fill="#65d46e">
 <g>
  width="64" height="64" fill="currentColor"<g>
@@ -138,6 +135,244 @@ const frameworks = [
   {name: 'Express', icon: ``}, {name: 'Edge', icon: ``}, {name: 'Edge', icon: ``},
   {name: 'Edge', icon: ``}, {name: 'Edge', icon: ``}, {name: 'Edge', icon: ``}, {name: 'Edge', icon: ``},
 ]
+
+const characterChart = ref(null);
+
+const initCharacterChart = () => {
+  if (!characterChart.value) return;
+
+  const chartInstance = echarts.init(characterChart.value);
+  
+  // 扩展角色数据
+  const characters = [
+    { id: 1, name: "艾琳", value: "女主角，天才黑客，性格独立坚强", category: 0 },
+    { id: 2, name: "马克", value: "男主角，前特工，充满正义感", category: 0 },
+    { id: 3, name: "萨姆", value: "艾琳的导师，神秘的科技公司创始人", category: 2 },
+    { id: 4, name: "莉莉", value: "艾琳的闺蜜，记者，擅长收集情报", category: 1 },
+    { id: 5, name: "杰克", value: "马克的搭档，技术专家", category: 1 },
+    { id: 6, name: "维克多", value: "主要反派，黑市军火商", category: 3 },
+    { id: 7, name: "安娜", value: "萨姆的助手，AI专家", category: 1 },
+    { id: 8, name: "克里斯", value: "警局内部线人", category: 2 },
+    { id: 9, name: "艾米", value: "维克多的妹妹，双面间谍", category: 3 },
+    { id: 10, name: "大卫", value: "政府特工，身份成谜", category: 2 },
+    { id: 11, name: "索菲亚", value: "黑客组织领袖", category: 3 },
+    { id: 12, name: "托马斯", value: "科技公司CEO，幕后推手", category: 2 }
+  ];
+
+  // 扩展关系数据
+  const relationships = [
+    { source: 0, target: 1, name: "命运相遇", value: "在一次网络安全事件中相识，共同对抗犯罪组织" },
+    { source: 0, target: 2, name: "师徒关系", value: "萨姆发现艾琳的天赋，收她为徒" },
+    { source: 0, target: 3, name: "挚友", value: "从大学时代就是形影不离的好友" },
+    { source: 1, target: 4, name: "搭档", value: "多年的工作伙伴，配合默契" },
+    { source: 2, target: 5, name: "宿敌", value: "曾是合作伙伴，后因理念不合成为对手" },
+    { source: 3, target: 4, name: "信息合作", value: "莉莉为杰克提供重要情报" },
+    { source: 1, target: 2, name: "互相怀疑", value: "对萨姆的真实身份产生怀疑" },
+    { source: 2, target: 6, name: "秘密合作", value: "安娜协助萨姆进行AI研究" },
+    { source: 5, target: 7, name: "非法交易", value: "克里斯暗中监视维克多的军火交易" },
+    { source: 5, target: 8, name: "血亲", value: "艾米是维克多的妹妹，但暗中为政府工作" },
+    { source: 8, target: 9, name: "上下级", value: "艾米向大卫汇报情报" },
+    { source: 0, target: 10, name: "对手", value: "艾琳与索菲亚在多个案件中对抗" },
+    { source: 2, target: 11, name: "商业合作", value: "萨姆与托马斯有密切的商业往来" },
+    { source: 10, target: 11, name: "秘密联盟", value: "索菲亚与托马斯暗中结盟" },
+    { source: 6, target: 11, name: "技术支持", value: "安娜为托马斯提供AI技术支持" },
+    { source: 3, target: 7, name: "情报交换", value: "莉莉与克里斯交换警方情报" },
+    { source: 4, target: 9, name: "暗中调查", value: "杰克调查大卫的真实身份" }
+  ];
+
+  const nodes = characters.map((character, index) => ({
+    id: index,
+    name: character.name,
+    value: character.value,
+    symbolSize: 60, // 增大节点大小
+    category: character.category
+  }));
+
+  const links = relationships.map(relation => ({
+    source: relation.source,
+    target: relation.target,
+    name: relation.name,
+    value: relation.value
+  }));
+
+  const option = {
+    title: {
+      text: '角色关系图谱',
+      subtext: '示例项目：赛博朋克悬疑剧',
+      top: 'bottom',
+      left: 'right',
+      textStyle: {
+        color: themeStore.isDark ? '#e5e7eb' : '#111827',
+        fontSize: 16,
+        fontWeight: 'bold'
+      },
+      subtextStyle: {
+        color: themeStore.isDark ? '#9ca3af' : '#4b5563'
+      }
+    },
+    tooltip: {
+      show: true,
+      confine: true,
+      formatter: function (params) {
+        const title = params.dataType === 'edge' ? '关系' : '角色';
+        return `
+          <div style="
+            width: 200px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 14px;
+            line-height: 1.5;
+          ">
+            <div style="
+              font-weight: bold;
+              margin-bottom: 8px;
+              color: #fff;
+              font-size: 15px;
+              white-space: normal;
+              word-break: break-all;
+            ">
+              ${title}：${params.data.name}
+            </div>
+            <div style="
+              color: rgba(255,255,255,0.9);
+              white-space: normal;
+              word-break: break-all;
+            ">
+              描述：${params.data.value}
+            </div>
+          </div>
+        `;
+      },
+      backgroundColor: 'rgba(0,0,0,0.75)',
+      borderRadius: 8,
+      padding: [10, 15],
+      textStyle: {
+        color: '#fff',
+        fontSize: 14
+      }
+    },
+    legend: [{
+      data: ['主角', '重要角色', '神秘人物', '反派'],
+      orient: 'vertical',
+      left: 'left',
+      textStyle: {
+        color: themeStore.isDark ? '#e5e7eb' : '#111827'
+      }
+    }],
+    series: [{
+      type: 'graph',
+      layout: 'force',
+      data: nodes,
+      links: links,
+      categories: [
+        { name: '主角' },
+        { name: '重要角色' },
+        { name: '神秘人物' },
+        { name: '反派' }
+      ],
+      roam: true,
+      draggable: true,
+      label: {
+        show: true,
+        position: 'right',
+        formatter: '{b}',
+        color: themeStore.isDark ? '#e5e7eb' : '#111827',
+        fontSize: 14,
+        fontWeight: 'bold'
+      },
+      force: {
+        repulsion: 400,
+        gravity: 0.2,
+        edgeLength: 150,
+        layoutAnimation: true,
+        friction: 0.1,
+      },
+      cursor: 'move',
+      zoom: 2,
+      center: ['50%', '50%'],
+      emphasis: {
+        focus: 'adjacency',
+        scale: 1.2,
+        lineStyle: {
+          width: 4
+        },
+        label: {
+          fontSize: 16,
+          show: true
+        }
+      },
+      nodeScaleRatio: 0.6,
+      itemStyle: {
+        borderWidth: 2,
+        borderColor: themeStore.isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)',
+        shadowColor: 'rgba(0, 0, 0, 0.2)',
+        shadowBlur: 10
+      },
+      animation: true,
+      animationDuration: 1000,
+      animationEasingUpdate: 'quinticInOut',
+      lineStyle: {
+        width: 2,
+        opacity: 0.7,
+        curveness: 0.3,
+        color: {
+          type: 'linear',
+          x: 0,
+          y: 0,
+          x2: 0,
+          y2: 1,
+          colorStops: [{
+            offset: 0, color: 'rgb(96, 163, 255)'
+          }, {
+            offset: 1, color: 'rgb(128, 108, 255)'
+          }]
+        }
+      },
+      emphasis: {
+        lineStyle: {
+          width: 4,
+          curveness: 0.3
+        }
+      },
+      edgeSymbol: ['none', 'arrow'],
+      edgeSymbolSize: [0, 8],
+    }],
+    backgroundColor: 'transparent'
+  };
+
+  chartInstance.setOption(option);
+  
+  // 添加鼠标交互事件
+  chartInstance.on('mousedown', 'series', () => {
+    chartInstance.getZr().setCursorStyle('move');
+  });
+  
+  chartInstance.on('mouseup', 'series', () => {
+    chartInstance.getZr().setCursorStyle('default');
+  });
+  
+  // 优化 resize 处理
+  const resizeHandler = () => {
+    chartInstance.resize();
+  };
+  
+  window.addEventListener('resize', resizeHandler);
+  
+  // 确保组件卸载时移除事件监听
+  onUnmounted(() => {
+    window.removeEventListener('resize', resizeHandler);
+    chartInstance.dispose();
+  });
+};
+
+// 监听主题变化，更新图表样式
+watch(() => themeStore.isDark, () => {
+  initCharacterChart();
+});
+
+onMounted(() => {
+  initCharacterChart();
+});
 </script>
 
 <template>
@@ -257,6 +492,23 @@ const frameworks = [
       </div>
     </div>
   </div>
+  <div class="h-screen bg-[#f5f5f5] dark:bg-[#030616]">
+    <div class="container mx-auto px-4 py-16 h-full font-sans flex flex-col">
+      <div class="flex-none">
+        <h1 class="text-5xl font-bold font-serif text-black dark:text-white text-center mb-4">
+          角色关系，一目了然
+        </h1>
+        <h1 class="text-3xl font-bold font-serif text-black dark:text-white text-center mb-8">
+          我们提供最清晰的方式助你理解项目。
+        </h1>
+      </div>
+      
+      <div class="flex-1 min-h-0 bg-white dark:bg-zinc-900/80 rounded-xl shadow-xl p-6">
+        <div ref="characterChart" class="w-full h-full" />
+      </div>
+    </div>
+  </div>
+  
   <div class="bg-white dark:bg-black flex font-sans min-h-32 text-theme-switch">
     <div class="mx-auto my-auto flex-col text-center">
       <span class=" cursor-pointer hover:text-blue-600">

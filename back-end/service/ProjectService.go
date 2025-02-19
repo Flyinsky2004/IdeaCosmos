@@ -470,6 +470,7 @@ func GenerateCharacterRS(c *gin.Context) {
 			"关系名称(name),关系内容(content)，关系名称例如合作伙伴,兄弟,父子,同学等等，关系内容即两名角色之间的故事",
 		Question:    prompt,
 		Temperature: 1.5,
+		MaxTokens:   8000,
 	})
 	if err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "生成时发生错误，请重试"))
@@ -589,6 +590,7 @@ func GenerateCharacter(c *gin.Context) {
 			"姓名(name),描述(description)，对角色的描述包括但不限于性别，人物背景，经历...",
 		Question:    prompt,
 		Temperature: 1.5,
+		MaxTokens:   8000,
 	})
 	if err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "生成时发生错误，请重试"))
@@ -615,6 +617,7 @@ func GenerateInfo(c *gin.Context) {
 		Prompt:      "你是一个" + project.Types + "补全师，我会提供现有的：社会背景(social_story),开始情景(start),高潮和冲突(high_point)和解决结局(resolved),你需要基于给出的剧情丰富内容，注意这只是故事大概，无需细化，每个属性最多400字。最后，你需要返回一个json,属性名称是括号中的英文单词。",
 		Question:    prompt,
 		Temperature: 1.5,
+		MaxTokens:   8000,
 	})
 	if err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "生成时发生错误，请重试"))

@@ -13,6 +13,13 @@ const options = reactive({
   chapters: []
 })
 
+// 添加编辑状态控制
+const editState = reactive({
+  currentEditingChapter: null,
+  editMode: false,
+  deleteConfirmId: null
+})
+
 onMounted(() => {
   fetchChapters()
 })
@@ -71,143 +78,148 @@ const goToWriting = (chapter) => {
   localStorage.setItem("chapter",JSON.stringify(chapter))
   router.push('/workspace/editProject/writing')
 }
+
+// 添加编辑相关方法
+const startEdit = (chapter) => {
+  editState.currentEditingChapter = { ...chapter }
+  editState.editMode = true
+}
+
+const saveEdit = () => {
+  // TODO: 实现保存编辑的逻辑
+  editState.editMode = false
+  editState.currentEditingChapter = null
+}
+
+const cancelEdit = () => {
+  editState.editMode = false
+  editState.currentEditingChapter = null
+}
+
+// 添加删除确认方法
+const confirmDelete = (chapterId) => {
+  editState.deleteConfirmId = chapterId
+}
+
+const cancelDelete = () => {
+  editState.deleteConfirmId = null
+}
 </script>
 
 <template>
-  <div class="w-full grid grid-cols-5 gap-2">
-<!--    <div class="border border-dashed rounded-xl dark:border-[rgb(118,118,118)] outline-[1px] min-h-56 place-items-center place-content-center text-gray-400-->
-<!--hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:dark:bg-gray-950/10 dark:active:bg-gray-900/10 cursor-pointer"-->
-<!--         @click="router.push('/workspace/newProject')">-->
-<!--      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"-->
-<!--           stroke="currentColor" class="size-16">-->
-<!--        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>-->
-<!--      </svg>-->
-<!--    </div>-->
-    <div @click="generateChapters"
-         class="border border-dashed rounded-xl dark:border-[rgb(118,118,118)] outline-[1px] min-h-56 place-items-center place-content-center
-hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:dark:bg-gray-950/10 dark:active:bg-gray-900/10 cursor-pointer">
-      <div v-if="!options.isChapterGenerating" class="flex flex-col gap-4">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
-             class="size-7 dark:text-purple-400 mx-auto">
-          <path fill-rule="evenodd"
-                d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.466 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5ZM16.5 15a.75.75 0 0 1 .712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 0 1 0 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 0 1-1.422 0l-.395-1.183a1.5 1.5 0 0 0-.948-.948l-1.183-.395a.75.75 0 0 1 0-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0 1 16.5 15Z"
-                clip-rule="evenodd"/>
+  <div class="space-y-8 p-6">
+    <!-- 顶部操作区 -->
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
+        章节管理
+      </h1>
+      <button 
+        @click="generateChapters"
+        :disabled="options.isChapterGenerating"
+        class="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:opacity-90 transition-all flex items-center gap-2"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
         </svg>
-        <span>AI剧匠智能生成</span>
-      </div>
-      <div v-else class="text-center place-items-center">
-        <loader class="mb-4"/>
-        <span>正在理解你的项目...</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="w-full border theme-border min-h-48 rounded-xl bg-[#f1f4fa]/20 dark:bg-gray-950/10 p-4 mt-4 flex flex-col">
-    <div v-if="options.chapters.length === 0 && options.generatedChapters.length === 0" class="mx-auto my-auto">
-      <span class="mx-auto my-auto">暂无篇章</span>
+        {{ options.isChapterGenerating ? '生成中...' : 'AI 生成章节' }}
+      </button>
     </div>
 
-    <!-- Existing Chapters Workflow -->
-    <div v-if="options.chapters.length !== 0" class="flex flex-wrap items-center gap-16">
-      <div v-for="(gc, index) in options.chapters"
-           class="relative flex items-center group">
-        <!-- Node -->
-        <div class="relative">
-          <!-- Connection Point Left -->
-          <div v-if="index > 0"
-               class="absolute left-0 top-1/2 transform -translate-x-2 -translate-y-1/2 w-3 h-3 rounded-full bg-purple-400"></div>
+    <!-- 章节流程图 -->
+    <div class="relative min-h-[200px] bg-white dark:bg-zinc-900 rounded-xl border theme-border p-6">
+      <!-- 空状态提示 -->
+      <div v-if="options.chapters.length === 0 && options.generatedChapters.length === 0" 
+           class="flex flex-col items-center justify-center h-48 text-gray-400">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+        </svg>
+        <span>暂无章节内容</span>
+      </div>
 
-          <!-- Connection Point Right -->
-          <div v-if="index < options.chapters.length"
-               class="absolute right-0 top-1/2 transform translate-x-2 -translate-y-1/2 w-3 h-3 rounded-full bg-purple-400"></div>
-
-          <!-- Node Content -->
-          <div class="w-48 p-4 rounded-lg shadow-lg border-2 bg-white dark:bg-indigo-950/20 border-purple-200 hover:border-purple-400 dark:border-purple-900 hover:dark:border-purple-600 transition-all transition-duration-300">
-            <div class="text-lg font-medium mb-2">{{ gc.Title }}</div>
-            <div class="text-sm text-gray-600 dark:text-gray-400">{{ gc.Description }}</div>
-            <!-- Action Buttons -->
-            <div class="flex gap-2 mt-4">
-              <button @click="goToWriting(gc)"
-                      class="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600">
-                创作
-              </button>
-              <button class="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600">
-                编辑
-              </button>
-              <button class="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600">
-                删除
-              </button>
+      <!-- 现有章节展示 -->
+      <div v-if="options.chapters.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-8">
+        <div v-for="(chapter, index) in options.chapters" 
+             :key="chapter.ID"
+             class="group relative">
+          <!-- 章节卡片 -->
+          <div class="w-full p-4 rounded-xl bg-white dark:bg-zinc-800 border theme-border hover:border-blue-500 dark:hover:border-blue-400 transition-all duration-300 group-hover:shadow-lg">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-sm text-gray-500 dark:text-gray-400">第 {{ index + 1 }} 章</span>
+              <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button @click="goToWriting(chapter)" 
+                        class="p-1 text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+                <button @click="startEdit(chapter)"
+                        class="p-1 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+                <button @click="confirmDelete(chapter.ID)"
+                        class="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <h3 class="text-lg font-medium mb-2 text-gray-900 dark:text-gray-100">{{ chapter.Title }}</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-3">{{ chapter.Description }}</p>
+            
+            <!-- 章节序号指示器 -->
+            <div class="absolute -left-3 -top-3 w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center text-white text-sm font-medium">
+              {{ index + 1 }}
             </div>
           </div>
         </div>
 
-        <!-- Connector Line with Arrow -->
-        <div v-if="index < options.chapters.length" class="absolute -right-16 top-1/2 w-16 flex items-center">
-          <div class="h-[2px] flex-grow bg-purple-400"></div>
+        <!-- 添加新章节按钮 -->
+        <div class="w-full p-4 rounded-xl border-2 border-dashed theme-border hover:border-blue-500 dark:hover:border-blue-400 transition-all duration-300 cursor-pointer group">
+          <div class="flex flex-col items-center justify-center h-40 text-gray-400 group-hover:text-blue-500">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            <span>添加新章节</span>
+          </div>
         </div>
       </div>
-      <div class="relative">
-        <!-- Connection Point Left -->
-        <div v-if="index > 0"
-             class="absolute left-0 top-1/2 transform -translate-x-2 -translate-y-1/2 w-3 h-3 rounded-full bg-purple-400"></div>
 
-        <!-- Connection Point Right -->
-        <div v-if="index < options.chapters.length"
-             class="absolute right-0 top-1/2 transform translate-x-2 -translate-y-1/2 w-3 h-3 rounded-full bg-purple-400"></div>
-
-        <!-- Node Content -->
-        <div class="w-48 p-12 rounded-lg shadow-lg border-2 bg-white dark:bg-indigo-950/20 border-purple-200 hover:border-purple-400 dark:border-purple-900 hover:dark:border-purple-600 transition-all transition-duration-300 border-dashed cursor-pointer">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-               stroke="currentColor" class="size-16 mx-auto my-auto">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-          </svg>
+      <!-- AI 生成的章节建议 -->
+      <div v-if="options.generatedChapters.length > 0" 
+           class="mt-8 p-6 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-medium text-green-800 dark:text-green-400">AI 章节建议</h3>
+          <div class="flex items-center gap-4">
+            <button @click="acceptChapter"
+                    class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
+              采用建议
+            </button>
+            <button @click="rejectChapter"
+                    class="px-4 py-2 border border-red-200 dark:border-red-800 text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+              放弃建议
+            </button>
+          </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Generated Chapters Workflow -->
-    <div v-if="options.generatedChapters.length !== 0"
-         class="bg-green-300/10 rounded-xl w-full p-4 mt-4">
-      <div class="flex flex-wrap items-center gap-16">
-        <div v-for="(gc, index) in options.generatedChapters"
-             class="relative flex items-center group">
-          <!-- Node -->
-          <div class="relative">
-            <!-- Connection Point Left -->
-            <div v-if="index > 0"
-                 class="absolute left-0 top-1/2 transform -translate-x-2 -translate-y-1/2 w-3 h-3 rounded-full bg-green-500"></div>
-
-            <!-- Connection Point Right -->
-            <div v-if="index < options.generatedChapters.length - 1"
-                 class="absolute right-0 top-1/2 transform translate-x-2 -translate-y-1/2 w-3 h-3 rounded-full bg-green-500"></div>
-
-            <!-- Node Content -->
-            <div class="w-48 p-4 rounded-lg bg-white dark:bg-gray-800 shadow-lg border-2 border-green-400 dark:border-green-600">
-              <div class="text-lg font-medium mb-2">{{ gc.Title }}</div>
-              <div class="text-sm text-gray-600 dark:text-gray-400">{{ gc.Description }}</div>
+        <!-- 修改 AI 建议章节的展示方式 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-8">
+          <div v-for="(chapter, index) in options.generatedChapters" 
+               :key="index"
+               class="relative">
+            <div class="w-full p-4 rounded-xl bg-white dark:bg-zinc-800 border border-green-200 dark:border-green-800">
+              <span class="text-sm text-green-600 dark:text-green-400 mb-2 block">建议章节 {{ index + 1 }}</span>
+              <h3 class="text-lg font-medium mb-2 text-gray-900 dark:text-gray-100">{{ chapter.Title }}</h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-3">{{ chapter.Description }}</p>
+              
+              <!-- 章节序号指示器 -->
+              <div class="absolute -left-3 -top-3 w-6 h-6 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center text-white text-sm font-medium">
+                {{ index + 1 }}
+              </div>
             </div>
           </div>
-
-          <!-- Connector Line with Arrow -->
-          <div v-if="index < options.generatedChapters.length - 1" class="absolute -right-16 top-1/2 w-16 flex items-center">
-            <div class="h-[2px] flex-grow bg-green-400"></div>
-            <div class="absolute right-0 w-2 h-2 rotate-45 border-t-2 border-r-2 border-green-400 transform -translate-y-1/2"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Accept/Reject Buttons -->
-      <div class="mt-6 text-center">
-        <p class="mb-4">您是否接受剧匠AI为您提供的建议？</p>
-        <div class="flex justify-center gap-4">
-          <button @click="acceptChapter"
-                  class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">
-            采用
-          </button>
-          <button @click="rejectChapter"
-                  class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
-            丢弃
-          </button>
         </div>
       </div>
     </div>
@@ -215,5 +227,5 @@ hover:bg-gray-100/50 active:bg-gray-100/90 dark:hover:dark:bg-gray-950/10 dark:a
 </template>
 
 <style scoped>
-/* Add any additional styles here */
+/* 可以删除之前的滚动条样式 */
 </style>

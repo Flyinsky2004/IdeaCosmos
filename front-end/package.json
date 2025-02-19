@@ -25,6 +25,7 @@
     "lodash": "^4.17.21",
     "md-editor-v3": "^5.2.1",
     "pinia": "^2.2.6",
+    "remixicon": "^4.6.0",
     "vue": "^3.5.13",
     "vue-echarts": "^7.0.3",
     "vue-kinesis": "^2.0.5",

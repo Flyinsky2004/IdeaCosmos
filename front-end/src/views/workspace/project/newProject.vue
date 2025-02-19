@@ -351,7 +351,7 @@ const validateStep = (step) => {
             <a-checkable-tag
               v-for="(tag, index) in selectPeople.tagsData"
               :key="tag"
-              :checked="selectPeople.selectTags[index]"
+              v-model:checked="selectPeople.selectTags[index]"
               @change="checked => handlePeopleChange(tag, checked)"
               class="px-3 py-1.5 rounded-full text-sm"
             >
@@ -390,7 +390,7 @@ const validateStep = (step) => {
             <a-checkable-tag
               v-for="(tag, index) in selectTags.tagsData"
               :key="tag"
-              :checked="selectTags.selectTags[index]"
+              v-model:checked="selectTags.selectTags[index]"
               @change="checked => handleChange(tag, checked)"
               class="px-3 py-1.5 rounded-full text-sm"
             >
