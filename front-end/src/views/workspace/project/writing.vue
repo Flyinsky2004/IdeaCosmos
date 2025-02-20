@@ -243,7 +243,7 @@ const showWordsCountDialog = () => {
         message.warning("请输入字数");
         return;
       }
-      generateNewVersion(wordsCount.value * 5);
+      generateNewVersion(wordsCount.value);
     },
   });
 };

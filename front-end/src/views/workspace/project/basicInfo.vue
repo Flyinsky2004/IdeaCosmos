@@ -215,7 +215,7 @@ const infoItems = {
 
       <!-- 项目信息区域 -->
       <div class="flex flex-col gap-2">
-        <div class="p-6 border theme-border rounded-xl mb-6 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm">
+        <div class="p-6 border theme-border rounded-xl mb-6 gradient-bkg backdrop-blur-sm">
           <!-- AI 生成加载状态 -->
           <div v-if="options.isTextGenerating"
                class="h-80 flex items-center justify-center">
@@ -288,7 +288,7 @@ const infoItems = {
         </div>
 
         <!-- 团队信息卡片 -->
-        <div class="mt-6 p-6 bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-blue-950/20 rounded-xl border theme-border">
+        <div class="mt-6 p-6 gradient-bkg rounded-xl border theme-border">
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-xl font-semibold bg-gradient-to-r from-indigo-500 to-blue-500 bg-clip-text text-transparent">
               团队信息

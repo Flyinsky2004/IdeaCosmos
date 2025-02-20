@@ -28,3 +28,8 @@ type Favourite struct {
 	UserId    uint `json:"userId" gorm:"type:bigint unsigned"`
 	ProjectId uint `json:"project_id" gorm:"type:bigint unsigned"`
 }
+type Watch struct {
+	gorm.Model
+	UserId    uint `json:"userId" gorm:"type:bigint unsigned"`
+	ProjectId uint `json:"project_id" gorm:"type:bigint unsigned"`
+}

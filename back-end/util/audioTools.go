@@ -50,6 +50,59 @@ func (tts *AzureTTS) TextToSpeech(text, lang, voice, gender string) (string, err
 	filename := fmt.Sprintf("%s_%s.mp3", timestamp, randomString())
 	outputPath := fmt.Sprintf("./audio/%s", filename)
 
+	// 确保目录存在
+	if err := os.MkdirAll("./audio", os.ModePerm); err != nil {
+		return "", fmt.Errorf("创建目录失败: %v", err)
+	}
+
+	// 检查文本长度并分段
+	const maxLength = 2000
+	textRunes := []rune(text)
+	if len(textRunes) > maxLength {
+		// 创建临时目录
+		tempDir := "./audio/temp"
+		if err := os.MkdirAll(tempDir, os.ModePerm); err != nil {
+			return "", fmt.Errorf("创建临时目录失败: %v", err)
+		}
+		defer os.RemoveAll(tempDir)
+
+		// 分段处理
+		var tempFiles []string
+		for i := 0; i < len(textRunes); i += maxLength {
+			end := i + maxLength
+			if end > len(textRunes) {
+				end = len(textRunes)
+			}
+			chunk := string(textRunes[i:end])
+
+			// 为每个分段生成临时文件名
+			tempFile := fmt.Sprintf("%s/chunk_%d.mp3", tempDir, i/maxLength)
+			tempFiles = append(tempFiles, tempFile)
+
+			// 处理当前分段
+			if err := tts.processChunk(chunk, lang, voice, gender, tempFile); err != nil {
+				return "", fmt.Errorf("处理文本分段失败: %v", err)
+			}
+		}
+
+		// 合并所有临时文件
+		if err := tts.mergeAudioFiles(tempFiles, outputPath); err != nil {
+			return "", fmt.Errorf("合并音频文件失败: %v", err)
+		}
+
+		return filename, nil
+	}
+
+	// 文本长度在限制内，直接处理
+	if err := tts.processChunk(text, lang, voice, gender, outputPath); err != nil {
+		return "", err
+	}
+
+	return filename, nil
+}
+
+// processChunk 处理单个文本块
+func (tts *AzureTTS) processChunk(text, lang, voice, gender, outputPath string) error {
 	// 构建SSML
 	ssml := fmt.Sprintf(ssmlTemplate, lang, lang, gender, voice, text)
 
@@ -57,7 +110,7 @@ func (tts *AzureTTS) TextToSpeech(text, lang, voice, gender string) (string, err
 	url := fmt.Sprintf(baseURL, tts.Region)
 	req, err := http.NewRequest("POST", url, bytes.NewBufferString(ssml))
 	if err != nil {
-		return "", fmt.Errorf("创建请求失败: %v", err)
+		return fmt.Errorf("创建请求失败: %v", err)
 	}
 
 	// 设置请求头
@@ -68,34 +121,47 @@ func (tts *AzureTTS) TextToSpeech(text, lang, voice, gender string) (string, err
 	// 发送请求
 	resp, err := tts.client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("发送请求失败: %v", err)
+		return fmt.Errorf("发送请求失败: %v", err)
 	}
 	defer resp.Body.Close()
 
 	// 检查响应状态
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("API调用失败，状态码: %d, 响应: %s", resp.StatusCode, string(body))
+		return fmt.Errorf("API调用失败，状态码: %d, 响应: %s", resp.StatusCode, string(body))
 	}
 
-	// 确保目录存在
-	err = os.MkdirAll("./audio", os.ModePerm)
-	if err != nil {
-		return "", fmt.Errorf("创建目录失败: %v", err)
-	}
-
-	// 创建输出文件
+	// 写入文件
 	out, err := os.Create(outputPath)
 	if err != nil {
-		return "", fmt.Errorf("创建输出文件失败: %v", err)
+		return fmt.Errorf("创建输出文件失败: %v", err)
 	}
 	defer out.Close()
 
-	// 写入文件
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("写入文件失败: %v", err)
+	if _, err = io.Copy(out, resp.Body); err != nil {
+		return fmt.Errorf("写入文件失败: %v", err)
 	}
 
-	return filename, nil
+	return nil
+}
+
+// mergeAudioFiles 合并多个音频文件
+func (tts *AzureTTS) mergeAudioFiles(tempFiles []string, outputPath string) error {
+	outFile, err := os.Create(outputPath)
+	if err != nil {
+		return fmt.Errorf("创建合并文件失败: %v", err)
+	}
+	defer outFile.Close()
+
+	for _, tempFile := range tempFiles {
+		data, err := os.ReadFile(tempFile)
+		if err != nil {
+			return fmt.Errorf("读取临时文件失败: %v", err)
+		}
+		if _, err := outFile.Write(data); err != nil {
+			return fmt.Errorf("写入合并文件失败: %v", err)
+		}
+	}
+
+	return nil
 }

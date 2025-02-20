@@ -8,9 +8,9 @@ import (
 
 const (
 	// OpenAIKey OpenAI API密钥
-	OpenAIKey = "sk-47c813ac284940f6bd25e0eb8b7537fc"
+	OpenAIKey = "sk-hySadfvZfjMxfWx12b302e8c832c4aEeBf7e44C5138bE860"
 	// OpenAIBaseURL OpenAI API基础URL
-	OpenAIBaseURL = "https://api.deepseek.com/v1"
+	OpenAIBaseURL = "https://api.vveai.com/v1"
 )
 
 type StreamResponse struct {
@@ -44,6 +44,7 @@ func StreamChatCompletion(ctx context.Context, request ChatRequest) (<-chan Stre
 			Messages:    messages,
 			Temperature: request.Temperature,
 			Stream:      true,
+			MaxTokens:   request.MaxTokens,
 		},
 	)
 	if err != nil {

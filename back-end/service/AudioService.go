@@ -67,5 +67,4 @@ func GenerateChapterAudio(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, dto.SuccessResponseWithMessage("生成成功!", fileName))
-	return
 }

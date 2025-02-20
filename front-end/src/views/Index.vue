@@ -100,6 +100,7 @@ const frameworks = [
   {name: 'Edge', icon: ``},
   {name: 'Edge', icon: ``},
   {name: 'Edge', icon: ``},
+  {name: 'Edge', icon: ``},
   {
     name: 'Edge', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve" width="64" height="64" fill="#3f57e1">
 <g id="W_Mark_2_">
@@ -276,19 +277,35 @@ const initCharacterChart = () => {
         show: true,
         position: 'right',
         formatter: '{b}',
-        color: themeStore.isDark ? '#e5e7eb' : '#111827',
+        backgroundColor: 'rgba(102, 102, 102, 0.75)',
+        borderRadius: 4,
+        padding: [4, 8],
+        color: '#fff',
         fontSize: 14,
         fontWeight: 'bold'
       },
+      edgeLabel: {
+        show: true,
+        formatter: '{c}',
+        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        borderRadius: 4,
+        padding: [4, 8],
+        color: '#fff',
+        fontSize: 12,
+        distance: 20,
+        rotate: 0,
+        offset: [0, 0]
+      },
       force: {
-        repulsion: 400,
-        gravity: 0.2,
-        edgeLength: 150,
-        layoutAnimation: true,
+        repulsion: 800,
+        gravity: 0.1,
+        edgeLength: 300,
         friction: 0.1,
+        layoutAnimation: true,
+        initLayout: 'circular'
       },
       cursor: 'move',
-      zoom: 2,
+      zoom: 1.5,
       center: ['50%', '50%'],
       emphasis: {
         focus: 'adjacency',
@@ -322,9 +339,9 @@ const initCharacterChart = () => {
           x2: 0,
           y2: 1,
           colorStops: [{
-            offset: 0, color: 'rgb(96, 163, 255)'
+            offset: 0, color: 'rgb(77, 77, 245)'
           }, {
-            offset: 1, color: 'rgb(128, 108, 255)'
+            offset: 1, color: 'rgb(77, 77, 245)'
           }]
         }
       },

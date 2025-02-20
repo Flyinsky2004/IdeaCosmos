@@ -5,16 +5,16 @@ import { get, post , postJSON } from "@/util/request";
 import { message } from "ant-design-vue";
 import { BACKEND_DOMAIN, imagePrefix } from "@/util/VARRIBLES";
 import Loader from "@/components/loader.vue";
-import * as echarts from "echarts";
+import RelationShipGraph from "@/components/RelationShipGraph.vue";
+import SpinLoaderLarge from "@/components/spinLoaderLarge.vue";
 import { useUserStore } from "@/stores/user";
-
+import router from "@/router";
 const route = useRoute();
 const project = ref(null);
 const loading = ref(true);
 const chaptersLoading = ref(true);
 
 // 角色关系图相关
-const characterChart = ref(null);
 const characters = ref([]);
 const relationships = ref([]);
 
@@ -26,6 +26,9 @@ const commentContent = ref("");
 const comments = ref([]);
 const commentsLoading = ref(true);
 
+// 添加收藏相关状态
+const isFavorited = ref(false)
+
 onMounted(async () => {
   const projectId = route.params.id;
   try {
@@ -34,6 +37,7 @@ onMounted(async () => {
       fetchCharacters(projectId),
       fetchChapters(projectId)
     ]);
+    checkFavorite()
   } catch (error) {
     message.error('加载数据失败');
   }
@@ -67,9 +71,6 @@ const fetchCharacters = (projectId) => {
     (messager, data) => {
       characters.value = data.characters;
       relationships.value = data.relationships;
-      nextTick(() => {
-        initCharacterChart();
-      });
     },
     (messager) => message.warning(messager),
     (messager) => message.error(messager)
@@ -158,184 +159,6 @@ const submitComment = async () => {
   }
 };
 
-// 生成随机颜色
-const getRandomColor = () => {
-  const colors = [
-    "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEEAD",
-    "#D4A5A5", "#9B59B6", "#3498DB", "#1ABC9C", "#F1C40F",
-    "#E74C3C", "#2ECC71", "#34495E", "#16A085", "#27AE60",
-    "#FFB347", "#A8E6CF", "#3D84A8", "#46B3E6", "#4A90E2",
-    "#D35400", "#8E44AD", "#2980B9", "#F39C12", "#7F8C8D",
-    "#E67E22", "#C0392B", "#6C5CE7", "#00B894", "#FDA7DF",
-    "#FF9FF3", "#FFA07A", "#20B2AA", "#87CEEB", "#DDA0DD"
-  ];
-  return colors[Math.floor(Math.random() * colors.length)];
-};
-
-// 初始化角色关系图
-const initCharacterChart = () => {
-  if (!characterChart.value) return;
-
-  const chartInstance = echarts.init(characterChart.value);
-
-  // 构建图表数据
-  const nodes = characters.value.map((char) => ({
-    name: char.name,
-    id: char.ID.toString(),
-    symbolSize: 60,
-    category: 0,
-    itemStyle: {
-      color: getRandomColor(),
-    },
-    label: {
-      show: true,
-      color: "#fff",
-      fontSize: 14,
-      fontWeight: "bold",
-      backgroundColor: "#666",
-      padding: [4, 8],
-      borderRadius: 4,
-      distance: 5,
-    },
-    value: char.description,
-  }));
-
-  const categories = [{ name: "角色" }];
-
-  const links = relationships.value.map((rel) => ({
-    source: rel.first_character_id.toString(),
-    target: rel.second_character_id.toString(),
-    name: rel.name,
-    value: rel.content,
-    label: {
-      show: true,
-      formatter: rel.name,
-      fontSize: 12,
-      color: "#fff",
-      backgroundColor: "rgba(0,0,0,0.6)",
-      padding: [4, 8],
-      borderRadius: 4,
-    },
-    lineStyle: {
-      width: 2,
-      curveness: 0.2,
-      color: "#666",
-      opacity: 0.8,
-    },
-  }));
-
-  const option = {
-    title: {
-      text: "角色关系图谱",
-      subtext: "可拖拽调整位置",
-      top: "bottom",
-      left: "right"
-    },
-    tooltip: {
-      show: true,
-      confine: true,
-      enterable: true,
-      formatter: function (params) {
-        const title = params.dataType === "edge" ? "关系" : "角色";
-        const name = params.data.name;
-        const desc = params.data.value || "暂无描述";
-        
-        return `
-          <div style="
-            width: 200px;
-            max-height: 300px;
-            overflow-y: auto;
-            font-size: 14px;
-            line-height: 1.5;
-          ">
-            <div style="
-              font-weight: bold;
-              margin-bottom: 8px;
-              color: #fff;
-              font-size: 15px;
-              white-space: normal;
-              word-break: break-all;
-            ">
-              ${title}：${name}
-            </div>
-            <div style="
-              color: rgba(255,255,255,0.9);
-              white-space: normal;
-              word-break: break-all;
-            ">
-              描述：${desc}
-            </div>
-          </div>
-        `;
-      },
-      backgroundColor: "rgba(0,0,0,0.75)",
-      padding: [10, 15],
-      borderRadius: 8,
-      textStyle: {
-        fontSize: 14,
-        lineHeight: 20,
-        rich: {
-          title: {
-            fontSize: 15,
-            fontWeight: 'bold',
-            lineHeight: 25
-          },
-          content: {
-            lineHeight: 20,
-            color: 'rgba(255,255,255,0.9)'
-          }
-        }
-      }
-    },
-    legend: [
-      {
-        data: categories.map((a) => a.name),
-      },
-    ],
-    animationDuration: 1500,
-    animationEasingUpdate: "quinticInOut",
-    series: [
-      {
-        name: "角色关系",
-        type: "graph",
-        layout: "force",
-        data: nodes,
-        links: links,
-        categories: categories,
-        roam: true,
-        draggable: true,
-        label: {
-          position: "right",
-          formatter: "{b}",
-        },
-        force: {
-          repulsion: 200,
-          gravity: 0.1,
-          edgeLength: 120,
-          layoutAnimation: true,
-        },
-        lineStyle: {
-          color: "source",
-          curveness: 0.3,
-        },
-        emphasis: {
-          focus: "adjacency",
-          lineStyle: {
-            width: 4,
-          },
-        },
-      },
-    ],
-  };
-
-  chartInstance.setOption(option);
-
-  // 监听窗口大小变化
-  window.addEventListener("resize", () => {
-    chartInstance.resize();
-  });
-};
-
 // 在获取到项目信息后加载其他数据
 watch(
   () => project.value,
@@ -394,13 +217,43 @@ const formatCommentDate = (date) => {
     minute: '2-digit'
   });
 };
+
+// 检查收藏状态
+const checkFavorite = async () => {
+  if (!userStore.isLogin) return
+  
+  get('/api/user/favorite/check', {
+    project_id: route.params.id
+  }, (messageer, data) => {
+    isFavorited.value = data
+  })
+}
+
+// 收藏/取消收藏
+const toggleFavorite = async () => {
+  if (!userStore.isLogin) {
+    message.warning('请先登录')
+    return
+  }
+
+  const api = isFavorited.value ? '/api/user/favorite/remove' : '/api/user/favorite/add'
+  
+  get(api, {
+    project_id: route.params.id
+  }, (messageer, data) => {
+    isFavorited.value = !isFavorited.value
+    message.success(isFavorited.value ? '收藏成功' : '已取消收藏')
+    // 更新项目信息
+    fetchProjectDetail(route.params.id)
+  })
+}
 </script>
 
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-zinc-900/20 p-6">
     <!-- 加载状态 -->
     <div v-if="loading" class="flex items-center justify-center min-h-[400px]">
-      <loader />
+      <SpinLoaderLarge />
     </div>
 
     <template v-else-if="project">
@@ -470,20 +323,25 @@ const formatCommentDate = (date) => {
                 {{ project.watches }} 浏览
               </div>
               <div class="flex items-center gap-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+                <button
+                  @click="toggleFavorite"
+                  class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors"
+                  :class="isFavorited ? 
+                    'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                    'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'"
                 >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
-                  />
-                </svg>
-                {{ project.favorites }} 收藏
+                  <svg xmlns="http://www.w3.org/2000/svg" 
+                    class="h-5 w-5" 
+                    :class="isFavorited ? 'fill-current' : 'stroke-current fill-none'"
+                    viewBox="0 0 24 24"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" 
+                      d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" 
+                    />
+                  </svg>
+                  <span>{{ isFavorited ? '已收藏' : '收藏' }}</span>
+                  <span class="text-sm">{{ project.favorites }}</span>
+                </button>
               </div>
             </div>
 
@@ -592,7 +450,10 @@ const formatCommentDate = (date) => {
             >
               角色关系图谱
             </h2>
-            <div ref="characterChart" class="w-full h-[600px]"></div>
+            <RelationShipGraph 
+          :relationships="relationships" 
+          class="min-h-[400px]"
+        />
           </div>
 
           <!-- 章节列表 -->
@@ -614,6 +475,7 @@ const formatCommentDate = (date) => {
             <!-- 章节列表 -->
             <div v-else-if="chapters.length > 0" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               <div v-for="chapter in chapters" 
+                  @click="router.push(`/community/chapter/${chapter.ID}`)"
                    :key="chapter.ID" 
                    :class="[
                      'group p-4 border theme-border rounded-lg hover:border-blue-500 transition-all',

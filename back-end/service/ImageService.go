@@ -8,9 +8,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	"github.com/nfnt/resize"
 	"image"
 	"image/jpeg"
 	"image/png"
@@ -21,6 +18,10 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/nfnt/resize"
 )
 
 /**

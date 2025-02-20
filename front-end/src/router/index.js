@@ -108,6 +108,11 @@ const router = createRouter({
                     path: 'project/:id',
                     name: 'ProjectDetail',
                     component: () => import('@/views/community/ProjectDetail.vue')
+                },
+                {
+                    path: 'chapter/:id',
+                    name: 'ChapterView',
+                    component: () => import('@/views/workspace/project/chapterView.vue'),
                 }
             ]
         },

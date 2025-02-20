@@ -154,3 +154,7 @@ div{
     scrollbar-width: thin;
     scrollbar-color: var(--scrollbar-thumb-bg) var(--scrollbar-track-bg);
 }
+
+.gradient-bkg{
+    @apply bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-blue-950/20;
+}

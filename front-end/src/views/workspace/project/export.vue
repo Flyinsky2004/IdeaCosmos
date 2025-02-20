@@ -81,7 +81,7 @@ const stopAudio = () => {
 }
 const fetchAudioResource = async () => {
   // 发送请求，获取MP3文件流
-  const response = await axios.get(BACKEND_DOMAIN + 'audio/' + options.currentChapter.current_version.audio_path, {
+  const response = await axios.get(BACKEND_DOMAIN + 'audio/' + options.currentAudioFileName, {
     responseType: 'arraybuffer', // 确保获取的是二进制数据
   });
 
@@ -133,39 +133,79 @@ const fetchAudioResource = async () => {
       </div>
 
       <!-- 篇章选择 -->
-      <div v-show="options.activeTab === 'chapters'" class="space-y-4">
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          选择要导出的篇章
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div v-show="options.activeTab === 'chapters'" class="space-y-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            选择要导出的篇章
+          </h2>
+          <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>点击卡片选择要导出的篇章</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           <div
             v-for="chapter in options.chapters"
             :key="chapter.ID"
-            class="group relative aspect-[4/3] rounded-xl overflow-hidden cursor-pointer"
-            :class="chapter.ID === options.currentChapterId ? 
-              'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-900' : 
-              'hover:ring-2 hover:ring-blue-500/50 hover:ring-offset-2 dark:hover:ring-offset-gray-900'"
+            class="group relative bg-white dark:bg-zinc-800 rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1"
+            :class="[
+              chapter.ID === options.currentChapterId ? 
+                'ring-2 ring-blue-500 dark:ring-blue-400 shadow-lg shadow-blue-500/10' : 
+                'border theme-border hover:shadow-xl',
+              !chapter.current_version?.ID && 'opacity-50'
+            ]"
             @click="chapterClickHandler(chapter, chapter.version_id)"
           >
-            <!-- 背景 -->
-            <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/60" />
-            
-            <!-- 内容 -->
-            <div class="absolute inset-0 p-4 flex flex-col justify-between">
-              <div>
-                <h3 class="text-lg font-semibold text-white">
-                  {{ chapter.Title }}
-                </h3>
-                <p class="mt-2 text-sm text-gray-200 line-clamp-2">
-                  {{ chapter.Description }}
-                </p>
-              </div>
+            <!-- 状态标签 -->
+            <div 
+              class="absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-medium z-10"
+              :class="chapter.current_version?.ID ? 
+                'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 
+                'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'"
+            >
+              {{ chapter.current_version?.ID ? '可导出' : '未创作' }}
+            </div>
+
+            <!-- 渐变背景 -->
+            <div class="aspect-[4/3] relative">
+              <div class="absolute inset-0 bg-gradient-to-b from-black/30 to-black/70"></div>
               
-              <div class="flex items-center justify-between text-xs text-gray-200">
-                <span>版本 {{ chapter.current_version?.ID || '未创作' }}</span>
-                <span>{{ parseDateTime(chapter.UpdatedAt) }}</span>
+              <!-- 内容 -->
+              <div class="absolute inset-0 p-4 flex flex-col justify-between">
+                <div class="space-y-2">
+                  <h3 class="text-lg font-semibold text-white group-hover:text-blue-200 transition-colors">
+                    {{ chapter.Title }}
+                  </h3>
+                  <p class="text-sm text-gray-200 line-clamp-2">
+                    {{ chapter.Description }}
+                  </p>
+                </div>
+                
+                <div class="flex items-center justify-between text-xs">
+                  <div class="flex items-center gap-2 text-gray-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>版本 {{ chapter.current_version?.ID || '-' }}</span>
+                  </div>
+                  <div class="flex items-center gap-2 text-gray-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>{{ parseDateTime(chapter.UpdatedAt) }}</span>
+                  </div>
+                </div>
               </div>
             </div>
+
+            <!-- 选中指示器 -->
+            <div 
+              v-if="chapter.ID === options.currentChapterId"
+              class="absolute inset-0 border-2 border-blue-500 dark:border-blue-400 rounded-xl pointer-events-none"
+            ></div>
           </div>
         </div>
       </div>
@@ -186,6 +226,26 @@ const fetchAudioResource = async () => {
           </a-button>
         </div>
 
+        <!-- 音频播放器 -->
+        <div v-if="options.currentChapter?.current_version?.audio_path" 
+          class="mt-4 p-4 bg-gray-50 dark:bg-zinc-900/50 rounded-xl border border-gray-200 dark:border-zinc-700/80"
+        >
+          <div class="flex items-center gap-3 mb-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+            </svg>
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">章节音频</span>
+          </div>
+          <audio
+            ref="audioPlayer"
+            :src="`${BACKEND_DOMAIN}audio/${options.currentChapter.current_version.audio_path}`"
+            class="w-full focus:outline-none"
+            controls
+            preload="metadata"
+            @error="onAudioError"
+          ></audio>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div
             v-for="(model, index) in audioModels"
@@ -204,7 +264,7 @@ const fetchAudioResource = async () => {
                        'from-blue-400 to-blue-600' : 
                        'from-pink-400 to-rose-500'"
                 >
-                  <div class="w-full h-full rounded-full bg-white dark:bg-gray-900 p-1.5">
+                  <div class="w-full h-full rounded-full bg-white dark:bg-gray-900">
                     <div v-html="model.isMale ? maleAvatar : femaleAvatar" />
                   </div>
                 </div>

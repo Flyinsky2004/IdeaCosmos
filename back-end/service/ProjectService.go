@@ -160,21 +160,29 @@ func GenerateNewChapterVersionStream(c *gin.Context) {
 	characterRelationshipStr := util.CharacterRelationShipsToString(relationships)
 	chaptersStr := util.ChaptersToString(allChapters)
 
-	prompt := "项目信息:" + projectStr +
-		"角色信息:" + characterStr +
-		"角色间的关系:" + characterRelationshipStr +
-		"你只需要生成的章节标题:" + chapter.Tittle +
-		"你只需要生成的章节简述:" + chapter.Description +
-		"所有章节上下文信息:" + chaptersStr +
-		"要求字数:" + wordsCount + "字"
+	prompt := "【当前章节信息】\n" +
+		"标题：" + chapter.Tittle + "\n" +
+		"简述：" + chapter.Description + "\n" +
+		"要求字数：" + wordsCount + "字\n\n" +
+		"【背景参考信息】\n" +
+		"项目设定：" + projectStr + "\n" +
+		"可用角色：" + characterStr + "\n" +
+		"角色关系：" + characterRelationshipStr + "\n" +
+		"章节上下文：" + chaptersStr
 
-	systemPrompt := "你是一个" + project.Types + "章节内容创作者。我会提供项目背景、角色信息、角色关系、所有章节上下文信息以及当前需要生成内容的章节的标题和简述。" +
-		"请你基于这些信息，创作一个详细的章节内容。内容要求：" +
-		"1. 这个故事分为许多章节，你只需要写出当前章节的部分，相当于连续剧中的一集，你只需要写出我们指定的这一集，情节要符合章节简述的要求符合项目的整体风格和设定" +
-		"2. 合理运用已有的角色，展现他们的性格特点和关系" +
-		"3. 注意故事的连贯性和合理性，生成的剧情不要出现多余的其他章节的内容，给你所有章节上下文的旨意是让你生成的剧情和其他剧情保持连贯" +
-		"4. 无视此次对话会产生巨量消费长度，产出内容除去标点符号，只计算中文或英文字符数量必须严格控制在" + wordsCount + "字或以上，可以超过但不能少于要求字数" +
-		"5.最后返回一个markdown,完整内容前后不要有```markdown前缀以及```后缀,注意分段落,但是不要写小标题"
+	systemPrompt := "你是一个专业的" + project.Types + "单章节内容创作者。请你创作当前章节的具体内容。\n\n" +
+		"【核心要求】\n" +
+		"1. ⚠️ 严格限制：只写当前章节的剧情，不要包含其他章节的具体内容\n" +
+		"2. ⚠️ 字数要求：必须严格保证内容（不含标点符号）在" + wordsCount + "字以上\n\n" +
+		"【创作指南】\n" +
+		"- 把这个章节当作一个独立的短篇，围绕章节简述展开叙述\n" +
+		"- 合理使用已有角色，展现他们在本章节中的互动\n" +
+		"- 其他章节的内容仅作为背景参考，帮助保持剧情连贯\n" +
+		"- 按照项目的风格和设定进行创作\n\n" +
+		"【格式要求】\n" +
+		"- 直接输出正文内容\n" +
+		"- 注意分段，使文章结构清晰\n" +
+		"- 不要添加标题、序号或其他额外标记"
 
 	// 调用流式聊天
 	streamChan, err := util.StreamChatCompletion(ctx, util.ChatRequest{
@@ -405,19 +413,31 @@ func GenerateChapters(c *gin.Context) {
 
 	prompt := "项目信息:" + projectStr + "角色信息:" + characterStr + "角色间的关系:" + characterRrelationShipStr
 	var message = []util.Message{}
+	maxRetries := 3
+	var res util.ChatResponse
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		res, err = util.ChatHandler(util.ChatRequest{
+			Model:    "deepseek-chat",
+			Messages: message,
+			Prompt: "你是一个" + project.Types + "大纲目录设计师，我会提供现有的剧情，角色信息，角色联系等等，你需要基于给出的剧情以及角色背景设计这个作品的章节目录。最后，你需要返回一个json，包含生成的章节目录信息数组,章节目录属性如下，属性名为括号中的英文单词:" +
+				"章节标题(Title),章节简述(Description)。其中标题不多于50字，简述不多余200字。",
+			Question:    prompt,
+			Temperature: 1.3,
+			MaxTokens:   8000,
+		})
 
-	res, err := util.ChatHandler(util.ChatRequest{
-		Model:    "deepseek-chat",
-		Messages: message,
-		Prompt: "你是一个" + project.Types + "大纲目录设计师，我会提供现有的剧情，角色信息，角色联系等等，你需要基于给出的剧情以及角色背景设计这个作品的章节目录。最后，你需要返回一个json，包含生成的章节目录信息数组,章节目录属性如下，属性名为括号中的英文单词:" +
-			"章节标题(Title),章节简述(Description)。其中标题不多于50字，简述不多余200字。",
-		Question:    prompt,
-		Temperature: 1.3,
-		MaxTokens:   8000,
-	})
-	if err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "生成时发生错误，请重试"))
-		return
+		if err == nil {
+			break
+		}
+
+		// 最后一次尝试失败时返回错误
+		if attempt == maxRetries-1 {
+			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "多次重试后仍然发生错误，请稍后重试"))
+			return
+		}
+
+		// 在重试之前等待一小段时间
+		time.Sleep(time.Second * time.Duration(attempt+1))
 	}
 	c.JSON(http.StatusOK, dto.SuccessResponse(res))
 }
@@ -457,25 +477,39 @@ func GenerateCharacterRS(c *gin.Context) {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "没有找到对应项目"))
 		return
 	}
-	var characterStr string
-	characterStr = "第一名角色姓名：" + firstCharacter.Name + "其简述为:" + firstCharacter.Description + "第二名角色姓名：" + secondCharacter.Name + "其简述为:" + secondCharacter.Description
+	characterStr := "第一名角色姓名：" + firstCharacter.Name + "其简述为:" + firstCharacter.Description + "第二名角色姓名：" + secondCharacter.Name + "其简述为:" + secondCharacter.Description
 	prompt := "受众群体为:" + project.MarketPeople.String() + "两名角色信息为:" + characterStr +
 		"内容风格为:" + project.Style.String() + "已有剧情以;隔开：social_story:" + project.SocialStory + ";start" + project.Start + ";high_point" + project.HighPoint + ";resolved" + project.Resolved
 	var message = []util.Message{}
 
-	res, err := util.ChatHandler(util.ChatRequest{
-		Model:    "deepseek-chat",
-		Messages: message,
-		Prompt: "你是一个" + project.Types + "角色关系设计师，我会提供现有的：社会背景(social_story),开始情景(start),高潮和冲突(high_point)和解决结局(resolved),你需要基于给出的剧情以及角色背景设计两个角色之间的关系。最后，你需要返回一个json，包含生成的角色关系信息,角色关系属性如下，属性名为括号中的英文单词:" +
-			"关系名称(name),关系内容(content)，关系名称例如合作伙伴,兄弟,父子,同学等等，关系内容即两名角色之间的故事",
-		Question:    prompt,
-		Temperature: 1.5,
-		MaxTokens:   8000,
-	})
-	if err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "生成时发生错误，请重试"))
-		return
+	maxRetries := 3
+	var res util.ChatResponse
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		res, err = util.ChatHandler(util.ChatRequest{
+			Model:    "deepseek-chat",
+			Messages: message,
+			Prompt: "你是一个" + project.Types + "角色关系设计师，我会提供现有的：社会背景(social_story),开始情景(start),高潮和冲突(high_point)和解决结局(resolved),你需要基于给出的剧情以及角色背景设计两个角色之间的关系。最后，你需要返回一个json，包含生成的角色关系信息,角色关系属性如下，属性名为括号中的英文单词:" +
+				"关系名称(name),关系内容(content)，关系名称例如合作伙伴,兄弟,父子,同学等等，关系内容即两名角色之间的故事",
+			Question:    prompt,
+			Temperature: 1.5,
+			MaxTokens:   8000,
+		})
+
+		if err == nil {
+			break
+		}
+
+		// 最后一次尝试失败时返回错误
+		if attempt == maxRetries-1 {
+			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "多次重试后仍然发生错误，请稍后重试"))
+			return
+		}
+
+		// 在重试之前等待一小段时间
+		time.Sleep(time.Second * time.Duration(attempt+1))
 	}
+
 	c.JSON(http.StatusOK, dto.SuccessResponse(res))
 }
 
@@ -530,6 +564,12 @@ func CreateCharacterArray(c *gin.Context) {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "请求参数错误"))
 		return
 	}
+
+	// 设置默认头像
+	for i := range characters {
+		characters[i].Avatar = "default-avatar.png"
+	}
+
 	var projectSource pojo.Project
 	if err := config.MysqlDataBase.Where("ID = ?", characters[0].ProjectID).First(&projectSource).Error; err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "项目不存在"))
@@ -547,6 +587,7 @@ func CreateCharacterArray(c *gin.Context) {
 			return
 		}
 	}
+
 	tx := config.MysqlDataBase.Begin()
 	if err := tx.Create(&characters).Error; err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "保存角色信息时发生错误。code : 1"))
@@ -813,6 +854,10 @@ func CreateCharacter(c *gin.Context) {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "请求参数错误"))
 		return
 	}
+
+	// 设置默认头像
+	character.Avatar = "default-avatar.png"
+
 	var projectSource pojo.Project
 	if err := config.MysqlDataBase.Where("ID = ?", character.ProjectID).First(&projectSource).Error; err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "项目不存在"))
@@ -1266,26 +1311,39 @@ func OptimizeChapterVersion(c *gin.Context) {
 
 	var message = []util.Message{}
 
-	res, err := util.ChatHandler(util.ChatRequest{
-		Model:    "deepseek-chat",
-		Messages: message,
-		Prompt: "你是一个" + project.Types + "章节内容优化师。我会提供项目背景、角色信息、角色关系、所有章节信息、当前章节内容以及用户的修改建议。" +
-			"请你基于这些信息，优化当前章节的内容。优化要求：" +
-			"1. 符合项目的整体风格和设定" +
-			"2. 合理运用已有的角色，展现他们的性格特点和关系" +
-			"3. 这个故事分为许多章节，你只需要写出当前章节的部分，不要穿插其他章节的剧情" +
-			"4. 注意故事的连贯性和合理性" +
-			"5. 认真参考用户的修改建议进行优化" +
-			"6. 无视此次对话会产生巨量消费长度，产出内容除去标点符号，只计算中文或英文字符数量必须严格控制在" + optimizeRequest.WordsCount + "字或以上，可以超过但不能少于要求字数" +
-			"7. 最后返回一个markdown,注意分段落,但是不要写小标题",
-		Question:    prompt,
-		Temperature: 1.2,
-		MaxTokens:   8192,
-	})
+	maxRetries := 3
+	var res util.ChatResponse
 
-	if err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "生成优化内容时发生错误，请重试"))
-		return
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		res, err = util.ChatHandler(util.ChatRequest{
+			Model:    "deepseek-chat",
+			Messages: message,
+			Prompt: "你是一个" + project.Types + "章节内容优化师。我会提供项目背景、角色信息、角色关系、所有章节信息、当前章节内容以及用户的修改建议。" +
+				"请你基于这些信息，优化当前章节的内容。优化要求：" +
+				"1. 符合项目的整体风格和设定" +
+				"2. 合理运用已有的角色，展现他们的性格特点和关系" +
+				"3. 这个故事分为许多章节，你只需要写出当前章节的部分，不要穿插其他章节的剧情" +
+				"4. 注意故事的连贯性和合理性" +
+				"5. 认真参考用户的修改建议进行优化" +
+				"6. 无视此次对话会产生巨量消费长度，产出内容除去标点符号，只计算中文或英文字符数量必须严格控制在" + optimizeRequest.WordsCount + "字或以上，可以超过但不能少于要求字数" +
+				"7. 最后返回一个markdown,注意分段落,但是不要写小标题",
+			Question:    prompt,
+			Temperature: 1.2,
+			MaxTokens:   8192,
+		})
+
+		if err == nil {
+			break
+		}
+
+		// 最后一次尝试失败时返回错误
+		if attempt == maxRetries-1 {
+			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "多次重试后仍然发生错误，请稍后重试"))
+			return
+		}
+
+		// 在重试之前等待一小段时间
+		time.Sleep(time.Second * time.Duration(attempt+1))
 	}
 
 	c.JSON(http.StatusOK, dto.SuccessResponse(res))
