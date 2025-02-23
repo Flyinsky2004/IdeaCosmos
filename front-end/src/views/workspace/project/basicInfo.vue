@@ -102,7 +102,7 @@ const infoItems = {
 <template>
   <div class="animate__animated animate__fadeIn">
     <!-- 项目标题区域 -->
-    <div class="mb-6">
+    <div class="mb-6 animate__animated animate__fadeIn animate__delay-1s">
       <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-500 to-blue-500 bg-clip-text text-transparent">
         {{ project.project_name }}
       </h1>
@@ -117,7 +117,7 @@ const infoItems = {
     <!-- 封面和信息区域 -->
     <div class="grid grid-cols-[400px,1fr] gap-8">
       <!-- 封面区域 -->
-      <div>
+      <div class="animate__animated animate__fadeIn animate__delay-2s">
         <a-popover title="编辑作品封面" trigger="hover">
           <template #content>
             <div class="flex flex-nowrap gap-2">
@@ -178,7 +178,7 @@ const infoItems = {
         <!-- 标签区域 -->
         <div class="space-y-4 mt-4">
           <!-- 风格标签 -->
-          <div class="p-4 border theme-border rounded-xl bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm">
+          <div class="p-4 border theme-border rounded-xl bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm animate__animated animate__fadeIn animate__delay-3s">
             <h2 class="text-lg font-semibold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent mb-3">
               创作风格
             </h2>
@@ -195,7 +195,7 @@ const infoItems = {
           </div>
 
           <!-- 目标人群标签 -->
-          <div class="p-4 border theme-border rounded-xl bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm">
+          <div class="p-4 border theme-border rounded-xl bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm animate__animated animate__fadeIn animate__delay-4s">
             <h2 class="text-lg font-semibold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent mb-3">
               目标人群
             </h2>
@@ -215,7 +215,7 @@ const infoItems = {
 
       <!-- 项目信息区域 -->
       <div class="flex flex-col gap-2">
-        <div class="p-6 border theme-border rounded-xl mb-6 gradient-bkg backdrop-blur-sm">
+        <div class="p-6 border theme-border rounded-xl mb-6 gradient-bkg backdrop-blur-sm animate__animated animate__fadeIn animate__delay-5s">
           <!-- AI 生成加载状态 -->
           <div v-if="options.isTextGenerating"
                class="h-80 flex items-center justify-center">
@@ -288,7 +288,7 @@ const infoItems = {
         </div>
 
         <!-- 团队信息卡片 -->
-        <div class="mt-6 p-6 gradient-bkg rounded-xl border theme-border">
+        <div class="mt-6 p-6 gradient-bkg rounded-xl border theme-border animate__animated animate__fadeIn animate__delay-6s">
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-xl font-semibold bg-gradient-to-r from-indigo-500 to-blue-500 bg-clip-text text-transparent">
               团队信息
@@ -321,5 +321,27 @@ const infoItems = {
 </template>
 
 <style scoped>
+.animate__animated {
+  animation-duration: 0.5s; /* 调整动画持续时间 */
+}
 
+/* 自定义延迟时间 */
+.animate__delay-1s {
+  animation-delay: 0.1s;
+}
+.animate__delay-2s {
+  animation-delay: 0.2s;
+}
+.animate__delay-3s {
+  animation-delay: 0.3s;
+}
+.animate__delay-4s {
+  animation-delay: 0.4s;
+}
+.animate__delay-5s {
+  animation-delay: 0.5s;
+}
+.animate__delay-6s {
+  animation-delay: 0.6s;
+}
 </style>

@@ -6,11 +6,13 @@ import {parseDateTime} from "@/util/common.js";
 import router from "@/router/index.js";
 import {useProjectStore} from "@/stores/project.js";
 import {imagePrefix} from "@/util/VARRIBLES.js";
+import SpinLoaderLarge from '@/components/spinLoaderLarge.vue'
 
 const options = reactive({
   projects: [],
   isAddWindowOpen: false,
   nowHoverId: -1,
+  loading: true,
   quickActions: [
     {
       name: '新建项目',
@@ -33,9 +35,11 @@ const options = reactive({
   ]
 })
 const fetchMyProjects = () => {
+  options.loading = true
   get('/api/project/myProjects', {},
       (message, data) => {
         options.projects = data;
+        options.loading = false
       })
 }
 
@@ -58,114 +62,156 @@ const enterProject = (project) => {
 
 <template>
   <div class="flex flex-col gap-4 animate__animated animate__fadeIn p-6">
-    <!-- 顶部欢迎区域 -->
-    <div class="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border theme-border">
-      <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent mb-2">
-        创剧空间
-      </h1>
-      <p class="text-gray-600 dark:text-gray-400 leading-relaxed">
-        我们的团队功能支持您将创剧空间中的项目与您的团队绑定，使您的团队成员一同加入您的精彩内容创作！
-        <br/>
-        <span class="text-sm font-medium mt-2 inline-block">
-          支持功能：项目多人分工协作 / 实时评论反馈 / 项目版本控制
-        </span>
-      </p>
+    <div v-if="options.loading" class="flex items-center justify-center py-12">
+      <SpinLoaderLarge />
     </div>
 
-    <!-- 项目列表区域 -->
-    <div class="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border theme-border">
-      <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">我的项目</h2>
-        <button 
-          @click="router.push('/workspace/newProject')"
-          class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:opacity-90 transition-all"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-          </svg>
-          新建项目
-        </button>
+    <template v-else>
+      <!-- 顶部欢迎区域 -->
+      <div class="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border theme-border animate__animated animate__fadeIn animate__delay-1s">
+        <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent mb-2">
+          创剧空间
+        </h1>
+        <p class="text-gray-600 dark:text-gray-400 leading-relaxed">
+          我们的团队功能支持您将创剧空间中的项目与您的团队绑定，使您的团队成员一同加入您的精彩内容创作！
+          <br/>
+          <span class="text-sm font-medium mt-2 inline-block">
+            支持功能：项目多人分工协作 / 实时评论反馈 / 项目版本控制
+          </span>
+        </p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        <!-- 项目卡片 -->
-        <div 
-          v-for="project in options.projects" 
-          :key="project.ID"
-          class="group relative bg-gray-50 dark:bg-zinc-800/50 rounded-xl overflow-hidden border theme-border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
-          @mouseover="moveIn(project.ID)" 
-          @mouseleave="moveOut()"
-        >
-          <!-- 项目封面 -->
-          <div class="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-zinc-800">
-            <img 
-              v-if="project.cover_image" 
-              :src="imagePrefix + project.cover_image" 
-              :alt="project.project_name"
-              class="w-full h-full object-cover"
-            />
-            <div v-else class="w-full h-full flex items-center justify-center text-gray-400">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-          </div>
-
-          <!-- 项目信息 -->
-          <div class="p-4">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
-              {{ project.project_name }}
-            </h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
-              团队：{{ project.team.username }}
-            </p>
-            <div class="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-              <span class="flex items-center gap-1">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {{ parseDateTime(project.CreatedAt) }}
-              </span>
-            </div>
-          </div>
-
-          <!-- 悬浮时显示的操作按钮 -->
-          <div 
-            v-if="options.nowHoverId === project.ID"
-            class="absolute inset-0 bg-black/60 flex items-center justify-center animate__animated animate__fadeIn animate__faster"
+      <!-- 项目列表区域 -->
+      <div class="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border theme-border animate__animated animate__fadeIn animate__delay-2s">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">我的项目</h2>
+          <button 
+            @click="router.push('/workspace/newProject')"
+            class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:opacity-90 transition-all"
           >
-            <button 
-              @click="enterProject(project)"
-              class="px-6 py-3 bg-white text-gray-900 rounded-lg font-medium hover:bg-gray-100 transition-colors flex items-center gap-2"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-              </svg>
-              进入项目
-            </button>
-          </div>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            新建项目
+          </button>
         </div>
 
-        <!-- 快捷操作卡片 -->
-        <div 
-          v-for="action in options.quickActions"
-          :key="action.name"
-          @click="router.push(action.route)"
-          class="group bg-gray-50 dark:bg-zinc-800/50 rounded-xl border theme-border p-6 flex flex-col items-center justify-center gap-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all duration-300 hover:-translate-y-1"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" :d="action.icon"/>
-          </svg>
-          <div class="text-center">
-            <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">{{ action.name }}</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400">{{ action.description }}</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <!-- 项目卡片 -->
+          <div 
+            v-for="(project, index) in options.projects" 
+            :key="project.ID"
+            class="group relative bg-gray-50 dark:bg-zinc-800/50 rounded-xl overflow-hidden border theme-border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg animate__animated animate__fadeIn"
+            :class="'animate__delay-' + (index + 3) + 's'"
+            @mouseover="moveIn(project.ID)" 
+            @mouseleave="moveOut()"
+          >
+            <!-- 项目封面 -->
+            <div class="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-zinc-800">
+              <img 
+                v-if="project.cover_image" 
+                :src="imagePrefix + project.cover_image" 
+                :alt="project.project_name"
+                class="w-full h-full object-cover"
+              />
+              <div v-else class="w-full h-full flex items-center justify-center text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+            </div>
+
+            <!-- 项目信息 -->
+            <div class="p-4">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                {{ project.project_name }}
+              </h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                团队：{{ project.team.username }}
+              </p>
+              <div class="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                <span class="flex items-center gap-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {{ parseDateTime(project.CreatedAt) }}
+                </span>
+              </div>
+            </div>
+
+            <!-- 悬浮时显示的操作按钮 -->
+            <div 
+              v-if="options.nowHoverId === project.ID"
+              class="absolute inset-0 bg-black/60 flex items-center justify-center animate__animated animate__fadeIn animate__faster"
+            >
+              <button 
+                @click="enterProject(project)"
+                class="px-6 py-3 bg-white text-gray-900 rounded-lg font-medium hover:bg-gray-100 transition-colors flex items-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+                进入项目
+              </button>
+            </div>
+          </div>
+
+          <!-- 快捷操作卡片 -->
+          <div 
+            v-for="(action, index) in options.quickActions"
+            :key="action.name"
+            @click="router.push(action.route)"
+            class="group bg-gray-50 dark:bg-zinc-800/50 rounded-xl border theme-border p-6 flex flex-col items-center justify-center gap-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all duration-300 hover:-translate-y-1 animate__animated animate__fadeIn"
+            :class="'animate__delay-' + (index + options.projects.length + 3) + 's'"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" :d="action.icon"/>
+            </svg>
+            <div class="text-center">
+              <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">{{ action.name }}</h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400">{{ action.description }}</p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
 <style scoped>
+.animate__animated {
+  animation-duration: 0.5s;
+}
 
+/* 自定义延迟时间 */
+.animate__delay-1s {
+  animation-delay: 0.1s;
+}
+.animate__delay-2s {
+  animation-delay: 0.2s;
+}
+.animate__delay-3s {
+  animation-delay: 0.3s;
+}
+.animate__delay-4s {
+  animation-delay: 0.4s;
+}
+.animate__delay-5s {
+  animation-delay: 0.5s;
+}
+.animate__delay-6s {
+  animation-delay: 0.6s;
+}
+.animate__delay-7s {
+  animation-delay: 0.7s;
+}
+.animate__delay-8s {
+  animation-delay: 0.8s;
+}
+.animate__delay-9s {
+  animation-delay: 0.9s;
+}
+.animate__delay-10s {
+  animation-delay: 1s;
+}
 </style>

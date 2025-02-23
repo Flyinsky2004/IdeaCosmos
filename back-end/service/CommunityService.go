@@ -4,6 +4,7 @@ import (
 	"back-end/config"
 	"back-end/entity/dto"
 	"back-end/entity/pojo"
+	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -26,6 +27,8 @@ func GetIndexCoverList(c *gin.Context) {
 // 获取项目详情
 func GetProjectDetail(c *gin.Context) {
 	projectId := c.Query("project_id")
+	userId := c.Query("user_id") // 从查询参数获取可选的userId
+
 	id, err := strconv.Atoi(projectId)
 	if err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "无效的项目ID"))
@@ -39,9 +42,6 @@ func GetProjectDetail(c *gin.Context) {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "项目不存在"))
 		return
 	}
-
-	// 获取用户ID(如果已登录)
-	userId, exists := c.Get("userId")
 
 	// 增加浏览量并记录观看记录
 	tx := config.MysqlDataBase.Begin()
@@ -58,17 +58,20 @@ func GetProjectDetail(c *gin.Context) {
 		return
 	}
 
-	// 如果用户已登录,添加观看记录
-	if exists {
-		watch := pojo.Watch{
-			UserId:    uint(userId.(int)),
-			ProjectId: uint(id),
-		}
+	// 如果提供了userId,添加观看记录
+	if userId != "" {
+		uid, err := strconv.Atoi(userId)
+		if err == nil {
+			watch := pojo.Watch{
+				UserId:    uint(uid),
+				ProjectId: uint(id),
+			}
 
-		if err := tx.Create(&watch).Error; err != nil {
-			tx.Rollback()
-			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "记录观看历史失败"))
-			return
+			if err := tx.Create(&watch).Error; err != nil {
+				tx.Rollback()
+				c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "记录观看历史失败"))
+				return
+			}
 		}
 	}
 
@@ -475,6 +478,292 @@ func GetWatchesAndLikesAnalysis(c *gin.Context) {
 		// 转换为切片
 		for _, stats := range dateMap {
 			result = append(result, *stats)
+		}
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(result))
+}
+
+// GetStyleAndTypeAnalysis 获取不同风格和类型的数据分析
+func GetStyleAndTypeAnalysis(c *gin.Context) {
+	_, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "未登录"))
+		return
+	}
+
+	// 获取所有项目
+	var projects []pojo.Project
+	if err := config.MysqlDataBase.Find(&projects).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目信息失败"))
+		return
+	}
+
+	type StyleStats struct {
+		Date       string `json:"date"`
+		Style      string `json:"style"`
+		Type       string `json:"type"`
+		WatchCount int    `json:"watch_count"`
+		LikeCount  int    `json:"like_count"`
+	}
+
+	var result []StyleStats
+
+	// 获取最近10天的数据
+	for _, project := range projects {
+		// 解析项目风格
+		var styles []string
+		if err := json.Unmarshal([]byte(project.Style), &styles); err != nil {
+			continue
+		}
+
+		// 对每个风格进行统计
+		for _, style := range styles {
+			// 统计观看数据
+			var watchStats []struct {
+				Date  string
+				Count int
+			}
+			watchQuery := `
+				SELECT DATE(created_at) as date, COUNT(*) as count 
+				FROM watches 
+				WHERE project_id = ? AND deleted_at IS NULL
+				AND created_at >= DATE_SUB(CURDATE(), INTERVAL 10 DAY)
+				GROUP BY DATE(created_at)
+				ORDER BY date ASC
+			`
+			if err := config.MysqlDataBase.Raw(watchQuery, project.ID).Scan(&watchStats).Error; err != nil {
+				continue
+			}
+
+			// 统计收藏数据
+			var likeStats []struct {
+				Date  string
+				Count int
+			}
+			likeQuery := `
+				SELECT DATE(created_at) as date, 
+					   COUNT(CASE WHEN deleted_at IS NULL THEN 1 END) - 
+					   COUNT(CASE WHEN deleted_at IS NOT NULL THEN 1 END) as count
+				FROM favourites 
+				WHERE project_id = ?
+				AND created_at >= DATE_SUB(CURDATE(), INTERVAL 10 DAY)
+				GROUP BY DATE(created_at)
+				ORDER BY date ASC
+			`
+			if err := config.MysqlDataBase.Raw(likeQuery, project.ID).Scan(&likeStats).Error; err != nil {
+				continue
+			}
+
+			// 获取最近10天的日期范围
+			var dates []string
+			dateQuery := `
+				SELECT DATE(date) as date
+				FROM (
+					SELECT CURDATE() - INTERVAL (a.a + (10 * b.a) + (100 * c.a)) DAY as date
+					FROM (SELECT 0 as a UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) as a
+					CROSS JOIN (SELECT 0 as a UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) as b
+					CROSS JOIN (SELECT 0 as a UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) as c
+				) dates
+				WHERE date >= DATE_SUB(CURDATE(), INTERVAL 10 DAY)
+				ORDER BY date ASC
+			`
+			if err := config.MysqlDataBase.Raw(dateQuery).Scan(&dates).Error; err != nil {
+				continue
+			}
+
+			// 为每一天创建记录
+			for _, date := range dates {
+				stats := &StyleStats{
+					Date:       date,
+					Style:      style,
+					Type:       project.Types,
+					WatchCount: 0,
+					LikeCount:  0,
+				}
+
+				// 填充观看数据
+				for _, ws := range watchStats {
+					if ws.Date == date {
+						stats.WatchCount = ws.Count
+						break
+					}
+				}
+
+				// 填充收藏数据
+				for _, ls := range likeStats {
+					if ls.Date == date {
+						stats.LikeCount = ls.Count
+						break
+					}
+				}
+
+				result = append(result, *stats)
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(result))
+}
+
+// AddVersionFeeling 添加用户对版本的情绪评价
+func AddVersionFeeling(c *gin.Context) {
+	userId, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "未登录"))
+		return
+	}
+
+	var feeling pojo.Feeling
+	if err := c.ShouldBindJSON(&feeling); err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "请求参数错误"))
+		return
+	}
+
+	feeling.UserId = uint(userId.(int))
+
+	// 检查是否已经评价过
+	var count int64
+	config.MysqlDataBase.Model(&pojo.Feeling{}).
+		Where("user_id = ? AND version_id = ?", feeling.UserId, feeling.VersionId).
+		Count(&count)
+
+	if count > 0 {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "已经评价过该版本"))
+		return
+	}
+
+	// 创建新的情绪评价
+	if err := config.MysqlDataBase.Create(&feeling).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "添加情绪评价失败"))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse("评价成功"))
+}
+
+// GetVersionFeeling 获取用户对版本的情绪评价
+func GetVersionFeeling(c *gin.Context) {
+	userId, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "未登录"))
+		return
+	}
+
+	versionId := c.Query("version_id")
+	vid, err := strconv.Atoi(versionId)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "无效的版本ID"))
+		return
+	}
+
+	var feeling pojo.Feeling
+	err = config.MysqlDataBase.Where("user_id = ? AND version_id = ?", userId, vid).First(&feeling).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusOK, dto.SuccessResponse("获取失败"))
+			return
+		}
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取情绪评价失败"))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(feeling))
+}
+
+// GetEmotionAnalysis 获取情绪分析数据
+func GetEmotionAnalysis(c *gin.Context) {
+	userId, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "未登录"))
+		return
+	}
+
+	// 获取用户所属的团队
+	var teams []pojo.Team
+	if err := config.MysqlDataBase.
+		Where("leader_id = ?", userId).
+		Or("id IN (SELECT team_id FROM join_requests WHERE user_id = ? AND status = 1)", userId).
+		Find(&teams).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取团队信息失败"))
+		return
+	}
+
+	teamIds := make([]uint, len(teams))
+	for i, team := range teams {
+		teamIds[i] = team.ID
+	}
+
+	// 获取团队的所有项目
+	var projects []pojo.Project
+	if err := config.MysqlDataBase.
+		Where("team_id IN ?", teamIds).
+		Find(&projects).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目信息失败"))
+		return
+	}
+
+	type EmotionStats struct {
+		Date        string `json:"date"`
+		ProjectID   uint   `json:"project_id"`
+		ProjectName string `json:"project_name"`
+		Emotion     string `json:"emotion"`
+		Count       int    `json:"count"`
+	}
+
+	var result []EmotionStats
+
+	for _, project := range projects {
+		// 获取项目所有章节
+		var chapters []pojo.Chapter
+		if err := config.MysqlDataBase.
+			Where("project_id = ?", project.ID).
+			Preload("CurrentVersion").
+			Find(&chapters).Error; err != nil {
+			continue
+		}
+
+		// 获取所有版本ID
+		versionIds := make([]uint, len(chapters))
+		for i, chapter := range chapters {
+			if chapter.CurrentVersion.ID != 0 {
+				versionIds[i] = chapter.CurrentVersion.ID
+			}
+		}
+
+		// 获取情绪统计数据
+		var stats []struct {
+			Date    string
+			Emotion string
+			Count   int
+		}
+
+		query := `
+			SELECT 
+				DATE(created_at) as date,
+				feeling as emotion,
+				COUNT(*) as count
+			FROM feelings
+			WHERE version_id IN ?
+				AND created_at >= DATE_SUB(CURDATE(), INTERVAL 10 DAY)
+				AND deleted_at IS NULL
+			GROUP BY DATE(created_at), feeling
+			ORDER BY date DESC
+		`
+
+		if err := config.MysqlDataBase.Raw(query, versionIds).Scan(&stats).Error; err != nil {
+			continue
+		}
+
+		// 转换为响应格式
+		for _, stat := range stats {
+			result = append(result, EmotionStats{
+				Date:        stat.Date,
+				ProjectID:   project.ID,
+				ProjectName: project.ProjectName,
+				Emotion:     stat.Emotion,
+				Count:       stat.Count,
+			})
 		}
 	}
 

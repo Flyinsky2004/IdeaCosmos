@@ -43,12 +43,19 @@ onMounted(async () => {
   }
 });
 
-const fetchProjectDetail = (projectId) => {
-  loading.value = true;
-  get(
-    "/api/public/getProjectDetail",
-    { project_id: projectId },
-    (messager, data) => {
+const fetchProjectDetail = async (projectId) => {
+  try {
+    // 构建请求参数
+    const params = {
+      project_id: projectId
+    }
+    
+    // 如果用户已登录,添加user_id参数
+    if (userStore.user) {
+      params.user_id = userStore.user.ID
+    }
+
+    get('/api/public/getProjectDetail', params, (msg, data) => {
       project.value = data;
       loading.value = false;
     },
@@ -59,8 +66,10 @@ const fetchProjectDetail = (projectId) => {
     (messager) => {
       message.error(messager);
       loading.value = false;
-    }
-  );
+    })
+  } catch (error) {
+    message.error('获取项目详情失败')
+  }
 };
 
 // 获取角色数据

@@ -116,7 +116,7 @@ const router = createRouter({
                 }
             ]
         },
-    ],
+    ]
 })
 
 // BAD

@@ -210,6 +210,42 @@
             </div>
           </div>
         </div>
+
+        <!-- 在章节内容后添加情绪评价部分 -->
+        <div v-if="chapter?.current_version" class="mt-8 p-6 bg-white dark:bg-zinc-800/80 rounded-xl border theme-border">
+          <div class="text-center">
+            <h3 class="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-200">你对本篇剧情感受如何？</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">选择一个最能代表你此刻感受的情绪</p>
+          </div>
+          
+          <!-- 如果已经评价过，显示已选择的情绪 -->
+          <div v-if="userFeeling !== '获取失败'" class="text-center">
+            <p class="flex items-center justify-center gap-2 text-gray-600 dark:text-gray-400">
+              <span>你的感受是:</span>
+              <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300">
+                {{ emotionMap[userFeeling.feeling]?.icon }}
+                <span class="font-medium">{{ userFeeling.feeling }}</span>
+              </span>
+            </p>
+          </div>
+          
+          <!-- 如果还没评价过，显示情绪选择按钮 -->
+          <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
+            <button
+              v-for="emotion in Object.entries(emotionMap)"
+              :key="emotion"
+              @click="submitFeeling(emotion[0])"
+              class="flex flex-col items-center gap-2 p-4 rounded-xl border theme-border hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all transform hover:scale-105"
+              :class="{
+                'bg-blue-50 dark:bg-blue-900/30 border-blue-500': selectedEmotion === emotion[0]
+              }"
+            >
+              <span class="text-2xl">{{ emotion[1].icon }}</span>
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ emotion[0] }}</span>
+              <span class="text-xs text-gray-500 dark:text-gray-400">{{ emotion[1].description }}</span>
+            </button>
+          </div>
+        </div>
       </div>
       <!-- 回到顶部按钮 -->
     </div>
@@ -220,7 +256,7 @@
 import { ref, onMounted, computed, watch, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useThemeStore } from "@/stores/theme";
-import { get } from "@/util/request";
+import { get, post, postJSON } from "@/util/request";
 import { message } from "ant-design-vue";
 import { BACKEND_DOMAIN, imagePrefix } from "@/util/VARRIBLES";
 import { MdPreview } from "md-editor-v3";
@@ -347,6 +383,86 @@ watch(
 onUnmounted(() => {
   window.removeEventListener("scroll", handleScroll);
 });
+
+// 情绪映射表
+const emotionMap = {
+  "喜悦": { 
+    icon: "😊", 
+    description: "充满快乐和满足" 
+  },
+  "感动": { 
+    icon: "🥹", 
+    description: "内心被深深触动" 
+  },
+  "惊喜": { 
+    icon: "🤩", 
+    description: "意外的惊喜" 
+  },
+  "期待": { 
+    icon: "🤔", 
+    description: "对后续充满期待" 
+  },
+  "伤感": { 
+    icon: "😢", 
+    description: "略带忧伤的感动" 
+  },
+  "愤怒": { 
+    icon: "😠", 
+    description: "对情节感到愤慨" 
+  },
+  "恐惧": { 
+    icon: "😱", 
+    description: "感到害怕或紧张" 
+  },
+  "平静": { 
+    icon: "😐", 
+    description: "内心平和安宁" 
+  }
+};
+
+const selectedEmotion = ref("");
+const userFeeling = ref(null);
+
+// 获取用户对当前版本的情绪评价
+const fetchUserFeeling = async () => {
+  if (!chapter.value?.current_version?.ID) return;
+  
+  await get(
+    "/api/user/feeling/get",
+    { version_id: chapter.value.current_version.ID },
+    (message, data) => {
+      userFeeling.value = data;
+    }
+  );
+};
+
+// 提交情绪评价
+const submitFeeling = async (emotion) => {
+  if (!chapter.value?.current_version?.ID) return;
+  
+  selectedEmotion.value = emotion;
+  await postJSON(
+    "/api/user/feeling/add",
+    {
+      version_id: chapter.value.current_version.ID,
+      feeling: emotion
+    },
+    (messager, data) => {
+      message.success("评价成功");
+      fetchUserFeeling(); // 重新获取评价状态
+    },
+    (messager) => {
+      selectedEmotion.value = "";
+    }
+  );
+};
+
+// 在获取章节详情后获取情绪评价
+watch(() => chapter.value?.current_version?.ID, () => {
+  if (chapter.value?.current_version?.ID) {
+    fetchUserFeeling();
+  }
+});
 </script>
 
 <style lang="postcss">
@@ -423,5 +539,15 @@ audio::-moz-range-thumb {
 /* 添加过渡效果 */
 .fixed {
   @apply transition-opacity duration-300 ease-in-out;
+}
+
+/* 添加情绪按钮的悬停动画 */
+.transform {
+  transition: all 0.2s ease-in-out;
+}
+
+/* 确保emoji在暗色模式下显示正常 */
+.text-2xl {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 }
 </style>

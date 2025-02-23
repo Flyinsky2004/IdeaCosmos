@@ -4,21 +4,27 @@ import { get } from '@/util/request'
 import { message } from 'ant-design-vue'
 import { BACKEND_DOMAIN } from '@/util/VARRIBLES'
 import router from '@/router'
+import SpinLoaderLarge from '@/components/spinLoaderLarge.vue'
 
 const hotProjects = ref([])
+const loading = ref(true)
 
 // 获取热门项目
 const fetchHotProjects = async () => {
+  loading.value = true
   get('/api/public/hot-projects', 
     {}, 
     (messager, data) => {
       hotProjects.value = data
+      loading.value = false
     },
     (messager) => {
       message.warning(messager)
+      loading.value = false
     },
     (messager) => {
       message.error(messager)
+      loading.value = false
     }
   )
 }
@@ -37,18 +43,24 @@ onMounted(() => {
   <div class="min-h-screen py-8 bg-gray-50 dark:bg-zinc-900/70 rounded-xl">
     <div class="max-w-7xl mx-auto px-4">
       <!-- 页面标题 -->
-      <div class="flex items-center gap-3 mb-8">
+      <div class="flex items-center gap-3 mb-8 animate__animated animate__fadeIn">
         <div class="h-8 w-1 bg-gradient-to-b from-blue-500 to-cyan-500 rounded-full"></div>
         <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">
           热门项目
         </h1>
       </div>
 
+      <!-- 加载状态 -->
+      <div v-if="loading" class="flex items-center justify-center py-12">
+        <SpinLoaderLarge />
+      </div>
+
       <!-- 项目列表 -->
-      <div class="space-y-6">
+      <div v-else class="space-y-6">
         <div v-for="(project, index) in hotProjects" 
           :key="project.ID"
-          class="group bg-white dark:bg-zinc-800 rounded-xl border theme-border hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+          class="group bg-white dark:bg-zinc-800 rounded-xl border theme-border hover:shadow-xl transition-all duration-300 hover:-translate-y-1 animate__animated animate__fadeIn"
+          :class="'animate__delay-' + (index + 1) + 's'"
         >
           <div class="flex gap-6">
             <!-- 项目封面和排名 -->
@@ -170,8 +182,44 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.animate__animated {
+  animation-duration: 0.5s;
+}
+
+/* 自定义延迟时间 */
+.animate__delay-1s {
+  animation-delay: 0.1s;
+}
+.animate__delay-2s {
+  animation-delay: 0.2s;
+}
+.animate__delay-3s {
+  animation-delay: 0.3s;
+}
+.animate__delay-4s {
+  animation-delay: 0.4s;
+}
+.animate__delay-5s {
+  animation-delay: 0.5s;
+}
+.animate__delay-6s {
+  animation-delay: 0.6s;
+}
+.animate__delay-7s {
+  animation-delay: 0.7s;
+}
+.animate__delay-8s {
+  animation-delay: 0.8s;
+}
+.animate__delay-9s {
+  animation-delay: 0.9s;
+}
+.animate__delay-10s {
+  animation-delay: 1s;
+}
+
 /* 添加阴影效果 */
 .absolute {
   filter: drop-shadow(0 4px 6px rgb(0 0 0 / 0.1));
 }
-</style> 
+</style>

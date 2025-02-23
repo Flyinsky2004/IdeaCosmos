@@ -7,9 +7,11 @@ import (
 	"back-end/util"
 	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
+	"golang.org/x/crypto/bcrypt"
 )
 
 /**
@@ -52,7 +54,14 @@ func SaveCodeToRedis(key, code string, ttl time.Duration) error {
 
 // GetCodeFromRedis 获取验证码
 func GetCodeFromRedis(key string) (string, error) {
-	return config.RedisClient.Get(context.Background(), key).Result()
+	result, err := config.RedisClient.Get(context.Background(), key).Result()
+	if err == redis.Nil {
+		return "", fmt.Errorf("验证码不存在或已过期")
+	}
+	if err != nil {
+		return "", fmt.Errorf("获取验证码失败: %v", err)
+	}
+	return result, nil
 }
 func DeleteCodeToRedis(key string) error {
 	return config.RedisClient.Del(context.Background(), key).Err()
@@ -81,7 +90,7 @@ type SendVerifyCodeRequestBody struct {
 func SendVerifyCode(c *gin.Context) {
 	var reqBody SendVerifyCodeRequestBody
 	if err := c.ShouldBindJSON(&reqBody); err != nil {
-		c.JSON(200, dto.ErrorResponse[string](400, "请求表单格式有误"))
+		c.JSON(200, dto.ErrorResponse[string](400, "请求表单格式有误"+err.Error()))
 		return
 	}
 	isHasExisted, err := CheckIfCodeExists(reqBody.Email)
@@ -98,7 +107,73 @@ func SendVerifyCode(c *gin.Context) {
 		c.JSON(200, dto.ErrorResponse[string](500, "缓存验证码时发生错误"))
 		return
 	}
-	if err := util.SendEmail(reqBody.Email, "OneAPIWay验证码", "您的验证码为："+code); err != nil {
+
+	// 邮件HTML模板
+	emailTemplateFront := `
+<!DOCTYPE html>
+<html dir="ltr" lang="en">
+<head>
+  <meta name="viewport" content="width=device-width"/>
+  <meta content="text/html; charset=UTF-8" http-equiv="Content-Type"/>
+  <meta name="color-scheme" content="light"/>
+  <meta name="supported-color-schemes" content="light"/>
+  <style>
+    @font-face {
+      font-family: 'Inter';
+      font-style: normal;
+      font-weight: 400;
+      mso-font-alt: 'sans-serif';
+      src: url(https://rsms.me/inter/font-files/Inter-Regular.woff2?v=3.19) format('woff2');
+    }
+    * {
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<body style="margin:0">
+  <table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="max-width:600px;min-width:300px;width:100%;margin-left:auto;margin-right:auto;padding:0.5rem">
+    <tbody>
+      <tr style="width:100%">
+        <td>
+          <h2 style="margin:0 0 12px 0;text-align:left;color:#111827;font-size:30px;line-height:36px;font-weight:700">
+            <strong>创剧星球</strong>
+          </h2>
+          <p style="font-size:15px;line-height:26.25px;margin:0 0 20px 0;color:#374151">
+            欢迎您加入创剧星球,您的邮件验证码为:
+`
+	emailTemplateAfter := `
+          </p>
+          <table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="max-width:100%;text-align:left;margin-bottom:0px">
+            <tbody>
+              <tr style="width:100%">
+                <td>
+                  <a href="https://ic.1024110.xyz" style="line-height:100%;text-decoration:none;display:inline-block;max-width:100%;color:#ffffff;background-color:#000000;border:2px solid #000000;font-size:14px;font-weight:500;border-radius:9999px;padding:12px 32px" target="_blank">
+                    <span style="max-width:100%;display:inline-block;line-height:120%;mso-padding-alt:0px;mso-text-raise:9px">
+                      前往官网 ->
+                    </span>
+                  </a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="height:64px"></div>
+          <p style="font-size:15px;line-height:26.25px;margin:0 0 20px 0;color:#374151">
+            感谢您使用我们强大的由AI驱动的工程化剧集开发工具和社区。
+          </p>
+          <p style="font-size:15px;line-height:26.25px;margin:0 0 20px 0;color:#374151">
+            创剧星球团队
+          </p>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+</html>
+`
+	// 使用验证码替换模板中的占位符
+	emailContent := emailTemplateFront + code + emailTemplateAfter
+
+	if err := util.SendEmail(reqBody.Email, "创剧星球验证码", emailContent); err != nil {
 		c.JSON(200, dto.ErrorResponse[string](400, "邮件系统发送验证码时发生错误"))
 		return
 	}

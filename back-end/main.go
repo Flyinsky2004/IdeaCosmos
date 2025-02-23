@@ -4,9 +4,7 @@ import (
 	"back-end/config"
 	"back-end/entity/pojo"
 	"back-end/route"
-	"back-end/util"
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -23,7 +21,7 @@ import (
 func main() {
 	//printBanner()
 	config.InitMysqlDataBase()
-	//config.InitRedis("localhost:9999", "131598", 0)
+	config.InitRedis("localhost:6379", "131598", 0)
 
 	// 禁用外键检查
 	//config.MysqlDataBase.Exec("SET FOREIGN_KEY_CHECKS = 0")
@@ -43,6 +41,7 @@ func main() {
 		&pojo.ReaderComment{},
 		&pojo.Favourite{},
 		&pojo.Watch{},
+		&pojo.Feeling{},
 	)
 
 	// 重新启用外键检查
@@ -51,8 +50,8 @@ func main() {
 	app := gin.Default()
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:5173"}, // 允许的前端来源
-		AllowMethods:     []string{"GET", "POST", "OPTIONS"},
-		AllowHeaders:     []string{"Content-Type", "Content-Length", "Accept", "Authorization"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "x-requested-with"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour, // 预检请求的缓存时间
@@ -87,30 +86,30 @@ func printBanner() {
 	}
 }
 
-func AiTest() {
-	//prompt := "A futuristic city with flying cars at sunset"
-	//baseURL := "https://api1.zhtec.xyz"
-	//apiKey := "sk-SwmvMY9looEOO7KcEd1a18D8Ad8b413c8c019809586cB842"
-	//
-	//imageURL, err := util.GenerateImage(prompt, baseURL, apiKey)
-	//if err != nil {
-	//	fmt.Printf("Error generating image: %v\n", err)
-	//	return
-	//}
-	//
-	//fmt.Printf("Generated image URL: %s\n", imageURL)
-	//userInfo := util.Message{
-	//	Role:    "user",
-	//	Content: "写一个白雪公主大战奥特曼的故事",
-	//}
-	message := []util.Message{}
-	resp, _ := util.ChatHandler(util.ChatRequest{
-		Model:       "deepseek-chat",
-		Messages:    message,
-		Prompt:      "你是一个编剧",
-		Question:    "写一个白雪公主大战奥特曼的故事",
-		Temperature: 1.5,
-	})
-	jsonStr, _ := json.Marshal(resp)
-	fmt.Printf(string(jsonStr))
-}
+// func AiTest() {
+// 	//prompt := "A futuristic city with flying cars at sunset"
+// 	//baseURL := "https://api1.zhtec.xyz"
+// 	//apiKey := "sk-SwmvMY9looEOO7KcEd1a18D8Ad8b413c8c019809586cB842"
+// 	//
+// 	//imageURL, err := util.GenerateImage(prompt, baseURL, apiKey)
+// 	//if err != nil {
+// 	//	fmt.Printf("Error generating image: %v\n", err)
+// 	//	return
+// 	//}
+// 	//
+// 	//fmt.Printf("Generated image URL: %s\n", imageURL)
+// 	//userInfo := util.Message{
+// 	//	Role:    "user",
+// 	//	Content: "写一个白雪公主大战奥特曼的故事",
+// 	//}
+// 	message := []util.Message{}
+// 	resp, _ := util.ChatHandler(util.ChatRequest{
+// 		Model:       "deepseek-chat",
+// 		Messages:    message,
+// 		Prompt:      "你是一个编剧",
+// 		Question:    "写一个白雪公主大战奥特曼的故事",
+// 		Temperature: 1.5,
+// 	})
+// 	jsonStr, _ := json.Marshal(resp)
+// 	fmt.Printf(string(jsonStr))
+// }

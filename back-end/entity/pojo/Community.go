@@ -33,3 +33,9 @@ type Watch struct {
 	UserId    uint `json:"userId" gorm:"type:bigint unsigned"`
 	ProjectId uint `json:"project_id" gorm:"type:bigint unsigned"`
 }
+type Feeling struct {
+	gorm.Model
+	UserId    uint   `json:"userId" gorm:"type:bigint unsigned"`
+	VersionId uint   `json:"version_id" gorm:"type:bigint unsigned"`
+	Feeling   string `json:"feeling" gorm:"type:varchar(50)"`
+}

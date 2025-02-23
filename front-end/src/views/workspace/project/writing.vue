@@ -10,45 +10,69 @@ import { BACKEND_DOMAIN } from "@/util/VARRIBLES";
 import { message, Modal, InputNumber } from "ant-design-vue";
 const themeStore = useThemeStore();
 const chapter = JSON.parse(localStorage.getItem("chapter"));
+
+// 添加 loading 状态
+const loading = ref(true);
+
 onMounted(() => {
-  fetchCurrentChapterVersion();
-  fetchVersionHistory();
+  // 修改现有的 onMounted
+  Promise.all([
+    fetchCurrentChapterVersion(),
+    fetchVersionHistory()
+  ]).finally(() => {
+    loading.value = false;
+  });
 });
+
 const fetchCurrentChapterVersion = () => {
-  if (chapter.version_id === 0) return;
-  get(
-    "/api/project/getCurrentChapterVersion",
-    {
-      chapter_id: chapter.ID,
-    },
-    (messager, data) => {
-      options.currentVersion = data;
-    },
-    (messager, data) => {
-      message.warning(messager);
-    },
-    (messager, data) => {
-      message.error(messager);
-    }
-  );
+  if (chapter.version_id === 0) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve, reject) => {
+    get(
+      "/api/project/getCurrentChapterVersion",
+      {
+        chapter_id: chapter.ID,
+      },
+      (messager, data) => {
+        options.currentVersion = data;
+        resolve();
+      },
+      (messager, data) => {
+        message.warning(messager);
+        reject();
+      },
+      (messager, data) => {
+        message.error(messager);
+        reject();
+      }
+    );
+  });
 };
+
 const fetchVersionHistory = () => {
-  get(
-    "/api/project/getChapterVersions",
-    {
-      chapter_id: chapter.ID,
-    },
-    (messager, data) => {
-      options.historyVersions = data;
-    },
-    (messager) => {
-      message.warning(messager);
-    },
-    (messager) => {
-      message.error(messager);
-    }
-  );
+  return new Promise((resolve, reject) => {
+    get(
+      "/api/project/getChapterVersions",
+      {
+        chapter_id: chapter.ID,
+      },
+      (messager, data) => {
+        options.historyVersions = data;
+        resolve();
+      },
+      (messager) => {
+        message.warning(messager);
+        reject();
+      },
+      (messager) => {
+        message.error(messager);
+        reject();
+      }
+    );
+  });
 };
+
 const options = reactive({
   historyVersions: [],
   currentVersion: {},
@@ -289,11 +313,17 @@ const submitEditing = () => {
 </script>
 
 <template>
-  <div class="h-full w-full grid grid-cols-[4fr,1fr] gap-4 p-4">
+  <!-- 添加加载状态显示 -->
+  <div v-if="loading" class="h-full w-full flex items-center justify-center">
+    <SpinLoaderLarge />
+  </div>
+
+  <!-- 将原有内容包装在 v-else 中，并添加动画类 -->
+  <div v-else class="h-full w-full grid grid-cols-[4fr,1fr] gap-4 p-4">
     <!-- 主编辑区域 -->
     <div class="flex flex-col gap-4">
       <!-- 章节信息 -->
-      <div class="bg-white dark:bg-zinc-900 border theme-border rounded-xl p-4">
+      <div class="bg-white dark:bg-zinc-900 border theme-border rounded-xl p-4 animate__animated animate__fadeIn animate__delay-1s">
         <h1 class="text-xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent mb-2">
           {{ chapter.Title }}
         </h1>
@@ -301,7 +331,7 @@ const submitEditing = () => {
       </div>
 
       <!-- 工具栏 -->
-      <div class="bg-white dark:bg-zinc-900 border theme-border rounded-xl p-4">
+      <div class="bg-white dark:bg-zinc-900 border theme-border rounded-xl p-4 animate__animated animate__fadeIn animate__delay-2s">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-semibold text-blue-500">创作工具</h2>
           <div class="flex items-center gap-2">
@@ -340,7 +370,7 @@ const submitEditing = () => {
       </div>
 
       <!-- 内容编辑/预览区域 -->
-      <div class="flex-grow bg-white dark:bg-zinc-900 border theme-border rounded-xl overflow-hidden">
+      <div class="flex-grow bg-white dark:bg-zinc-900 border theme-border rounded-xl overflow-hidden animate__animated animate__fadeIn animate__delay-3s">
         <div class="relative h-full">
           <!-- 编辑模式 -->
           <div v-if="options.isEditing" class="h-full p-4">
@@ -451,7 +481,7 @@ const submitEditing = () => {
     </div>
 
     <!-- 历史版本侧边栏 -->
-    <div class="bg-white dark:bg-zinc-900 border theme-border rounded-xl p-4">
+    <div class="bg-white dark:bg-zinc-900 border theme-border rounded-xl p-4 animate__animated animate__fadeIn animate__delay-4s">
       <h2 class="text-lg font-semibold text-blue-500 mb-4">历史版本</h2>
       <div class="space-y-4 max-h-[calc(100vh-10rem)] overflow-y-auto">
         <div v-if="options.historyVersions.length === 0" 
@@ -493,6 +523,36 @@ const submitEditing = () => {
 </template>
 
 <style scoped>
-/* 编辑器主题相关样式 */
+/* 添加动画相关样式 */
+.animate__animated {
+  animation-duration: 0.5s;
+}
 
+.animate__delay-1s {
+  animation-delay: 0.1s;
+}
+
+.animate__delay-2s {
+  animation-delay: 0.2s;
+}
+
+.animate__delay-3s {
+  animation-delay: 0.3s;
+}
+
+.animate__delay-4s {
+  animation-delay: 0.4s;
+}
+
+/* 为卡片添加淡入动画 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 </style>

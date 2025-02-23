@@ -5,7 +5,7 @@ import ThemeSwitcher from '@/components/button/ThemeSwitcher.vue'
 import { useThemeStore } from '@/stores/theme'
 import { useUserStore } from '@/stores/user'
 import { BACKEND_DOMAIN } from '@/util/VARRIBLES'
-
+import logo from '@/assets/img/logo.webp'
 const route = useRoute()
 const router = useRouter()
 const searchKeyword = ref('')
@@ -73,9 +73,10 @@ window.addEventListener('resize', () => {
     <header class="fixed top-0 w-full bg-white/80 dark:bg-black border-b theme-border shadow-sm z-50 backdrop-blur-sm">
       <div class="max-w-7xl mx-auto h-16 flex items-center justify-between px-4 sm:px-6">
         <div class="flex items-center gap-12">
-          <div class="text-xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
-            创意宇宙
-          </div>
+          <div class="flex flex-nowrap p-4 cursor-pointer" @click="router.push('/')">
+      <img :src="logo" class="w-8 h-8 rounded-full"/>
+      <span class="my-auto ml-4 dark:text-white">创剧星球</span>
+    </div>
           <nav class="flex gap-8 relative">
             <!-- 背景动画条 -->
             <div 

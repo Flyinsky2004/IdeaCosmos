@@ -480,11 +480,12 @@ onMounted(() => {
         <button
             @click="quickStartClickHandler"
             class="px-6 py-2 rounded-2xl font-light bg-gradient-to-r from-blue-500 to-violet-500 text-white hover:-translate-y-0.5 transition-all">
-          立刻上手
+          创剧工坊
         </button>
         <button
+          @click="router.push('/community')"
             class="px-6 py-2 rounded-2xl font-light border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white hover:-translate-y-0.5 transition-all">
-          用户评价
+          星球社区
         </button>
       </div>
     </div>

@@ -52,8 +52,8 @@ const topBarItems = [
     </kinesis-container>
     <div class="place-content-center place-items-center animate__animated animate__fadeIn">
       <div class="box1 p-8 rounded-xl transition-all">
-        <LoginForm v-if="route.path === '/auth/login'"/>
-        <RegisterForm v-else/>
+        <LoginForm class="animate__animated animate__fadeIn" v-if="route.path === '/auth/login'"/>
+        <RegisterForm class="animate__animated animate__fadeIn" v-else/>
       </div>
     </div>
   </div>

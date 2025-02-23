@@ -27,7 +27,7 @@ func RegisterRoutes(r *gin.Engine) {
 		publicGroup.GET("getProjectChapters", service.GetProjectChapters)
 		publicGroup.GET("getProjectComments", service.GetProjectComments)
 		publicGroup.GET("getChapterDetail", service.GetChapterDetail)
-		publicGroup.GET("/hot-projects", service.GetHotProjects)
+		publicGroup.GET("hot-projects", service.GetHotProjects)
 	}
 
 	userGroup := r.Group("/api/user", preHandler())
@@ -40,6 +40,9 @@ func RegisterRoutes(r *gin.Engine) {
 		userGroup.GET("/favorite/add", service.AddFavorite)
 		userGroup.GET("/favorite/remove", service.RemoveFavorite)
 		userGroup.GET("/favorite/check", service.CheckFavorite)
+		userGroup.POST("/feeling/add", service.AddVersionFeeling)
+		userGroup.GET("/feeling/get", service.GetVersionFeeling)
+		userGroup.GET("/analysis/emotions", service.GetEmotionAnalysis)
 	}
 
 	teamGroup := r.Group("/api/team", preHandler())
@@ -81,6 +84,7 @@ func RegisterRoutes(r *gin.Engine) {
 		projectGroup.GET("getChapterVersions", service.GetChapterVersions)
 		projectGroup.GET("generateChapterAudio", service.GenerateChapterAudio)
 		projectGroup.GET("/analysis/watches-likes", service.GetWatchesAndLikesAnalysis)
+		projectGroup.GET("/analysis/style-type", service.GetStyleAndTypeAnalysis)
 	}
 
 	websocketGroup := r.Group("/api/ws")
