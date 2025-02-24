@@ -484,6 +484,14 @@ func GetWatchesAndLikesAnalysis(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.SuccessResponse(result))
 }
 
+type StyleStats struct {
+	Date       string `json:"date"`
+	Style      string `json:"style"`
+	Type       string `json:"type"`
+	WatchCount int    `json:"watch_count"`
+	LikeCount  int    `json:"like_count"`
+}
+
 // GetStyleAndTypeAnalysis 获取不同风格和类型的数据分析
 func GetStyleAndTypeAnalysis(c *gin.Context) {
 	_, exists := c.Get("userId")
@@ -497,14 +505,6 @@ func GetStyleAndTypeAnalysis(c *gin.Context) {
 	if err := config.MysqlDataBase.Find(&projects).Error; err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目信息失败"))
 		return
-	}
-
-	type StyleStats struct {
-		Date       string `json:"date"`
-		Style      string `json:"style"`
-		Type       string `json:"type"`
-		WatchCount int    `json:"watch_count"`
-		LikeCount  int    `json:"like_count"`
 	}
 
 	var result []StyleStats

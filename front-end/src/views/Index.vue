@@ -1,141 +1,101 @@
 <script setup>
-
 import ThemeSwitcher from "@/components/button/ThemeSwitcher.vue";
-import logo from '@/assets/img/logo.webp'
+import logo from "@/assets/img/logo.webp";
 import router from "@/router/index.js";
-import {useUserStore} from "@/stores/user.js";
-import {get} from "@/util/request.js";
-import {useThemeStore} from "@/stores/theme.js";
-import {message} from "ant-design-vue";
-import {useFullPageScroll} from "@/util/useFullPageScroll.js";
+import { useUserStore } from "@/stores/user.js";
+import { get } from "@/util/request.js";
+import { useThemeStore } from "@/stores/theme.js";
+import { message } from "ant-design-vue";
+import { useFullPageScroll } from "@/util/useFullPageScroll.js";
 import * as echarts from "echarts";
 import { ref, onMounted, onUnmounted, watch } from "vue";
+import titleDark from "@/assets/img/title-dark.png";
+import { MdPreview } from "md-editor-v3";
+import "md-editor-v3/lib/preview.css";
 
 const { currentSection } = useFullPageScroll();
+// 将渐变色数组提取为公共变量
+const gradientColors = [
+  ["#3B82F6", "#60A5FA"], // 蓝色
+  ["#10B981", "#34D399"], // 绿色
+  ["#F59E0B", "#FBBF24"], // 橙色
+  ["#8B5CF6", "#A78BFA"], // 紫色
+  ["#EC4899", "#F472B6"], // 粉色
+  ["#EF4444", "#F87171"], // 红色
+  ["#06B6D4", "#22D3EE"], // 青色
+  ["#14B8A6", "#2DD4BF"], // 蓝绿色
+  ["#F97316", "#FB923C"], // 深橙色
+  ["#84CC16", "#A3E635"], // 青柠色
+  ["#6366F1", "#818CF8"], // 靛蓝色
+  ["#D946EF", "#E879F9"], // 洋红色
+  ["#0EA5E9", "#38BDF8"], // 天蓝色
+  ["#4F46E5", "#6366F1"], // 深蓝色
+  ["#7C3AED", "#A78BFA"], // 深紫色
+  ["#DB2777", "#EC4899"], // 玫红色
+  ["#EA580C", "#FB923C"], // 赭石色
+  ["#16A34A", "#4ADE80"], // 翠绿色
+  ["#2563EB", "#60A5FA"], // 皇家蓝
+  ["#9333EA", "#C084FC"], // 紫罗兰色
+];
 
 const themeStore = useThemeStore();
 const getFrontColor = () => {
-  return themeStore.isDark ? '#FFFFFF' : '#000000'
-}
+  return themeStore.isDark ? "#FFFFFF" : "#000000";
+};
 const topBarItems = [
   {
-    name: '作品画廊',
-    path: '/',
+    name: "作品画廊",
+    path: "/",
     icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
   <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 7.125C2.25 6.504 2.754 6 3.375 6h6c.621 0 1.125.504 1.125 1.125v3.75c0 .621-.504 1.125-1.125 1.125h-6a1.125 1.125 0 0 1-1.125-1.125v-3.75ZM14.25 8.625c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125v8.25c0 .621-.504 1.125-1.125 1.125h-5.25a1.125 1.125 0 0 1-1.125-1.125v-8.25ZM3.75 16.125c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125v2.25c0 .621-.504 1.125-1.125 1.125h-5.25a1.125 1.125 0 0 1-1.125-1.125v-2.25Z" />
 </svg>
-`
-  }, {
-    name: '订阅计划',
-    path: '/',
+`,
+  },
+  {
+    name: "订阅计划",
+    path: "/",
     icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
   <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" />
 </svg>
-`
-  }
-]
+`,
+  },
+];
 const quickStartClickHandler = () => {
-  const userStore = useUserStore()
+  const userStore = useUserStore();
   if (userStore.isLogin) {
-    console.log(userStore.user)
-    message.success("欢迎回来,"+userStore.user.username+"!正在为您跳转...")
-    setTimeout(()=>{
-      router.push('/workspace')
-    },1000)
-  }else{
-    get('/api/user/me', {},
-        (messager, data) => {
-          message.success("欢迎回来,"+data.username+"!正在为您跳转...")
-          userStore.login(data)
-          setTimeout(()=>{
-            router.push('/workspace')
-          },1000)
-        },
-        (messager, data) => {
-          message.info(messager);
-          console.log(data);
-          setTimeout(() => {
-            router.push('/auth/login')
-          }, 1000)        },
-        (messager, data) => {
-          console.log(messager);
-          message.info(messager);
-          setTimeout(() => {
-            router.push('/auth/login')
-          }, 1000)
-        }
-    )
+    console.log(userStore.user);
+    message.success("欢迎回来," + userStore.user.username + "!正在为您跳转...");
+    setTimeout(() => {
+      router.push("/workspace/dataAnlysis");
+    }, 1000);
+  } else {
+    get(
+      "/api/user/me",
+      {},
+      (messager, data) => {
+        message.success("欢迎回来," + data.username + "!正在为您跳转...");
+        userStore.login(data);
+        setTimeout(() => {
+          router.push("/workspace");
+        }, 1000);
+      },
+      (messager, data) => {
+        message.info(messager);
+        console.log(data);
+        setTimeout(() => {
+          router.push("/auth/login");
+        }, 1000);
+      },
+      (messager, data) => {
+        console.log(messager);
+        message.info(messager);
+        setTimeout(() => {
+          router.push("/auth/login");
+        }, 1000);
+      }
+    );
   }
-}
-const frameworks = [
-  {name: 'Express', icon: ``},
-  {name: 'Edge', icon: ``},
-  {
-    name: 'Instgram', icon: `<svg xmlns="http://www.w3.org/2000/svg"  version="1.1"
-          id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;"
-                   xml:space="preserve" width="64" height="64" fill="currentColor">
-<g>
-<path
-      d="M12,2.162c3.204,0,3.584,0.012,4.849,0.07c1.308,0.06,2.655,0.358,3.608,1.311c0.962,0.962,1.251,2.296,1.311,3.608   c0.058,1.265,0.07,1.645,0.07,4.849c0,3.204-0.012,3.584-0.07,4.849c-0.059,1.301-0.364,2.661-1.311,3.608   c-0.962,0.962-2.295,1.251-3.608,1.311c-1.265,0.058-1.645,0.07-4.849,0.07s-3.584-0.012-4.849-0.07   c-1.291-0.059-2.669-0.371-3.608-1.311c-0.957-0.957-1.251-2.304-1.311-3.608c-0.058-1.265-0.07-1.645-0.07-4.849   c0-3.204,0.012-3.584,0.07-4.849c0.059-1.296,0.367-2.664,1.311-3.608c0.96-0.96,2.299-1.251,3.608-1.311   C8.416,2.174,8.796,2.162,12,2.162 M12,0C8.741,0,8.332,0.014,7.052,0.072C5.197,0.157,3.355,0.673,2.014,2.014   C0.668,3.36,0.157,5.198,0.072,7.052C0.014,8.332,0,8.741,0,12c0,3.259,0.014,3.668,0.072,4.948c0.085,1.853,0.603,3.7,1.942,5.038   c1.345,1.345,3.186,1.857,5.038,1.942C8.332,23.986,8.741,24,12,24c3.259,0,3.668-0.014,4.948-0.072   c1.854-0.085,3.698-0.602,5.038-1.942c1.347-1.347,1.857-3.184,1.942-5.038C23.986,15.668,24,15.259,24,12   c0-3.259-0.014-3.668-0.072-4.948c-0.085-1.855-0.602-3.698-1.942-5.038c-1.343-1.343-3.189-1.858-5.038-1.942   C15.668,0.014,15.259,0,12,0z"/>
-  <path
-      d="M12,5.838c-3.403,0-6.162,2.759-6.162,6.162c0,3.403,2.759,6.162,6.162,6.162s6.162-2.759,6.162-6.162   C18.162,8.597,15.403,5.838,12,5.838z M12,16c-2.209,0-4-1.791-4-4s1.791-4,4-4s4,1.791,4,4S14.209,16,12,16z"/>
-  <circle cx="18.406" cy="5.594" r="1.44"/>
-</g>
-</svg>`
-  },
-  {
-    name: 'Napster', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 512 512" style="enable-background:new 0 0 512 512;" xml:space="preserve" width="64" height="64" fill="#3343aa">
-<g id="XMLID_1_">
- width="64" height="64" fill="currentColor"<path d="M451.95,316.03c0,0.02,0,0.04,0,0.07c-0.02,108.2-87.77,195.92-195.97,195.9c-108.23-0.02-195.93-87.74-195.91-195.97   c0-91.77,61.25-152.98,115.29-206.97C211.39,73.05,245.76,38.72,256,0c10.22,38.72,44.61,73.05,80.62,109.06   C390.68,163.05,451.93,224.26,451.95,316.03z M384.98,353.13c6.81-14.87,18.37-59.92-15.12-112.04   C336.36,188.97,256,112.73,256,112.73s-26.97,26.94-36.2,36.18c-7.36,7.36-23.23,21.44-4.76,41.38   c21.01,22.7,133.25,140.01,146.11,159.04c5.87,8.66,6.7,12.74,14.64,12.44C380.22,361.6,383.53,356.31,384.98,353.13z    M323.39,395.03c0.15-16.47-5.89-32.41-16.89-44.65c-12.65-14.1-50.5-56.51-50.5-56.51s-38.44,41.79-50.6,56.66   c-5.3,6.21-9.44,13.25-12.28,20.78c-2.84,7.53-4.38,15.55-4.51,23.72c0,37.23,30.18,67.39,67.39,67.39   C293.23,462.42,323.39,432.26,323.39,395.03z M223.7,269.5c1.81-1.81,1.79-4.75-0.04-6.57l-54.42-59.45   c-82.24,81.38-37.91,157.8-25.9,158.21c1.26,0.04,3.33,0.19,4.73-3.8c6.87-19.18,62.23-74.71,75.23-88.02   C223.45,269.76,223.57,269.63,223.7,269.5z"/>
-</g>
-</svg>`
-  },
-  {
-    name: 'Edge', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve"  width="64" height="64" fill="#ea333d">
-<g id="XMLID_184_">
- <path d="M23.498,6.186c-0.276-1.039-1.089-1.858-2.122-2.136C19.505,3.546,12,3.546,12,3.546s-7.505,0-9.377,0.504   C1.591,4.328,0.778,5.146,0.502,6.186C0,8.07,0,12,0,12s0,3.93,0.502,5.814c0.276,1.039,1.089,1.858,2.122,2.136   C4.495,20.454,12,20.454,12,20.454s7.505,0,9.377-0.504c1.032-0.278,1.845-1.096,2.122-2.136C24,15.93,24,12,24,12   S24,8.07,23.498,6.186z M9.546,15.569V8.431L15.818,12L9.546,15.569z"/>
-</g></svg>`
-  },
-  {name: 'Edge', icon: ``},
-  {name: 'Edge', icon: ``},
-  {name: 'Edge', icon: ``},
-  {name: 'Edge', icon: ``},
-  {name: 'Edge', icon: ``},
-  {
-    name: 'Edge', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve" width="64" height="64" fill="#3f57e1">
-<g id="W_Mark_2_">
-\t<path d="M12,0.72c1.523,0,3,0.298,4.39,0.886c2.671,1.13,4.874,3.333,6.003,6.003C22.982,9,23.28,10.477,23.28,12   s-0.298,3-0.886,4.39c-1.116,2.639-3.35,4.881-6.003,6.003C15,22.982,13.523,23.28,12,23.28c-1.523,0-3-0.298-4.39-0.886   c-2.638-1.116-4.881-3.351-6.003-6.003C1.018,15,0.72,13.523,0.72,12c0-1.523,0.298-3,0.886-4.39   C2.736,4.939,4.94,2.735,7.61,1.606C9,1.018,10.477,0.72,12,0.72 M12,0C5.373,0,0,5.373,0,12c0,6.627,5.373,12,12,12   s12-5.373,12-12C24,5.373,18.627,0,12,0L12,0z"/>
-\t<path d="M2,12c0,3.958,2.3,7.379,5.636,9L2.866,7.93C2.311,9.174,2,10.55,2,12z M18.751,11.495c0-1.236-0.444-2.092-0.824-2.758   c-0.507-0.824-0.982-1.521-0.982-2.345c0-0.919,0.697-1.775,1.679-1.775c0.044,0,0.086,0.005,0.129,0.008   C16.974,2.995,14.603,2,12,2C8.506,2,5.433,3.793,3.645,6.507C3.88,6.515,4.101,6.519,4.288,6.519c1.046,0,2.665-0.127,2.665-0.127   c0.539-0.032,0.602,0.76,0.064,0.824c0,0-0.542,0.063-1.144,0.095l3.641,10.832l2.189-6.563l-1.558-4.269   C9.607,7.28,9.096,7.216,9.096,7.216C8.557,7.184,8.621,6.361,9.16,6.392c0,0,1.651,0.127,2.634,0.127   c1.046,0,2.666-0.127,2.666-0.127c0.539-0.032,0.602,0.76,0.064,0.824c0,0-0.542,0.063-1.144,0.095l3.614,10.749l1.032-3.269   C18.482,13.363,18.751,12.351,18.751,11.495z M12.176,12.874l-3.001,8.718C10.071,21.856,11.018,22,12,22   c1.164,0,2.282-0.201,3.321-0.567c-0.027-0.043-0.051-0.088-0.072-0.138L12.176,12.874z M20.775,7.202   c0.043,0.318,0.067,0.66,0.067,1.028c0,1.014-0.19,2.155-0.761,3.582l-3.054,8.831C20.001,18.91,22,15.689,22,12   C22,10.261,21.556,8.627,20.775,7.202z"/>
-</g>
-</svg>`
-  },
-  {
-    name: 'Edge', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve"  width="64" height="64" fill="#4894e2">
-<path id="Logo_00000038394049246713568260000012923108920998390947_" d="M21.543,7.104c0.014,0.211,0.014,0.423,0.014,0.636  c0,6.507-4.954,14.01-14.01,14.01v-0.004C4.872,21.75,2.252,20.984,0,19.539c0.389,0.047,0.78,0.07,1.172,0.071  c2.218,0.002,4.372-0.742,6.115-2.112c-2.107-0.04-3.955-1.414-4.6-3.42c0.738,0.142,1.498,0.113,2.223-0.084  c-2.298-0.464-3.95-2.483-3.95-4.827c0-0.021,0-0.042,0-0.062c0.685,0.382,1.451,0.593,2.235,0.616  C1.031,8.276,0.363,5.398,1.67,3.148c2.5,3.076,6.189,4.946,10.148,5.145c-0.397-1.71,0.146-3.502,1.424-4.705  c1.983-1.865,5.102-1.769,6.967,0.214c1.103-0.217,2.16-0.622,3.127-1.195c-0.368,1.14-1.137,2.108-2.165,2.724  C22.148,5.214,23.101,4.953,24,4.555C23.339,5.544,22.507,6.407,21.543,7.104z"/>
-</svg>`
-  },
-  {
-    name: 'Edge', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve"  width="64" height="64" fill="#65d46e">
-<g>
- width="64" height="64" fill="currentColor"<g>
- width="64" height="64" fill="currentColor" width="64" height="64" fill="currentColor"<g>
- width="64" height="64" fill="currentColor" width="64" height="64" fill="currentColor" width="64" height="64" fill="currentColor"<path d="M12,0C5.373,0,0,5.373,0,12c0,6.628,5.373,12,12,12c6.628,0,12-5.372,12-12C24,5.373,18.628,0,12,0z M17.503,17.308     c-0.216,0.354-0.676,0.464-1.028,0.249c-2.818-1.722-6.365-2.111-10.542-1.157c-0.403,0.092-0.804-0.16-0.896-0.562     c-0.092-0.402,0.159-0.804,0.563-0.895c4.571-1.045,8.492-0.595,11.655,1.338C17.608,16.495,17.719,16.956,17.503,17.308z      M18.972,14.041c-0.271,0.44-0.847,0.578-1.287,0.308c-3.225-1.982-8.142-2.557-11.958-1.398C5.233,13.1,4.71,12.821,4.56,12.327     c-0.149-0.495,0.13-1.016,0.624-1.167c4.358-1.323,9.776-0.682,13.48,1.594C19.104,13.025,19.242,13.601,18.972,14.041z      M19.098,10.638C15.23,8.341,8.85,8.13,5.157,9.251c-0.593,0.18-1.22-0.155-1.4-0.748c-0.18-0.593,0.155-1.22,0.748-1.4     c4.239-1.287,11.285-1.038,15.738,1.605c0.533,0.317,0.708,1.005,0.392,1.538C20.32,10.779,19.63,10.955,19.098,10.638z"/>
- width="64" height="64" fill="currentColor" width="64" height="64" fill="currentColor"</g>
- width="64" height="64" fill="currentColor"</g>
-</g></svg>`
-  },
-  {
-    name: 'Edge', icon: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Capa_1" x="0px" y="0px" viewBox="0 0 24 24" style="enable-background:new 0 0 24 24;" xml:space="preserve"  width="64" height="64" fill="currentColor">
-<g id="PRIMARY_-_GHOST">
- width="64" height="64" fill="currentColor"<path d="M23.914,17.469c-0.167-0.454-0.484-0.697-0.846-0.898c-0.068-0.04-0.131-0.072-0.184-0.097   c-0.108-0.056-0.218-0.11-0.328-0.166c-1.127-0.598-2.008-1.352-2.619-2.246c-0.173-0.252-0.324-0.518-0.45-0.797   c-0.052-0.149-0.049-0.233-0.012-0.311c0.037-0.06,0.086-0.111,0.144-0.15c0.194-0.128,0.394-0.258,0.529-0.346   c0.241-0.157,0.433-0.28,0.556-0.368c0.463-0.324,0.787-0.668,0.989-1.052c0.286-0.537,0.323-1.172,0.104-1.74   c-0.307-0.807-1.069-1.308-1.992-1.308c-0.195,0-0.389,0.021-0.579,0.061c-0.051,0.011-0.102,0.023-0.151,0.036   c0.008-0.552-0.004-1.134-0.053-1.708c-0.174-2.016-0.88-3.072-1.616-3.915c-0.471-0.528-1.026-0.975-1.643-1.322   C14.647,0.505,13.38,0.181,12,0.181c-1.38,0-2.64,0.324-3.758,0.961C7.624,1.49,7.067,1.938,6.596,2.467   C5.86,3.309,5.154,4.368,4.98,6.382C4.931,6.955,4.919,7.541,4.927,8.089c-0.05-0.013-0.1-0.024-0.15-0.036   c-0.191-0.041-0.385-0.061-0.58-0.061c-0.924,0-1.687,0.501-1.993,1.308c-0.221,0.568-0.184,1.204,0.101,1.742   c0.203,0.385,0.526,0.728,0.99,1.052c0.123,0.086,0.315,0.21,0.556,0.368c0.13,0.085,0.321,0.209,0.508,0.332   c0.066,0.042,0.121,0.098,0.163,0.164c0.039,0.081,0.04,0.167-0.018,0.326c-0.124,0.273-0.272,0.534-0.442,0.78   C3.465,14.94,2.61,15.68,1.519,16.273c-0.578,0.307-1.179,0.511-1.433,1.201c-0.192,0.521-0.067,1.113,0.42,1.612   c0.178,0.186,0.385,0.343,0.613,0.464c0.474,0.26,0.978,0.462,1.5,0.6c0.108,0.028,0.21,0.074,0.303,0.136   c0.177,0.155,0.152,0.389,0.388,0.731c0.119,0.177,0.269,0.33,0.444,0.451c0.495,0.342,1.052,0.363,1.642,0.386   c0.533,0.02,1.137,0.044,1.827,0.271c0.286,0.094,0.583,0.277,0.927,0.491c0.826,0.508,1.957,1.202,3.849,1.202   c1.892,0,3.031-0.698,3.863-1.208c0.342-0.21,0.637-0.391,0.915-0.483c0.69-0.228,1.294-0.251,1.827-0.271   c0.59-0.022,1.147-0.044,1.642-0.386c0.207-0.144,0.38-0.333,0.505-0.552c0.17-0.289,0.165-0.491,0.325-0.632   c0.087-0.059,0.183-0.103,0.285-0.13c0.53-0.139,1.041-0.342,1.521-0.606c0.242-0.129,0.46-0.3,0.644-0.504l0.006-0.008   C23.986,18.552,24.101,17.977,23.914,17.469z M22.59,18.046c-0.03,0.093-0.133,0.202-0.358,0.327   c-1.026,0.567-1.708,0.506-2.238,0.848c-0.197,0.127-0.257,0.318-0.289,0.512c-0.014,0.08-0.022,0.161-0.034,0.238   c-0.025,0.161-0.063,0.305-0.188,0.391c-0.402,0.278-1.591-0.019-3.127,0.488c-1.267,0.419-2.075,1.623-4.353,1.623   c-2.279,0-3.068-1.202-4.356-1.626c-1.533-0.507-2.724-0.21-3.128-0.487c-0.327-0.225-0.061-0.851-0.511-1.141   c-0.531-0.341-1.213-0.281-2.238-0.844c-0.33-0.182-0.398-0.329-0.358-0.443c0-0.003,0.001-0.005,0.003-0.008   c0.043-0.109,0.184-0.188,0.29-0.239c1.742-0.843,2.798-1.902,3.43-2.809c0.127-0.182,0.236-0.357,0.331-0.524   c0.442-0.778,0.562-1.36,0.574-1.45c0.032-0.249,0.067-0.446-0.208-0.699c-0.265-0.246-1.443-0.975-1.77-1.203   c-0.223-0.156-0.454-0.343-0.578-0.592c-0.27-0.541,0.153-1.068,0.71-1.068c0.099,0,0.198,0.012,0.295,0.033   c0.593,0.129,1.17,0.426,1.503,0.506c0.22,0.053,0.364-0.047,0.351-0.276c-0.038-0.65-0.13-1.915-0.028-3.098   c0.05-0.581,0.167-1.171,0.381-1.721c0.206-0.529,0.535-1.001,0.906-1.426c0.3-0.343,1.705-1.828,4.395-1.828   c2.1,0,3.42,0.903,4.04,1.461c0.989,0.909,1.533,2.18,1.645,3.507c0.102,1.183,0.014,2.449-0.028,3.098   c-0.014,0.221,0.141,0.33,0.351,0.277c0.334-0.081,0.91-0.378,1.504-0.507c0.438-0.095,0.946,0.039,1.066,0.521   c0.099,0.413-0.141,0.759-0.638,1.106c-0.327,0.228-1.505,0.956-1.77,1.202c-0.275,0.254-0.239,0.45-0.207,0.7   c0.015,0.116,0.203,1.022,1.003,2.113c0.001,0.001,0.001,0.002,0.002,0.002c0.033,0.045,0.067,0.091,0.103,0.137   c0.18,0.234,0.389,0.476,0.63,0.719c0.624,0.628,1.466,1.266,2.597,1.812c0.093,0.045,0.2,0.101,0.261,0.187   C22.593,17.916,22.612,17.984,22.59,18.046z"/>
-</g></svg>`
-  },
-  {name: 'Edge', icon: ``},
-  {name: 'Edge', icon: ``},
-  {name: 'Edge', icon: ``},
-  {name: 'Express', icon: ``}, {name: 'Edge', icon: ``}, {name: 'Edge', icon: ``},
-  {name: 'Edge', icon: ``}, {name: 'Edge', icon: ``}, {name: 'Edge', icon: ``}, {name: 'Edge', icon: ``},
-]
+};
 
 const characterChart = ref(null);
 
@@ -143,13 +103,28 @@ const initCharacterChart = () => {
   if (!characterChart.value) return;
 
   const chartInstance = echarts.init(characterChart.value);
-  
+
   // 扩展角色数据
   const characters = [
-    { id: 1, name: "艾琳", value: "女主角，天才黑客，性格独立坚强", category: 0 },
+    {
+      id: 1,
+      name: "艾琳",
+      value: "女主角，天才黑客，性格独立坚强",
+      category: 0,
+    },
     { id: 2, name: "马克", value: "男主角，前特工，充满正义感", category: 0 },
-    { id: 3, name: "萨姆", value: "艾琳的导师，神秘的科技公司创始人", category: 2 },
-    { id: 4, name: "莉莉", value: "艾琳的闺蜜，记者，擅长收集情报", category: 1 },
+    {
+      id: 3,
+      name: "萨姆",
+      value: "艾琳的导师，神秘的科技公司创始人",
+      category: 2,
+    },
+    {
+      id: 4,
+      name: "莉莉",
+      value: "艾琳的闺蜜，记者，擅长收集情报",
+      category: 1,
+    },
     { id: 5, name: "杰克", value: "马克的搭档，技术专家", category: 1 },
     { id: 6, name: "维克多", value: "主要反派，黑市军火商", category: 3 },
     { id: 7, name: "安娜", value: "萨姆的助手，AI专家", category: 1 },
@@ -157,28 +132,88 @@ const initCharacterChart = () => {
     { id: 9, name: "艾米", value: "维克多的妹妹，双面间谍", category: 3 },
     { id: 10, name: "大卫", value: "政府特工，身份成谜", category: 2 },
     { id: 11, name: "索菲亚", value: "黑客组织领袖", category: 3 },
-    { id: 12, name: "托马斯", value: "科技公司CEO，幕后推手", category: 2 }
+    { id: 12, name: "托马斯", value: "科技公司CEO，幕后推手", category: 2 },
   ];
 
   // 扩展关系数据
   const relationships = [
-    { source: 0, target: 1, name: "命运相遇", value: "在一次网络安全事件中相识，共同对抗犯罪组织" },
-    { source: 0, target: 2, name: "师徒关系", value: "萨姆发现艾琳的天赋，收她为徒" },
-    { source: 0, target: 3, name: "挚友", value: "从大学时代就是形影不离的好友" },
+    {
+      source: 0,
+      target: 1,
+      name: "命运相遇",
+      value: "在一次网络安全事件中相识，共同对抗犯罪组织",
+    },
+    {
+      source: 0,
+      target: 2,
+      name: "师徒关系",
+      value: "萨姆发现艾琳的天赋，收她为徒",
+    },
+    {
+      source: 0,
+      target: 3,
+      name: "挚友",
+      value: "从大学时代就是形影不离的好友",
+    },
     { source: 1, target: 4, name: "搭档", value: "多年的工作伙伴，配合默契" },
-    { source: 2, target: 5, name: "宿敌", value: "曾是合作伙伴，后因理念不合成为对手" },
+    {
+      source: 2,
+      target: 5,
+      name: "宿敌",
+      value: "曾是合作伙伴，后因理念不合成为对手",
+    },
     { source: 3, target: 4, name: "信息合作", value: "莉莉为杰克提供重要情报" },
-    { source: 1, target: 2, name: "互相怀疑", value: "对萨姆的真实身份产生怀疑" },
+    {
+      source: 1,
+      target: 2,
+      name: "互相怀疑",
+      value: "对萨姆的真实身份产生怀疑",
+    },
     { source: 2, target: 6, name: "秘密合作", value: "安娜协助萨姆进行AI研究" },
-    { source: 5, target: 7, name: "非法交易", value: "克里斯暗中监视维克多的军火交易" },
-    { source: 5, target: 8, name: "血亲", value: "艾米是维克多的妹妹，但暗中为政府工作" },
+    {
+      source: 5,
+      target: 7,
+      name: "非法交易",
+      value: "克里斯暗中监视维克多的军火交易",
+    },
+    {
+      source: 5,
+      target: 8,
+      name: "血亲",
+      value: "艾米是维克多的妹妹，但暗中为政府工作",
+    },
     { source: 8, target: 9, name: "上下级", value: "艾米向大卫汇报情报" },
-    { source: 0, target: 10, name: "对手", value: "艾琳与索菲亚在多个案件中对抗" },
-    { source: 2, target: 11, name: "商业合作", value: "萨姆与托马斯有密切的商业往来" },
-    { source: 10, target: 11, name: "秘密联盟", value: "索菲亚与托马斯暗中结盟" },
-    { source: 6, target: 11, name: "技术支持", value: "安娜为托马斯提供AI技术支持" },
-    { source: 3, target: 7, name: "情报交换", value: "莉莉与克里斯交换警方情报" },
-    { source: 4, target: 9, name: "暗中调查", value: "杰克调查大卫的真实身份" }
+    {
+      source: 0,
+      target: 10,
+      name: "对手",
+      value: "艾琳与索菲亚在多个案件中对抗",
+    },
+    {
+      source: 2,
+      target: 11,
+      name: "商业合作",
+      value: "萨姆与托马斯有密切的商业往来",
+    },
+    {
+      source: 10,
+      target: 11,
+      name: "秘密联盟",
+      value: "索菲亚与托马斯暗中结盟",
+    },
+    {
+      source: 6,
+      target: 11,
+      name: "技术支持",
+      value: "安娜为托马斯提供AI技术支持",
+    },
+    {
+      source: 3,
+      target: 7,
+      name: "情报交换",
+      value: "莉莉与克里斯交换警方情报",
+    },
+    { source: 4, target: 9, name: "暗中调查", value: "杰克调查大卫的真实身份" },
   ];
 
   const nodes = characters.map((character, index) => ({
@@ -186,36 +221,36 @@ const initCharacterChart = () => {
     name: character.name,
     value: character.value,
     symbolSize: 60, // 增大节点大小
-    category: character.category
+    category: character.category,
   }));
 
-  const links = relationships.map(relation => ({
+  const links = relationships.map((relation) => ({
     source: relation.source,
     target: relation.target,
     name: relation.name,
-    value: relation.value
+    value: relation.value,
   }));
 
   const option = {
     title: {
-      text: '角色关系图谱',
-      subtext: '示例项目：赛博朋克悬疑剧',
-      top: 'bottom',
-      left: 'right',
+      text: "角色关系图谱",
+      subtext: "示例项目：赛博朋克悬疑剧",
+      top: "bottom",
+      left: "right",
       textStyle: {
-        color: themeStore.isDark ? '#e5e7eb' : '#111827',
+        color: themeStore.isDark ? "#e5e7eb" : "#111827",
         fontSize: 16,
-        fontWeight: 'bold'
+        fontWeight: "bold",
       },
       subtextStyle: {
-        color: themeStore.isDark ? '#9ca3af' : '#4b5563'
-      }
+        color: themeStore.isDark ? "#9ca3af" : "#4b5563",
+      },
     },
     tooltip: {
       show: true,
       confine: true,
       formatter: function (params) {
-        const title = params.dataType === 'edge' ? '关系' : '角色';
+        const title = params.dataType === "edge" ? "关系" : "角色";
         return `
           <div style="
             width: 200px;
@@ -244,302 +279,991 @@ const initCharacterChart = () => {
           </div>
         `;
       },
-      backgroundColor: 'rgba(0,0,0,0.75)',
+      backgroundColor: "rgba(0,0,0,0.75)",
       borderRadius: 8,
       padding: [10, 15],
       textStyle: {
-        color: '#fff',
-        fontSize: 14
-      }
-    },
-    legend: [{
-      data: ['主角', '重要角色', '神秘人物', '反派'],
-      orient: 'vertical',
-      left: 'left',
-      textStyle: {
-        color: themeStore.isDark ? '#e5e7eb' : '#111827'
-      }
-    }],
-    series: [{
-      type: 'graph',
-      layout: 'force',
-      data: nodes,
-      links: links,
-      categories: [
-        { name: '主角' },
-        { name: '重要角色' },
-        { name: '神秘人物' },
-        { name: '反派' }
-      ],
-      roam: true,
-      draggable: true,
-      label: {
-        show: true,
-        position: 'right',
-        formatter: '{b}',
-        backgroundColor: 'rgba(102, 102, 102, 0.75)',
-        borderRadius: 4,
-        padding: [4, 8],
-        color: '#fff',
+        color: "#fff",
         fontSize: 14,
-        fontWeight: 'bold'
       },
-      edgeLabel: {
-        show: true,
-        formatter: '{c}',
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
-        borderRadius: 4,
-        padding: [4, 8],
-        color: '#fff',
-        fontSize: 12,
-        distance: 20,
-        rotate: 0,
-        offset: [0, 0]
-      },
-      force: {
-        repulsion: 800,
-        gravity: 0.1,
-        edgeLength: 300,
-        friction: 0.1,
-        layoutAnimation: true,
-        initLayout: 'circular'
-      },
-      cursor: 'move',
-      zoom: 1.5,
-      center: ['50%', '50%'],
-      emphasis: {
-        focus: 'adjacency',
-        scale: 1.2,
-        lineStyle: {
-          width: 4
+    },
+    legend: [
+      {
+        data: ["主角", "重要角色", "神秘人物", "反派"],
+        orient: "vertical",
+        left: "left",
+        textStyle: {
+          color: themeStore.isDark ? "#e5e7eb" : "#111827",
         },
+      },
+    ],
+    series: [
+      {
+        type: "graph",
+        layout: "force",
+        data: nodes,
+        links: links,
+        categories: [
+          { name: "主角" },
+          { name: "重要角色" },
+          { name: "神秘人物" },
+          { name: "反派" },
+        ],
+        roam: true,
+        draggable: true,
         label: {
-          fontSize: 16,
-          show: true
-        }
-      },
-      nodeScaleRatio: 0.6,
-      itemStyle: {
-        borderWidth: 2,
-        borderColor: themeStore.isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)',
-        shadowColor: 'rgba(0, 0, 0, 0.2)',
-        shadowBlur: 10
-      },
-      animation: true,
-      animationDuration: 1000,
-      animationEasingUpdate: 'quinticInOut',
-      lineStyle: {
-        width: 2,
-        opacity: 0.7,
-        curveness: 0.3,
-        color: {
-          type: 'linear',
-          x: 0,
-          y: 0,
-          x2: 0,
-          y2: 1,
-          colorStops: [{
-            offset: 0, color: 'rgb(77, 77, 245)'
-          }, {
-            offset: 1, color: 'rgb(77, 77, 245)'
-          }]
-        }
-      },
-      emphasis: {
+          show: true,
+          position: "right",
+          formatter: "{b}",
+          backgroundColor: "rgba(102, 102, 102, 0.75)",
+          borderRadius: 4,
+          padding: [4, 8],
+          color: "#fff",
+          fontSize: 14,
+          fontWeight: "bold",
+        },
+        edgeLabel: {
+          show: true,
+          formatter: "{c}",
+          backgroundColor: "rgba(0, 0, 0, 0.75)",
+          borderRadius: 4,
+          padding: [4, 8],
+          color: "#fff",
+          fontSize: 12,
+          distance: 20,
+          rotate: 0,
+          offset: [0, 0],
+        },
+        force: {
+          repulsion: 800,
+          gravity: 0.1,
+          edgeLength: 300,
+          friction: 0.1,
+          layoutAnimation: true,
+          initLayout: "circular",
+        },
+        cursor: "move",
+        zoom: 1.5,
+        center: ["50%", "50%"],
+        emphasis: {
+          focus: "adjacency",
+          scale: 1.2,
+          lineStyle: {
+            width: 4,
+          },
+          label: {
+            fontSize: 16,
+            show: true,
+          },
+        },
+        nodeScaleRatio: 0.6,
+        itemStyle: {
+          borderWidth: 2,
+          borderColor: themeStore.isDark
+            ? "rgba(255,255,255,0.3)"
+            : "rgba(0,0,0,0.2)",
+          shadowColor: "rgba(0, 0, 0, 0.2)",
+          shadowBlur: 10,
+        },
+        animation: true,
+        animationDuration: 1000,
+        animationEasingUpdate: "quinticInOut",
         lineStyle: {
-          width: 4,
-          curveness: 0.3
-        }
+          width: 2,
+          opacity: 0.7,
+          curveness: 0.3,
+          color: {
+            type: "linear",
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              {
+                offset: 0,
+                color: "rgb(77, 77, 245)",
+              },
+              {
+                offset: 1,
+                color: "rgb(77, 77, 245)",
+              },
+            ],
+          },
+        },
+        emphasis: {
+          lineStyle: {
+            width: 4,
+            curveness: 0.3,
+          },
+        },
+        edgeSymbol: ["none", "arrow"],
+        edgeSymbolSize: [0, 8],
       },
-      edgeSymbol: ['none', 'arrow'],
-      edgeSymbolSize: [0, 8],
-    }],
-    backgroundColor: 'transparent'
+    ],
+    backgroundColor: "transparent",
   };
 
   chartInstance.setOption(option);
-  
+
   // 添加鼠标交互事件
-  chartInstance.on('mousedown', 'series', () => {
-    chartInstance.getZr().setCursorStyle('move');
+  chartInstance.on("mousedown", "series", () => {
+    chartInstance.getZr().setCursorStyle("move");
   });
-  
-  chartInstance.on('mouseup', 'series', () => {
-    chartInstance.getZr().setCursorStyle('default');
+
+  chartInstance.on("mouseup", "series", () => {
+    chartInstance.getZr().setCursorStyle("default");
   });
-  
+
   // 优化 resize 处理
   const resizeHandler = () => {
     chartInstance.resize();
   };
-  
-  window.addEventListener('resize', resizeHandler);
-  
+
+  window.addEventListener("resize", resizeHandler);
+
   // 确保组件卸载时移除事件监听
   onUnmounted(() => {
-    window.removeEventListener('resize', resizeHandler);
+    window.removeEventListener("resize", resizeHandler);
     chartInstance.dispose();
   });
 };
 
 // 监听主题变化，更新图表样式
-watch(() => themeStore.isDark, () => {
-  initCharacterChart();
-});
+watch(
+  () => themeStore.isDark,
+  () => {
+    initCharacterChart();
+  }
+);
 
 onMounted(() => {
   initCharacterChart();
+});
+
+// 示例数据
+const demoData = {
+  dates: ["2024-03-01", "2024-03-02", "2024-03-03", "2024-03-04", "2024-03-05"],
+  projects: ["科幻冒险", "都市情感", "悬疑推理"],
+  emotions: ["喜悦", "感动", "惊喜", "期待", "伤感"],
+};
+
+// 初始化示例图表
+const initDemoCharts = () => {
+  // 观看趋势图
+  const watchChart = echarts.init(document.querySelector("#watchChart"));
+  watchChart.setOption({
+    tooltip: {
+      trigger: "axis",
+    },
+    legend: {
+      data: demoData.projects,
+      bottom: 0,
+    },
+    xAxis: {
+      type: "category",
+      data: demoData.dates,
+      axisLabel: { rotate: 45 },
+    },
+    yAxis: {
+      type: "value",
+      name: "观看次数",
+    },
+    series: demoData.projects.map((project, index) => ({
+      name: project,
+      type: "line",
+      smooth: true,
+      data: demoData.dates.map(() => Math.floor(Math.random() * 1000)),
+      itemStyle: {
+        color: gradientColors[index][0],
+      },
+    })),
+  });
+
+  // 情感分析图
+  const emotionChart = echarts.init(document.querySelector("#emotionChart"));
+  emotionChart.setOption({
+    tooltip: {
+      trigger: "item",
+    },
+    legend: {
+      bottom: 0,
+    },
+    series: [
+      {
+        type: "pie",
+        radius: ["40%", "70%"],
+        data: demoData.emotions.map((emotion, index) => ({
+          name: emotion,
+          value: Math.floor(Math.random() * 100),
+          itemStyle: {
+            color: gradientColors[index][0],
+          },
+        })),
+      },
+    ],
+  });
+
+  // 监听窗口大小变化
+  window.addEventListener("resize", () => {
+    watchChart.resize();
+    emotionChart.resize();
+    styleChart.resize();
+    aiChart.resize();
+  });
+};
+
+onMounted(() => {
+  initDemoCharts();
+});
+
+const demoText = ref("");
+const fullDemoText = `正在分析已有内容...
+
+故事发生在一个雨夜，城市的霓虹灯在雨中显得格外迷离。艾琳坐在她的工作室里，双手飞快地在键盘上敲击。显示器的蓝光映照在她专注的脸上，一行行代码如流水般在屏幕上滑过。
+
+突然，她的系统发出了警告。有人正试图入侵她精心设计的防火墙。这不是普通的黑客，他们的手法太专业了。艾琳眯起眼睛，嘴角露出一丝微笑。"有意思，"她喃喃自语，"让我们看看你是谁。"
+
+就在这时，她的通讯器响了。是一个加密频道。"艾琳，"一个熟悉的声音传来，"是我，马克。我们需要谈谈。"`;
+
+let currentIndex = ref(0);
+const isTyping = ref(true);
+
+const typeText = () => {
+  if (currentIndex.value < fullDemoText.length) {
+    demoText.value = fullDemoText.slice(0, currentIndex.value + 1);
+    currentIndex.value++;
+  } else {
+    // 重置动画
+    setTimeout(() => {
+      currentIndex.value = 0;
+      demoText.value = "";
+      isTyping.value = true;
+    }, 2000);
+  }
+};
+
+onMounted(() => {
+  const interval = setInterval(() => {
+    if (isTyping.value) {
+      typeText();
+    }
+  }, 50);
+
+  onUnmounted(() => {
+    clearInterval(interval);
+  });
 });
 </script>
 
 <template>
   <div
-      class="fixed top-0 left-0 w-full shadow-md z-50 flex flex-nowrap place-items-center text-theme-switch font-sans border-b-[1px] theme-border bkg-theme-switch">
+    class="fixed top-0 left-0 w-full shadow-md z-50 flex flex-nowrap place-items-center text-theme-switch font-sans border-b-[1px] theme-border bkg-theme-switch"
+  >
     <div class="w-1/12"></div>
     <div class="flex flex-nowrap p-4 cursor-pointer" @click="router.push('/')">
-      <img :src="logo" class="w-8 h-8 rounded-full"/>
+      <img :src="logo" class="w-8 h-8 rounded-full" />
       <span class="my-auto ml-4">创剧星球</span>
     </div>
-    <div class="flex-grow"/>
+    <div class="flex-grow" />
     <div class="h-full flex gap-4">
-      <div class="text-hover flex flex-nowrap cursor-pointer transition-all my-auto" v-for="item in topBarItems"
-           @click="router.push(item.path)">
-        <div v-html="item.icon" class="h-6 w-6 rounded-full"/>
+      <div
+        class="text-hover flex flex-nowrap cursor-pointer transition-all my-auto"
+        v-for="item in topBarItems"
+        @click="router.push(item.path)"
+      >
+        <div v-html="item.icon" class="h-6 w-6 rounded-full" />
         <span>{{ item.name }}</span>
       </div>
-      <ThemeSwitcher class="mx-auto my-auto"/>
+      <ThemeSwitcher class="mx-auto my-auto" />
     </div>
     <div class="w-1/12"></div>
   </div>
   <div class="relative w-full h-screen overflow-hidden bg-black">
     <div class="absolute inset-0 overflow-hidden bg-slate-50 dark:bg-slate-950">
       <!-- 核心发光中心 -->
-      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32">
+      <div
+        class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32"
+      >
         <div
-            class="absolute inset-0 bg-gradient-to-r from-blue-400/50 via-violet-400/40 to-transparent dark:from-blue-400/30 dark:via-violet-400/25 blur-md"></div>
+          class="absolute inset-0 bg-gradient-to-r from-blue-400/50 via-violet-400/40 to-transparent dark:from-blue-400/30 dark:via-violet-400/25 blur-md"
+        ></div>
       </div>
 
       <!-- 主渐变区域 -->
-      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px]">
+      <div
+        class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px]"
+      >
         <div
-            class="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-violet-500/40 to-transparent dark:from-blue-600/40 dark:via-violet-600/35 dark:to-slate-950/30 blur-3xl"></div>
+          class="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-violet-500/40 to-transparent dark:from-blue-600/40 dark:via-violet-600/35 dark:to-slate-950/30 blur-3xl"
+        ></div>
       </div>
 
       <!-- 线性光线 -->
       <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
         <template v-for="i in 12" :key="i">
           <div
-              class="absolute h-px w-[400px] bg-gradient-to-r from-blue-400/20 via-violet-400/15 to-transparent dark:from-blue-400/15 dark:via-violet-400/10 dark:to-slate-950/5"
-              :style="{
-          transform: `rotate(${(i - 1) * 30}deg)`,
-          transformOrigin: '0 50%'
-        }"
+            class="absolute h-px w-[400px] bg-gradient-to-r from-blue-400/20 via-violet-400/15 to-transparent dark:from-blue-400/15 dark:via-violet-400/10 dark:to-slate-950/5"
+            :style="{
+              transform: `rotate(${(i - 1) * 30}deg)`,
+              transformOrigin: '0 50%',
+            }"
           ></div>
         </template>
       </div>
 
       <!-- 边缘渐隐效果 -->
-      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px]">
+      <div
+        class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px]"
+      >
         <div
-            class="absolute inset-0 bg-gradient-to-r from-blue-400/20 via-violet-400/15 to-transparent dark:from-blue-500/15 dark:via-violet-500/10 dark:to-slate-950/5 blur-[150px]"></div>
+          class="absolute inset-0 bg-gradient-to-r from-blue-400/20 via-violet-400/15 to-transparent dark:from-blue-500/15 dark:via-violet-500/10 dark:to-slate-950/5 blur-[150px]"
+        ></div>
       </div>
     </div>
 
-
     <!-- 内容层 -->
-    <div class="relative animate__animated animate__backInDown z-10 flex flex-col items-center justify-center h-full font-sans">
+    <div
+      class="relative animate__animated animate__backInDown z-10 flex flex-col items-center justify-center h-full font-sans"
+    >
       <!--      <div class="mx-auto p-2 border rounded-3xl border-blue-500 dark:border-purple-900 text-theme-switch flex flex-nowrap">-->
       <!--        <img :src="logo" class="w-4 h-4 rounded-full my-auto"/>-->
       <!--        <span class="my-auto ml-2">现在就创作引人入胜的作品！</span>-->
       <!--      </div>-->
       <div class="mx-auto font-serif">
-        <span
+        <!-- <span
             class="text-7xl font-bold bg-gradient-to-b from-gray-700 via-gray-900 to-black dark:from-gray-100 dark:via-gray-300 dark:to-gray-400 text-transparent bg-clip-text">
           内容创作者的
-        </span>
+        </span> -->
+        <img :src="titleDark" class="invert dark:invert-0" />
       </div>
 
       <div class="mx-auto font-serif">
-        <span
+        <!-- <span
             class="text-6xl font-bold bg-gradient-to-b from-gray-600 via-gray-700 to-gray-800 dark:from-gray-400 dark:via-gray-500 dark:to-gray-600 text-transparent bg-clip-text">
           得力助手
-        </span>
+        </span> -->
       </div>
-      <div class="mx-auto font-serif text-gray-600 dark:text-[#a0a0a0] mt-8 text-2xl">
-        人人都可以是优秀的编剧。
+      <div
+        class="mx-auto font-serif text-gray-600 dark:text-[#8B8B8B] mt-8 text-2xl"
+      >
+        让创意化为精彩剧集
       </div>
-      <div class="mx-auto text-gray-600 dark:text-[#a9a9a9] mt-8 text-xl">
-        一款集灵感激发、角色设计、剧本生成、团队协作于一体的智能创作平台，
+      <div class="mx-auto text-gray-600 dark:text-[#737373] mt-8 text-xl">
+        一款集AI智能创作、角色塑造、剧情构建、团队协同于一体的专业创作平台，
       </div>
 
-      <div class="mx-auto text-gray-500 dark:text-[#a9a9a9] mt-2">
-        支持版本控制、版权管理及内容优化输出，助力创作者高效创作。
+      <div class="mx-auto text-gray-500 dark:text-[#666666] mt-2">
+        为您提供从灵感激发到作品完成的全流程支持，让创作更轻松，让故事更精彩。
       </div>
 
       <div class="mx-auto mt-4 flex flex-wrap gap-2">
         <button
-            @click="quickStartClickHandler"
-            class="px-6 py-2 rounded-2xl font-light bg-gradient-to-r from-blue-500 to-violet-500 text-white hover:-translate-y-0.5 transition-all">
+          @click="quickStartClickHandler"
+          class="px-6 py-2 rounded-2xl font-light bg-gradient-to-r from-blue-500 to-violet-500 text-white hover:-translate-y-0.5 transition-all"
+        >
           创剧工坊
         </button>
         <button
           @click="router.push('/community')"
-            class="px-6 py-2 rounded-2xl font-light border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white hover:-translate-y-0.5 transition-all">
+          class="px-6 py-2 rounded-2xl font-light border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white hover:-translate-y-0.5 transition-all"
+        >
           星球社区
         </button>
       </div>
     </div>
   </div>
-  <div class="h-screen bg-[#f5f5f5] dark:bg-[#030616]">
+  <div class="h-screen bg-[#f8fafc] dark:bg-[#030616]">
     <div class="container mx-auto px-4 py-16 font-sans">
-      <h1 class="text-5xl font-bold font-serif text-black dark:text-white text-center mb-4">
-        一次编发，处处开花
-      </h1>
-      <h1 class="text-3xl font-bold font-serif text-black dark:text-white text-center mb-16">
-        发布至任何您想分享的平台。
-      </h1>
-      <div class="grid grid-cols-8 gap-4 max-w-4xl mx-auto">
-        <template v-for="(item, index) in frameworks" :key="index">
-          <div
-              class="aspect-square border border-gray-300 dark:border-gray-950 hover:shadow-lg shadow-indigo-300 dark:shadow-indigo-800 rounded-xl bg-gradient-to-br from-white to-gray-200 dark:from-[rgb(36,36,36)] dark:to-[#030616] p-4 flex items-center justify-center transition-transform hover:-translate-y-1 cursor-pointer"
-          >
-            <div v-if="item.icon !== ``" class="text-gray-900 dark:text-white" v-html="item.icon"></div>
-            <div class="font-bold" v-else></div>
+      <!-- AI扩写功能介绍 -->
+      <div class="flex flex-col lg:flex-row gap-8 items-center">
+        <!-- 左侧介绍文本 -->
+        <div class="lg:w-1/2 space-y-6">
+          <h2 class="text-4xl font-bold font-serif text-black dark:text-white">
+            AI 智能创作
+          </h2>
+          <h3 class="text-2xl font-bold text-gray-700 dark:text-gray-300">
+            让创作过程更轻松，让灵感源源不断
+          </h3>
+          <div class="space-y-4">
+            <div class="flex items-start gap-4">
+              <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                </svg>
+              </div>
+              <div>
+                <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  智能续写
+                </h4>
+                <p class="text-gray-600 dark:text-gray-400">
+                  根据已有内容智能分析，自动生成后续情节，让故事自然流畅地发展
+                </p>
+              </div>
+            </div>
+            
+            <div class="flex items-start gap-4">
+              <div class="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zM12 2.25V4.5m5.834.166l-1.591 1.591M20.25 10.5H18M7.757 14.743l-1.59 1.59M6 10.5H3.75m4.007-4.243l-1.59-1.59" />
+                </svg>
+              </div>
+              <div>
+                <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  情节优化
+                </h4>
+                <p class="text-gray-600 dark:text-gray-400">
+                  提供情节建议和优化方案，让故事更加引人入胜
+                </p>
+              </div>
+            </div>
+            
+            <div class="flex items-start gap-4">
+              <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                </svg>
+              </div>
+              <div>
+                <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  角色塑造
+                </h4>
+                <p class="text-gray-600 dark:text-gray-400">
+                  智能分析角色性格特征，提供人物对话和行为建议
+                </p>
+              </div>
+            </div>
           </div>
-        </template>
+        </div>
+
+        <!-- 右侧演示窗口 -->
+        <div class="lg:w-1/2">
+          <div class="bg-white dark:bg-zinc-900 rounded-xl shadow-xl border theme-border p-6">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="flex space-x-2">
+                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+              </div>
+              <div class="flex-1 text-center text-sm text-gray-600 dark:text-gray-400">
+                AI 智能创作示例
+              </div>
+            </div>
+            
+            <div class="h-[400px] overflow-hidden rounded-lg bg-gray-50 dark:bg-zinc-800 p-4">
+              <MdPreview 
+                :modelValue="demoText"
+                :theme="themeStore.currentTheme"
+                previewTheme="github"
+                style="background: transparent"
+              />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
-  <div class="h-screen bg-[#f5f5f5] dark:bg-[#030616]">
+  <div class="h-screen bg-[#f8fafc] dark:bg-[#030616]">
+    <div class="container mx-auto px-4 py-16 h-full font-sans flex flex-col">
+      <!-- 标题部分 -->
+      <div class="flex-none">
+        <h1
+          class="text-5xl font-bold font-serif text-black dark:text-white text-center mb-4"
+        >
+          数据驱动创作
+        </h1>
+        <h1
+          class="text-3xl font-bold font-serif text-black dark:text-white text-center mb-8"
+        >
+          让每个决策都有据可依
+        </h1>
+      </div>
+
+      <!-- 图表展示区域 -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1">
+        <!-- 观看趋势示例图 -->
+        <div
+          class="bg-white dark:bg-[#141419] rounded-xl p-6 border theme-border hover:shadow-lg transition-shadow"
+        >
+          <div class="flex items-center gap-3 mb-4">
+            <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6 text-blue-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                />
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              观看趋势分析
+            </h3>
+          </div>
+          <div id="watchChart" ref="watchChart" class="w-full h-[300px]"></div>
+        </div>
+
+        <!-- 情感分析示例图 -->
+        <div
+          class="bg-white dark:bg-[#141419] rounded-xl p-6 border theme-border hover:shadow-lg transition-shadow"
+        >
+          <div class="flex items-center gap-3 mb-4">
+            <div class="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6 text-purple-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              情感分析洞察
+            </h3>
+          </div>
+          <div
+            id="emotionChart"
+            ref="emotionChart"
+            class="w-full h-[300px]"
+          ></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="h-screen bg-[#f8fafc] dark:bg-[#030616]">
     <div class="container mx-auto px-4 py-16 h-full font-sans flex flex-col">
       <div class="flex-none">
-        <h1 class="text-5xl font-bold font-serif text-black dark:text-white text-center mb-4">
+        <h1
+          class="text-5xl font-bold font-serif text-black dark:text-white text-center mb-4"
+        >
           角色关系，一目了然
         </h1>
-        <h1 class="text-3xl font-bold font-serif text-black dark:text-white text-center mb-8">
+        <h1
+          class="text-3xl font-bold font-serif text-black dark:text-white text-center mb-8"
+        >
           我们提供最清晰的方式助你理解项目。
         </h1>
       </div>
-      
-      <div class="flex-1 min-h-0 bg-white dark:bg-zinc-900/80 rounded-xl shadow-xl p-6">
+
+      <div
+        class="flex-1 min-h-0 bg-white dark:bg-zinc-900/80 rounded-xl shadow-xl p-6"
+      >
         <div ref="characterChart" class="w-full h-full" />
       </div>
     </div>
   </div>
-  
+  <div class="h-screen bg-[#f8fafc] dark:bg-[#030616]">
+    <div class="container mx-auto px-4 py-16 font-sans">
+      <!-- 标题部分 -->
+      <div class="text-center mb-16">
+        <h1
+          class="text-5xl font-bold font-serif text-black dark:text-white mb-4"
+        >
+          多样化导出，灵活应用
+        </h1>
+        <h2
+          class="text-3xl font-bold font-serif text-black dark:text-white mb-8"
+        >
+          为不同场景提供专业的输出方案
+        </h2>
+      </div>
+
+      <!-- 导出功能展示网格 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <!-- PDF导出卡片 -->
+        <div
+          class="bg-white dark:bg-[#141419] rounded-xl p-8 border theme-border hover:shadow-xl transition-all group"
+        >
+          <div class="flex items-center gap-4 mb-6">
+            <div
+              class="p-3 rounded-xl bg-red-100 dark:bg-red-900/30 group-hover:scale-110 transition-transform"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-8 w-8 text-red-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+                />
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100">
+              PDF格式
+            </h3>
+          </div>
+          <p class="text-gray-600 dark:text-gray-400 mb-6">
+            专业的排版布局，支持富文本样式，适合正式场合使用。完美支持跨平台阅读，保持内容的一致性展现。
+          </p>
+          <ul class="space-y-3 text-sm">
+            <li
+              class="flex items-center gap-2 text-gray-700 dark:text-gray-300"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 text-green-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              专业排版与样式
+            </li>
+            <li
+              class="flex items-center gap-2 text-gray-700 dark:text-gray-300"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 text-green-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              跨平台阅读支持
+            </li>
+            <li
+              class="flex items-center gap-2 text-gray-700 dark:text-gray-300"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 text-green-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              内容版式锁定
+            </li>
+          </ul>
+        </div>
+
+        <!-- Word导出卡片 -->
+        <div
+          class="bg-white dark:bg-[#141419] rounded-xl p-8 border theme-border hover:shadow-xl transition-all group"
+        >
+          <div class="flex items-center gap-4 mb-6">
+            <div
+              class="p-3 rounded-xl bg-blue-100 dark:bg-blue-900/30 group-hover:scale-110 transition-transform"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-8 w-8 text-blue-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+                />
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100">
+              Word格式
+            </h3>
+          </div>
+          <p class="text-gray-600 dark:text-gray-400 mb-6">
+            支持二次编辑，方便修改和协作。兼容主流办公软件，适合需要进一步加工的场景。
+          </p>
+          <ul class="space-y-3 text-sm">
+            <li
+              class="flex items-center gap-2 text-gray-700 dark:text-gray-300"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 text-green-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              可编辑与修改
+            </li>
+            <li
+              class="flex items-center gap-2 text-gray-700 dark:text-gray-300"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 text-green-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              广泛的软件兼容
+            </li>
+            <li
+              class="flex items-center gap-2 text-gray-700 dark:text-gray-300"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 text-green-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              团队协作友好
+            </li>
+          </ul>
+        </div>
+
+        <!-- Markdown导出卡片 -->
+        <div
+          class="bg-white dark:bg-[#141419] rounded-xl p-8 border theme-border hover:shadow-xl transition-all group"
+        >
+          <div class="flex items-center gap-4 mb-6">
+            <div
+              class="p-3 rounded-xl bg-purple-100 dark:bg-purple-900/30 group-hover:scale-110 transition-transform"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-8 w-8 text-purple-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M14.25 9.75L16.5 12l-2.25 2.25m-4.5 0L7.5 12l2.25-2.25M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z"
+                />
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100">
+              Markdown格式
+            </h3>
+          </div>
+          <p class="text-gray-600 dark:text-gray-400 mb-6">
+            轻量级标记语言，适合技术写作和在线发布。支持快速转换为其他格式，保持良好的可读性。
+          </p>
+          <ul class="space-y-3 text-sm">
+            <li
+              class="flex items-center gap-2 text-gray-700 dark:text-gray-300"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 text-green-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              纯文本易读性
+            </li>
+            <li
+              class="flex items-center gap-2 text-gray-700 dark:text-gray-300"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 text-green-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              多平台支持
+            </li>
+            <li
+              class="flex items-center gap-2 text-gray-700 dark:text-gray-300"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 text-green-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              版本控制友好
+            </li>
+          </ul>
+        </div>
+
+        <!-- 音频导出卡片 -->
+        <div
+          class="bg-white dark:bg-[#141419] rounded-xl p-8 border theme-border hover:shadow-xl transition-all group"
+        >
+          <div class="flex items-center gap-4 mb-6">
+            <div
+              class="p-3 rounded-xl bg-amber-100 dark:bg-amber-900/30 group-hover:scale-110 transition-transform"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-8 w-8 text-amber-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a2.25 2.25 0 001.632-2.163zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 01-.99-3.467l2.31-.66A2.25 2.25 0 009 15.553z"
+                />
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100">
+              音频格式
+            </h3>
+          </div>
+          <p class="text-gray-600 dark:text-gray-400 mb-6">
+            支持多种音色的语音合成，让作品以听书形式呈现。适合移动场景和视障人士使用。
+          </p>
+          <ul class="space-y-3 text-sm">
+            <li
+              class="flex items-center gap-2 text-gray-700 dark:text-gray-300"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 text-green-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              多种音色选择
+            </li>
+            <li
+              class="flex items-center gap-2 text-gray-700 dark:text-gray-300"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 text-green-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              离线播放支持
+            </li>
+            <li
+              class="flex items-center gap-2 text-gray-700 dark:text-gray-300"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 text-green-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              自然语音合成
+            </li>
+            <li
+              class="flex items-center gap-2 text-gray-700 dark:text-gray-300"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 text-green-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              情感语气调节
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
   <div class="bg-white dark:bg-black flex font-sans min-h-32 text-theme-switch">
     <div class="mx-auto my-auto flex-col text-center">
-      <span class=" cursor-pointer hover:text-blue-600">
-      创剧星球IdeaCosmos
-    </span>
-      <br>
+      <span class="cursor-pointer hover:text-blue-600">
+        创剧星球IdeaCosmos
+      </span>
+      <br />
       <span class="mx-auto my-auto cursor-pointer hover:text-blue-600">
-      使用Vue.js&Golang构建
-    </span>
+        使用Vue.js&Golang构建
+      </span>
     </div>
-
   </div>
 </template>
 
-<style scoped>
-</style>
+<style scoped></style>

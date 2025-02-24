@@ -31,7 +31,7 @@ type Character struct {
 	gorm.Model
 	ProjectID   uint    `json:"project_id" gorm:"type:bigint unsigned"`
 	Name        string  `json:"name" gorm:"type:varchar(50)"`
-	Description string  `json:"description" gorm:"type:varchar(200)"`
+	Description string  `json:"description" gorm:"type:varchar(1000)"`
 	Avatar      string  `json:"avatar" binding:"omitempty" gorm:"type:varchar(50)"`
 	Project     Project `json:"project" gorm:"foreignKey:ProjectID"`
 }

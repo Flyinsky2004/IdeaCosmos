@@ -46,7 +46,8 @@ const generateInfo = () => {
     project_id: project.ID
   }, (messageer, data) => {
     message.success(messageer)
-    const raw = data.choices[0].message.content
+    const raw = data.choices[0].message.content.replace(/<think>.*?<\/think>/gs, '')
+    console.log(raw)
     options.infoTemp = JSON.parse(washJSONStr(raw))
     options.isTextGenerating = false
     options.editMode = true

@@ -807,7 +807,7 @@ func UpdateProject(c *gin.Context) {
 
 	tx := config.MysqlDataBase.Begin()
 	if err := tx.Save(&projectSource).Error; err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "保存项目信息时发生错误。code : 1"))
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "保存项目信息时发生错误。code : 1"+err.Error()))
 		return
 	}
 	if err := tx.Commit().Error; err != nil {
@@ -1383,4 +1383,260 @@ func GetChapterVersions(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto.SuccessResponse(versions))
+}
+
+// GetCategoryProjects 根据类型获取项目列表
+func GetCategoryProjects(c *gin.Context) {
+	// 获取请求参数
+	projectType := c.Query("category")
+	pageIndex := c.Query("pageIndex")
+	pageSize := 12 // 每页显示12个项目
+	offset, err := strconv.Atoi(pageIndex)
+	if err != nil {
+		offset = 0
+	}
+
+	var projects []pojo.Project
+
+	// 查询数据库
+	query := config.MysqlDataBase.Model(&pojo.Project{}).
+		Where("JSON_CONTAINS(style, JSON_ARRAY(?))", projectType).
+		Preload("Team").
+		Order("watches DESC").
+		Offset(offset * pageSize).
+		Limit(pageSize)
+
+	if err := query.Find(&projects).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目列表失败"))
+		return
+	}
+
+	// 返回结果
+	c.JSON(http.StatusOK, dto.SuccessResponse(projects))
+}
+
+// 添加修改版本的请求结构体
+type ChapterVersionModifyRequest struct {
+	Token            string `json:"token"`
+	ChapterId        string `json:"chapterId"`
+	CurrentContent   string `json:"currentContent"`   // 当前版本内容
+	ModifyPreference string `json:"modifyPreference"` // 修改偏好
+}
+
+func ModifyChapterVersionStream(c *gin.Context) {
+	// WebSocket升级配置
+	upgrader := websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			return true
+		},
+	}
+	ws, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "WebSocket升级失败"))
+		return
+	}
+	defer ws.Close()
+
+	// 读取并解析初始消息
+	_, message, err := ws.ReadMessage()
+	if err != nil {
+		return
+	}
+	var request ChapterVersionModifyRequest
+	if err := json.Unmarshal(message, &request); err != nil {
+		ws.WriteJSON(dto.ErrorResponse[string](500, "无法解析请求参数"+err.Error()))
+		return
+	}
+
+	// 验证token并获取userId
+	claims, err := util.ParseToken(request.Token)
+	if err != nil {
+		ws.WriteJSON(dto.ErrorResponse[string](500, "token验证失败"))
+		return
+	}
+	userId := claims.UserID
+
+	// 创建上下文
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	// 获取章节信息
+	var chapter pojo.Chapter
+	if err := config.MysqlDataBase.Where("id = ?", request.ChapterId).First(&chapter).Error; err != nil {
+		ws.WriteJSON(dto.ErrorResponse[string](500, "没有找到对应章节"))
+		return
+	}
+
+	// 验证权限
+	isValidPermission, err := checkProjectPermission(uint(userId), chapter.ProjectID)
+	if err != nil {
+		ws.WriteJSON(dto.ErrorResponse[string](500, "验证用户权限时发生错误"))
+		return
+	}
+	if !isValidPermission {
+		ws.WriteJSON(dto.ErrorResponse[string](500, "没有权限访问该项目"))
+		return
+	}
+
+	// 获取项目信息
+	var project pojo.Project
+	if err := config.MysqlDataBase.Where("id = ?", chapter.ProjectID).First(&project).Error; err != nil {
+		ws.WriteJSON(dto.ErrorResponse[string](500, "没有找到对应项目"))
+		return
+	}
+
+	// 获取角色信息
+	var characters []pojo.Character
+	if err := config.MysqlDataBase.Where("project_id = ?", chapter.ProjectID).Find(&characters).Error; err != nil {
+		ws.WriteJSON(dto.ErrorResponse[string](500, "获取角色信息时发生错误"))
+		return
+	}
+
+	// 获取角色关系
+	var characterIDs []uint
+	for _, char := range characters {
+		characterIDs = append(characterIDs, char.ID)
+	}
+	var relationships []pojo.CharacterRelationShip
+	if err := config.MysqlDataBase.Preload("FirstCharacter").Preload("SecondCharacter").
+		Where("first_character_id IN ? OR second_character_id IN ?", characterIDs, characterIDs).
+		Find(&relationships).Error; err != nil {
+		ws.WriteJSON(dto.ErrorResponse[string](500, "获取角色关系时发生错误"))
+		return
+	}
+
+	// 获取所有章节
+	var allChapters []pojo.Chapter
+	if err := config.MysqlDataBase.Where("project_id = ?", chapter.ProjectID).Find(&allChapters).Error; err != nil {
+		ws.WriteJSON(dto.ErrorResponse[string](500, "获取章节信息时发生错误"))
+		return
+	}
+
+	// 构建提示信息
+	projectStr := util.ProjectToString(project)
+	characterStr := util.CharactersToString(characters)
+	characterRelationshipStr := util.CharacterRelationShipsToString(relationships)
+	chaptersStr := util.ChaptersToString(allChapters)
+
+	prompt := "【❗重要修改要求❗】\n" +
+		request.ModifyPreference + "\n\n" +
+		"【当前章节信息】\n" +
+		"标题：" + chapter.Tittle + "\n" +
+		"简述：" + chapter.Description + "\n" +
+		"当前版本内容：\n" + request.CurrentContent + "\n\n" +
+		"【背景参考信息】\n" +
+		"项目设定：" + projectStr + "\n" +
+		"可用角色：" + characterStr + "\n" +
+		"角色关系：" + characterRelationshipStr + "\n" +
+		"章节上下文：" + chaptersStr
+
+	systemPrompt := "你是一个专业的" + project.Types + "内容修改专家。你的首要任务是严格按照用户提供的修改要求进行内容优化。\n\n" +
+		"【核心要求】\n" +
+		"1. ⚠️ 必须优先满足用户的具体修改要求\n" +
+		"2. ⚠️ 在满足修改要求的基础上，保持内容与项目设定的一致性\n" +
+		"3. ⚠️ 确保修改符合人物性格和关系的连贯性\n" +
+		"4. ⚠️ 修改后的内容字数必须不少于原文字数\n\n" +
+		"【修改流程】\n" +
+		"1. 首先仔细理解用户的修改要求\n" +
+		"2. 严格按照修改要求调整内容\n" +
+		"3. 检查修改是否完全符合用户要求\n" +
+		"4. 确保修改后字数不少于原文\n" +
+		"5. 最后确保与整体项目协调\n\n" +
+		"【格式要求】\n" +
+		"- 直接输出修改后的正文内容\n" +
+		"- 注意分段，使文章结构清晰\n" +
+		"- 不要添加标题、序号或其他额外标记"
+
+	// 调用流式聊天
+	streamChan, err := util.StreamChatCompletion(ctx, util.ChatRequest{
+		Model:       "deepseek-chat",
+		Messages:    []util.Message{},
+		Prompt:      systemPrompt,
+		Question:    prompt,
+		Temperature: 0.6,
+		MaxTokens:   8192,
+	})
+
+	if err != nil {
+		ws.WriteJSON(dto.ErrorResponse[string](500, "启动流式生成失败"+err.Error()))
+		return
+	}
+
+	// 读取流式响应并通过WebSocket发送
+	for response := range streamChan {
+		if err := ws.WriteJSON(response); err != nil {
+			return
+		}
+		if response.Done {
+			break
+		}
+	}
+}
+
+// GenerateCharacterFromDescription 从项目描述中生成角色
+func GenerateCharacterFromDescription(c *gin.Context) {
+	projectId := c.PostForm("project_id")
+	var project pojo.Project
+	err := config.MysqlDataBase.Where("id = ?", projectId).First(&project).Error
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "没有找到对应项目"))
+		return
+	}
+
+	// 获取现有角色，用于避免重复生成
+	var existingCharacters []pojo.Character
+	err = config.MysqlDataBase.Where("project_id = ?", projectId).Find(&existingCharacters).Error
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取现有角色时发生错误"))
+		return
+	}
+
+	var existingCharacterStr string
+	for _, character := range existingCharacters {
+		existingCharacterStr += character.Name + ":" + character.Description + ";"
+	}
+
+	// 构建提示信息，重点关注项目描述中的角色信息
+	prompt := "【项目基本信息】\n" +
+		"项目类型：" + project.Types + "\n" +
+		"目标受众：" + project.MarketPeople.String() + "\n" +
+		"创作风格：" + project.Style.String() + "\n\n" +
+		"【项目剧情信息】\n" +
+		"社会背景：" + project.SocialStory + "\n" +
+		"开始情节：" + project.Start + "\n" +
+		"高潮冲突：" + project.HighPoint + "\n" +
+		"结局：" + project.Resolved + "\n\n" +
+		"【现有角色】\n" + existingCharacterStr
+
+	var message = []util.Message{}
+
+	res, err := util.ChatHandler(util.ChatRequest{
+		Model:    "deepseek-chat",
+		Messages: message,
+		Prompt: "你是一个专业的" + project.Types + "角色设计师。请仔细分析项目描述中提到的人物，并将其设计为完整的角色。\n\n" +
+			"【核心要求】\n" +
+			"1. ⚠️ 只生成项目描述中已经明确提到或暗示的角色\n" +
+			"2. ⚠️ 不要生成与现有角色重复的角色\n" +
+			"3. ⚠️ 为每个角色创建完整的背景故事和性格特征\n\n" +
+			"【设计原则】\n" +
+			"1. 角色设定要符合项目的整体风格和主题\n" +
+			"2. 确保角色背景与项目的社会背景相符\n" +
+			"3. 角色性格要能推动剧情发展\n" +
+			"4. 注意角色之间的区分度\n\n" +
+			"【输出格式】\n" +
+			"请返回一个JSON数组，每个角色包含以下属性：\n" +
+			"- name: 角色姓名\n" +
+			"- description: 角色描述（包含性别、年龄、背景故事、性格特征等）\n" +
+			"注意：描述要详细但不超过300字",
+		Question:    prompt,
+		Temperature: 1.2,
+		MaxTokens:   8000,
+	})
+
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "生成角色时发生错误，请重试"))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(res))
 }

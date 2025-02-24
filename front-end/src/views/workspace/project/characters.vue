@@ -21,6 +21,7 @@ onMounted(() => {
 const options = reactive({
   characters: [],
   isCharactersGenerating: false,
+  isMainCharactersGenerating: false,
   generateResults: [],
   currentMoveId: -1,
   isCharacterAvatarGenerating: false,
@@ -88,7 +89,7 @@ const generateCharacter = () => {
       project_id: project.ID,
     },
     (messager, data) => {
-      const raw = data.choices[0].message.content;
+      const raw = data.choices[0].message.content.replace(/<think>.*?<\/think>/gs, '');
       options.generateResults = JSON.parse(washJSONStr(raw));
       for (let i = 0; i < options.generateResults.length; i++) {
         options.generateResults[i].project_id = project.ID;
@@ -175,7 +176,7 @@ const generateCharacterRS = () => {
       secondCharacterId: editRSForm.second_character_id,
     },
     (messager, data) => {
-      const raw = data.choices[0].message.content;
+      const raw = data.choices[0].message.content.replace(/<think>.*?<\/think>/gs, '');
       const washed = JSON.parse(washJSONStr(raw));
       editRSForm.name = washed.name;
       editRSForm.content = washed.content;
@@ -210,6 +211,23 @@ const submitCharacterRS = () => {
     );
   }
 };
+const generateMainCharacters = () => {
+  options.isMainCharactersGenerating = true;
+  post(
+    "/api/project/generateCharacterFromDescription",
+    {
+      project_id: project.ID,
+    },
+    (messager, data) => {
+      const raw = data.choices[0].message.content.replace(/<think>.*?<\/think>/gs, '');
+      options.generateResults = JSON.parse(washJSONStr(raw));
+      for (let i = 0; i < options.generateResults.length; i++) {
+        options.generateResults[i].project_id = project.ID;
+      }
+      options.isMainCharactersGenerating = false;
+    }
+  );
+};
 </script>
 
 <template>
@@ -222,6 +240,30 @@ const submitCharacterRS = () => {
         角色管理
       </h1>
       <div class="flex items-center gap-4">
+        <button
+          @click="generateMainCharacters"
+          :disabled="options.isMainCharactersGenerating"
+          class="px-4 py-2 bg-white dark:bg-zinc-800 border theme-border text-blue-500 rounded-lg hover:border-blue-500 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"
+            />
+          </svg>
+          {{ options.isMainCharactersGenerating ? "补全中..." : "补全主角团" }}
+          <SpinLoader
+            v-if="options.isMainCharactersGenerating"
+            class="ml-2 h-5 w-5"
+          />
+        </button>
         <button
           @click="generateCharacter"
           :disabled="options.isCharactersGenerating"

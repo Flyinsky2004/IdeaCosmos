@@ -174,7 +174,7 @@
                   >
                 </div>
               </div>
-              <div class="space-y-4">
+              <div class="space-y-4 select-text">
                 <div class="flex items-center justify-end gap-2">
                   <span class="text-sm text-gray-500 dark:text-gray-400"
                     >字体大小</span

@@ -72,7 +72,7 @@ func (c *Client) SendMessage(messages []Message, model string, maxToken int, tem
 	resp, err := c.client.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
-			Model:       model,
+			Model:       UseModelName,
 			Messages:    openaiMessages,
 			MaxTokens:   maxToken,
 			Temperature: float32(temperature),

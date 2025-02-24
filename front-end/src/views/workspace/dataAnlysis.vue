@@ -1,14 +1,27 @@
 <script setup>
-import { ref, onMounted, nextTick, onUnmounted } from 'vue'
+import { ref, onMounted, nextTick, onUnmounted, computed, reactive, watch } from 'vue'
 import { get } from '@/util/request'
 import { message } from 'ant-design-vue'
 import * as echarts from 'echarts'
 import SpinLoaderLarge from '@/components/spinLoaderLarge.vue'
+import { BACKEND_DOMAIN } from "@/util/VARRIBLES";
+import { MdPreview } from "md-editor-v3"
+import "md-editor-v3/lib/preview.css"
+import { useThemeStore } from "@/stores/theme"
+
+const themeStore = useThemeStore()
 
 const loading = ref(true)
 const projectData = ref([])
 const styleData = ref([])
 const emotionData = ref([])
+
+// 分析建议相关的状态
+const analysisOptions = reactive({
+  isGenerating: false,
+  showAnalysis: false,
+  content: "",
+})
 
 // 将渐变色数组提取为公共变量
 const gradientColors = [
@@ -116,6 +129,87 @@ const commonOptions = {
   animationDuration: 1000,
   animationEasing: 'cubicOut'
 }
+
+// 在 styleData 和 emotionData 的 ref 声明后添加新的计算属性
+const styleAnalytics = computed(() => {
+  if (!styleData.value.length) return null
+  
+  return {
+    // 按风格统计总观看和点赞数
+    styleStats: Object.entries(
+      styleData.value.reduce((acc, curr) => {
+        if (!acc[curr.style]) {
+          acc[curr.style] = { watches: 0, likes: 0, count: 0 }
+        }
+        acc[curr.style].watches += curr.watch_count
+        acc[curr.style].likes += curr.like_count
+        acc[curr.style].count++
+        return acc
+      }, {})
+    ),
+    
+    // 按类型统计
+    typeStats: Object.entries(
+      styleData.value.reduce((acc, curr) => {
+        if (!acc[curr.type]) {
+          acc[curr.type] = { watches: 0, likes: 0, count: 0 }
+        }
+        acc[curr.type].watches += curr.watch_count
+        acc[curr.type].likes += curr.like_count
+        acc[curr.type].count++
+        return acc
+      }, {})
+    ),
+    
+    // 计算互动率 (观看+点赞)/作品数
+    engagementRate: Object.entries(
+      styleData.value.reduce((acc, curr) => {
+        if (!acc[curr.style]) {
+          acc[curr.style] = { total: 0, count: 0 }
+        }
+        acc[curr.style].total += (curr.watch_count + curr.like_count)
+        acc[curr.style].count++
+        return acc
+      }, {})
+    ).map(([style, data]) => ({
+      style,
+      rate: data.total / data.count
+    }))
+  }
+})
+
+const emotionAnalytics = computed(() => {
+  if (!emotionData.value.length) return null
+  
+  return {
+    // 按项目统计情绪分布
+    projectEmotions: Object.entries(
+      emotionData.value.reduce((acc, curr) => {
+        if (!acc[curr.project_name]) {
+          acc[curr.project_name] = {}
+        }
+        if (!acc[curr.project_name][curr.emotion]) {
+          acc[curr.project_name][curr.emotion] = 0
+        }
+        acc[curr.project_name][curr.emotion] += curr.count
+        return acc
+      }, {})
+    ),
+    
+    // 情绪变化趋势
+    emotionTrends: emotionData.value.reduce((acc, curr) => {
+      const date = curr.date.split('T')[0]
+      if (!acc[date]) {
+        acc[date] = {}
+      }
+      if (!acc[date][curr.emotion]) {
+        acc[date][curr.emotion] = 0
+      }
+      acc[date][curr.emotion] += curr.count
+      return acc
+    }, {})
+  }
+})
 
 // 初始化图表
 const initCharts = () => {
@@ -927,11 +1021,309 @@ const initEmotionChart = () => {
   })
 }
 
+// 生成分析建议
+const generateAnalysis = () => {
+  if (!styleData.value || styleData.value.length === 0) {
+    message.warning("暂无数据可供分析")
+    return
+  }
+
+  analysisOptions.showAnalysis = true
+  analysisOptions.isGenerating = true
+  analysisOptions.content = ""
+
+  // 创建 WebSocket 连接
+  const token = localStorage.getItem("authToken")
+  const ws = new WebSocket(
+    `ws://${BACKEND_DOMAIN.replace("http://", "")}ws/newProjectAnalysis`
+  )
+
+  ws.onopen = () => {
+    ws.send(
+      JSON.stringify({
+        data: styleData.value,
+        auth_token: token
+      })
+    )
+  }
+
+  ws.onmessage = (event) => {
+    const response = JSON.parse(event.data)
+    if (response.code === 500) {
+      message.error(response.message)
+      analysisOptions.isGenerating = false
+      ws.close()
+      return
+    }
+
+    if (response.done) {
+      ws.close()
+      return
+    }
+
+    analysisOptions.content += response.content
+    // 滚动到底部
+    nextTick(() => {
+      const element = document.querySelector('.prose')
+      if (element) {
+        element.scrollTop = element.scrollHeight
+      }
+    })
+  }
+
+  ws.onerror = (error) => {
+    console.error("WebSocket error:", error)
+    message.error("连接发生错误，请重试")
+    analysisOptions.isGenerating = false
+  }
+
+  ws.onclose = () => {
+    analysisOptions.isGenerating = false
+  }
+}
+
+// 修改 initAdvancedCharts 函数
+const initAdvancedCharts = () => {
+  // 确保 DOM 元素存在
+  const engagementChartEl = document.getElementById('engagementChart')
+  const emotionHeatmapEl = document.getElementById('emotionHeatmap')
+  
+  if (!engagementChartEl || !emotionHeatmapEl || !styleAnalytics.value || !emotionAnalytics.value) {
+    return
+  }
+
+  // 互动率雷达图
+  const engagementChart = echarts.init(engagementChartEl)
+  const { engagementRate } = styleAnalytics.value
+  
+  engagementChart.setOption({
+    title: {
+      text: '内容风格互动率分析',
+      left: 'center',
+      textStyle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#333'
+      }
+    },
+    radar: {
+      indicator: engagementRate.map(item => ({
+        name: item.style,
+        max: Math.max(...engagementRate.map(i => i.rate)) * 1.2
+      })),
+      splitArea: {
+        areaStyle: {
+          color: document.documentElement.classList.contains('dark') 
+            ? ['rgba(255,255,255,0.02)', 'rgba(255,255,255,0.05)']
+            : ['rgba(200,200,200,0.1)', 'rgba(250,250,250,0.3)']
+        }
+      },
+      axisLine: {
+        lineStyle: {
+          color: document.documentElement.classList.contains('dark') ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+        }
+      },
+      splitLine: {
+        lineStyle: {
+          color: document.documentElement.classList.contains('dark') ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+        }
+      },
+      name: {
+        textStyle: {
+          color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#666'
+        }
+      }
+    },
+    series: [{
+      type: 'radar',
+      data: [{
+        value: engagementRate.map(item => item.rate),
+        name: '互动率',
+        symbol: 'circle',
+        symbolSize: 8,
+        lineStyle: {
+          width: 3,
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: '#3B82F6' },
+            { offset: 1, color: '#60A5FA' }
+          ])
+        },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(59, 130, 246, 0.3)' },
+            { offset: 1, color: 'rgba(96, 165, 250, 0.1)' }
+          ])
+        },
+        itemStyle: {
+          color: '#3B82F6'
+        }
+      }]
+    }]
+  })
+
+  // 情绪分布热力图
+  const emotionHeatmap = echarts.init(emotionHeatmapEl)
+  const { projectEmotions } = emotionAnalytics.value
+  
+  const projects = projectEmotions.map(([name]) => name)
+  const emotions = ["喜悦", "感动", "惊喜", "期待", "伤感", "愤怒", "恐惧", "平静"]
+  const heatmapData = projects.flatMap((project, i) => 
+    emotions.map((emotion, j) => [
+      i,
+      j,
+      projectEmotions.find(([name]) => name === project)[1][emotion] || 0
+    ])
+  )
+
+  emotionHeatmap.setOption({
+    title: {
+      text: '项目情绪分布热力图',
+      left: 'center',
+      textStyle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#333'
+      }
+    },
+    tooltip: {
+      position: 'top',
+      formatter: function(params) {
+        return `${params.name}<br/>
+                ${params.marker}${emotions[params.data[1]]}: ${params.data[2]}`
+      },
+      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+      borderColor: '#eee',
+      borderWidth: 1,
+      textStyle: {
+        color: '#666'
+      }
+    },
+    grid: {
+      top: '15%',
+      bottom: '15%',
+      left: '10%',
+      right: '10%'
+    },
+    xAxis: {
+      type: 'category',
+      data: projects,
+      splitArea: {
+        show: true
+      },
+      axisLabel: {
+        rotate: 45,
+        color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#666',
+        fontSize: 12
+      },
+      axisLine: {
+        lineStyle: {
+          color: document.documentElement.classList.contains('dark') ? 'rgba(255,255,255,0.1)' : '#eee'
+        }
+      }
+    },
+    yAxis: {
+      type: 'category',
+      data: emotions,
+      splitArea: {
+        show: true
+      },
+      axisLabel: {
+        color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#666',
+        fontSize: 12
+      },
+      axisLine: {
+        lineStyle: {
+          color: document.documentElement.classList.contains('dark') ? 'rgba(255,255,255,0.1)' : '#eee'
+        }
+      }
+    },
+    visualMap: {
+      min: 0,
+      max: Math.max(...heatmapData.map(item => item[2])),
+      calculable: true,
+      orient: 'horizontal',
+      left: 'center',
+      bottom: '5%',
+      textStyle: {
+        color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#666'
+      },
+      inRange: {
+        color: document.documentElement.classList.contains('dark')
+          ? [
+              'rgba(255,255,255,0.05)',  // 最少 - 深色模式下接近透明
+              '#6B7280',  // 中低
+              '#4B5563',  // 中等
+              '#3B82F6',  // 中高
+              '#2563EB'   // 最多 - 深蓝色
+            ]
+          : [
+              'rgba(0,0,0,0.05)',  // 最少 - 浅色模式下接近透明
+              '#E5E7EB',  // 中低
+              '#9CA3AF',  // 中等
+              '#3B82F6',  // 中高
+              '#1D4ED8'   // 最多 - 深蓝色
+            ]
+      }
+    },
+    series: [{
+      name: '情绪分布',
+      type: 'heatmap',
+      data: heatmapData,
+      label: {
+        show: true,
+        color: (params) => {
+          // 根据数值动态调整文字颜色，确保在深色背景上清晰可见
+          const value = params.data[2]
+          const max = Math.max(...heatmapData.map(item => item[2]))
+          const threshold = max * 0.5
+          return value > threshold 
+            ? '#ffffff'  // 深色背景上用白色文字
+            : (document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#666')
+        },
+        formatter: (params) => {
+          return params.data[2] > 0 ? params.data[2] : ''
+        }
+      },
+      emphasis: {
+        itemStyle: {
+          shadowBlur: 10,
+          shadowColor: 'rgba(0, 0, 0, 0.5)'
+        }
+      }
+    }]
+  })
+
+  // 监听窗口大小变化
+  window.addEventListener('resize', () => {
+    engagementChart.resize()
+    emotionHeatmap.resize()
+  })
+
+  // 在组件卸载时移除监听器
+  onUnmounted(() => {
+    window.removeEventListener('resize', () => {
+      engagementChart.resize()
+      emotionHeatmap.resize()
+    })
+    engagementChart.dispose()
+    emotionHeatmap.dispose()
+  })
+}
+
 onMounted(() => {
   fetchData()
   fetchStyleData()
   fetchEmotionData()
 })
+
+// 添加 watch 来监听数据变化
+watch([styleData, emotionData], ([newStyleData, newEmotionData]) => {
+  if (newStyleData.length && newEmotionData.length) {
+    nextTick(() => {
+      initAdvancedCharts()
+    })
+  }
+}, { deep: true })
 </script>
 
 <template>
@@ -966,6 +1358,53 @@ onMounted(() => {
       </div>
 
       <template v-else>
+        <!-- 分析建议按钮 -->
+        <div class="flex justify-end">
+          <a-button
+            type="primary"
+            :loading="analysisOptions.isGenerating"
+            @click="generateAnalysis"
+            class="flex items-center gap-2"
+          >
+            <template #icon>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+              </svg>
+            </template>
+            获取创作建议
+          </a-button>
+        </div>
+<!-- AI分析建议区域 -->
+        <div v-if="analysisOptions.showAnalysis" class="bg-white dark:bg-zinc-800 select-text rounded-xl p-6 border theme-border hover:shadow-lg transition-shadow animate__animated animate__fadeIn">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">创作建议分析</h2>
+            <a-button
+              type="text"
+              @click="analysisOptions.showAnalysis = false"
+              class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              <template #icon>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </template>
+            </a-button>
+          </div>
+          
+          <div ref="analysisOptions.content" class="prose dark:prose-invert max-w-none">
+            <div v-if="analysisOptions.isGenerating" class="mb-4 flex items-center gap-2 text-blue-500">
+              <div class="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+              <span>AI 正在分析...</span>
+            </div>
+            <MdPreview
+              style="background: transparent"
+              :theme="themeStore.currentTheme"
+              editorId="analysis-preview"
+              :modelValue="analysisOptions.content"
+              previewTheme="github"
+            />
+          </div>
+        </div>
         <!-- 数据概览卡片 -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <!-- 项目数量卡片 -->
@@ -1025,27 +1464,101 @@ onMounted(() => {
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <!-- 观看趋势图 -->
           <div class="bg-white dark:bg-zinc-800 rounded-xl p-6 border theme-border hover:shadow-lg transition-shadow animate__animated animate__fadeIn animate__delay-4s">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">观看趋势分析</h3>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400 mb-4">追踪不同项目的观看量变化趋势，帮助您了解内容受欢迎程度的时间分布。</p>
             <div id="watchChart" class="w-full h-[400px]"></div>
           </div>
 
           <!-- 收藏趋势图 -->
           <div class="bg-white dark:bg-zinc-800 rounded-xl p-6 border theme-border hover:shadow-lg transition-shadow animate__animated animate__fadeIn animate__delay-5s">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">收藏趋势分析</h3>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400 mb-4">展示各项目收藏数量的变化情况，反映用户对内容的长期兴趣。</p>
             <div id="favoriteChart" class="w-full h-[400px]"></div>
           </div>
 
           <!-- 风格分析图表 -->
           <div class="bg-white dark:bg-zinc-800 rounded-xl p-6 border theme-border hover:shadow-lg transition-shadow animate__animated animate__fadeIn animate__delay-6s">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.597-1.597L14.146 6.32a15.996 15.996 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">内容风格分布</h3>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400 mb-4">分析不同创作风格的分布情况，了解受众对各类风格的偏好。</p>
             <div id="styleChart" class="w-full h-[400px]"></div>
           </div>
 
           <!-- 类型分析图表 -->
           <div class="bg-white dark:bg-zinc-800 rounded-xl p-6 border theme-border hover:shadow-lg transition-shadow animate__animated animate__fadeIn animate__delay-7s">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">作品类型分析</h3>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400 mb-4">展示不同类型作品的数量和表现，帮助优化内容类型策略。</p>
             <div id="typeChart" class="w-full h-[400px]"></div>
           </div>
 
           <!-- 情绪分析图表 -->
           <div class="bg-white dark:bg-zinc-800 rounded-xl p-6 border theme-border hover:shadow-lg transition-shadow animate__animated animate__fadeIn animate__delay-8s lg:col-span-2">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="p-2 bg-rose-100 dark:bg-rose-900/30 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">情绪趋势分析</h3>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400 mb-4">追踪观众对内容的情感反应变化，优化情节设计和叙事节奏。</p>
             <div id="emotionChart" class="w-full h-[500px]"></div>
+          </div>
+
+          <!-- 互动率雷达图 -->
+          <div class="bg-white dark:bg-zinc-800 rounded-xl p-6 border theme-border hover:shadow-lg transition-shadow animate__animated animate__fadeIn animate__delay-9s">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">内容互动率分析</h3>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400 mb-4">多维度展示不同风格内容的用户互动情况，发现最受欢迎的创作方向。</p>
+            <div id="engagementChart" ref="engagementChart" class="w-full h-[400px]"></div>
+          </div>
+
+          <!-- 情绪分布热力图 -->
+          <div class="bg-white dark:bg-zinc-800 rounded-xl p-6 border theme-border hover:shadow-lg transition-shadow animate__animated animate__fadeIn animate__delay-10s">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5m.75-9l3-3 2.148 2.148A12.061 12.061 0 0116.5 7.605" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">情绪分布热力分析</h3>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400 mb-4">直观展示各项目引发的情绪分布强度，助您把握作品的情感基调。</p>
+            <div id="emotionHeatmap" class="w-full h-[400px]"></div>
           </div>
         </div>
       </template>
@@ -1079,5 +1592,43 @@ onMounted(() => {
 }
 .animate__delay-7s {
   animation-delay: 0.7s;
+}
+.animate__delay-8s {
+  animation-delay: 0.8s;
+}
+.animate__delay-9s {
+  animation-delay: 0.9s;
+}
+.animate__delay-10s {
+  animation-delay: 1s;
+}
+
+/* 分析内容样式 */
+.prose {
+  @apply text-gray-700 dark:text-gray-300;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 1rem;
+  
+  /* 自定义滚动条样式 */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    @apply bg-gray-100 dark:bg-zinc-800 rounded-full;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-zinc-600 rounded-full;
+    &:hover {
+      @apply bg-gray-400 dark:bg-zinc-500;
+    }
+  }
+}
+
+/* 调整 Markdown 预览区域的样式 */
+:deep(.md-editor-preview-wrapper) {
+  @apply px-0 !important;
 }
 </style>

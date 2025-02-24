@@ -28,6 +28,7 @@ func RegisterRoutes(r *gin.Engine) {
 		publicGroup.GET("getProjectComments", service.GetProjectComments)
 		publicGroup.GET("getChapterDetail", service.GetChapterDetail)
 		publicGroup.GET("hot-projects", service.GetHotProjects)
+		publicGroup.GET("getCategoryProjects", service.GetCategoryProjects)
 	}
 
 	userGroup := r.Group("/api/user", preHandler())
@@ -69,6 +70,7 @@ func RegisterRoutes(r *gin.Engine) {
 		projectGroup.POST("generateCover", service.GenerateProjectCover)
 		projectGroup.POST("generateInfo", service.GenerateInfo)
 		projectGroup.POST("generateCharacter", service.GenerateCharacter)
+		projectGroup.POST("generateCharacterFromDescription", service.GenerateCharacterFromDescription)
 		projectGroup.POST("generateCharacterAvatar", service.GenerateCharacterAvatar)
 		projectGroup.POST("characterRS/create", service.CreateCharacterRelationship)
 		projectGroup.POST("characterRS/update", service.UpdateCharacterRelationship)
@@ -90,6 +92,8 @@ func RegisterRoutes(r *gin.Engine) {
 	websocketGroup := r.Group("/api/ws")
 	{
 		websocketGroup.GET("generateNewChapterVersionStream", service.GenerateNewChapterVersionStream)
+		websocketGroup.GET("modifyChapterVersionStream", service.ModifyChapterVersionStream)
+		websocketGroup.GET("newProjectAnalysis", service.NewProjectAnalysis)
 	}
 	// WebSocket路由
 	//r.GET("/ws/chat", service.HandleStreamChat)

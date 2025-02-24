@@ -7,10 +7,16 @@ import (
 )
 
 const (
-	// OpenAIKey OpenAI API密钥
-	OpenAIKey = "sk-hySadfvZfjMxfWx12b302e8c832c4aEeBf7e44C5138bE860"
-	// OpenAIBaseURL OpenAI API基础URL
-	OpenAIBaseURL = "https://api.vveai.com/v1"
+	UseModelName = "deepseek-r1-250120"
+	// // deepseek官方
+	// OpenAIKey = "sk-dd6f248183a846d692fe78b075696676"
+	// OpenAIBaseURL = "https://api.deepseek.com/v1"
+	// //1024110中转
+	// OpenAIKey     = "sk-XnbHbzBOmPYGHgL_UV9xTM47qLbJs44jbIjK12f31ggQfX1MRFHCbRNwOec"
+	// OpenAIBaseURL = "https://models.1024110.xyz/v1"
+	//火山大模型中转
+	OpenAIKey     = "817b8b32-9ccc-4055-aab0-5f4fe97025d6"
+	OpenAIBaseURL = "https://ark.cn-beijing.volces.com/api/v3"
 )
 
 type StreamResponse struct {
@@ -40,7 +46,7 @@ func StreamChatCompletion(ctx context.Context, request ChatRequest) (<-chan Stre
 	stream, err := client.CreateChatCompletionStream(
 		ctx,
 		openai.ChatCompletionRequest{
-			Model:       request.Model,
+			Model:       UseModelName,
 			Messages:    messages,
 			Temperature: request.Temperature,
 			Stream:      true,
