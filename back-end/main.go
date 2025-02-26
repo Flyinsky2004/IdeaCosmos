@@ -21,7 +21,7 @@ import (
 func main() {
 	//printBanner()
 	config.InitMysqlDataBase()
-	config.InitRedis("localhost:6379", "131598", 0)
+	//config.InitRedis("localhost:6379", "131598", 0)
 
 	// 禁用外键检查
 	//config.MysqlDataBase.Exec("SET FOREIGN_KEY_CHECKS = 0")
