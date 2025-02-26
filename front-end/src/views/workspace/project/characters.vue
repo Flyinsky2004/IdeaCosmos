@@ -89,7 +89,13 @@ const generateCharacter = () => {
       project_id: project.ID,
     },
     (messager, data) => {
-      const raw = data.choices[0].message.content.replace(/<think>.*?<\/think>/gs, '');
+      let  raw;
+      const content = data.choices[0].message.content;
+      if (content.includes("<think>") && content.includes("</think>")) {
+        raw = content.replace(/<think>.*?<\/think>/gs, "");
+      } else {
+        raw = content;
+      }
       options.generateResults = JSON.parse(washJSONStr(raw));
       for (let i = 0; i < options.generateResults.length; i++) {
         options.generateResults[i].project_id = project.ID;
@@ -176,8 +182,15 @@ const generateCharacterRS = () => {
       secondCharacterId: editRSForm.second_character_id,
     },
     (messager, data) => {
-      const raw = data.choices[0].message.content.replace(/<think>.*?<\/think>/gs, '');
+      let  raw;
+      const content = data.choices[0].message.content;
+      if (content.includes("<think>") && content.includes("</think>")) {
+        raw = content.replace(/<think>.*?<\/think>/gs, "");
+      } else {
+        raw = content;
+      }
       const washed = JSON.parse(washJSONStr(raw));
+      console.log(washed);
       editRSForm.name = washed.name;
       editRSForm.content = washed.content;
       options.isCharacterRSGenerating = false;
@@ -219,7 +232,14 @@ const generateMainCharacters = () => {
       project_id: project.ID,
     },
     (messager, data) => {
-      const raw = data.choices[0].message.content.replace(/<think>.*?<\/think>/gs, '');
+      let  raw;
+      const content = data.choices[0].message.content;
+      if (content.includes("<think>") && content.includes("</think>")) {
+        raw = content.replace(/<think>.*?<\/think>/gs, "");
+      } else {
+        raw = content;
+      }
+      console.log(raw);
       options.generateResults = JSON.parse(washJSONStr(raw));
       for (let i = 0; i < options.generateResults.length; i++) {
         options.generateResults[i].project_id = project.ID;
@@ -415,7 +435,9 @@ const generateMainCharacters = () => {
             class="bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800 p-6"
           >
             <div class="flex justify-between items-center mb-4">
-              <h2 class="text-lg font-medium text-green-800 dark:text-green-400">
+              <h2
+                class="text-lg font-medium text-green-800 dark:text-green-400"
+              >
                 AI 生成的角色建议
               </h2>
               <div class="flex items-center gap-2">
@@ -651,12 +673,28 @@ const generateMainCharacters = () => {
 }
 
 /* 为每个卡片添加延迟 */
-.grid > div:nth-child(1) { animation-delay: 0.1s; }
-.grid > div:nth-child(2) { animation-delay: 0.2s; }
-.grid > div:nth-child(3) { animation-delay: 0.3s; }
-.grid > div:nth-child(4) { animation-delay: 0.4s; }
-.grid > div:nth-child(5) { animation-delay: 0.5s; }
-.grid > div:nth-child(6) { animation-delay: 0.6s; }
-.grid > div:nth-child(7) { animation-delay: 0.7s; }
-.grid > div:nth-child(8) { animation-delay: 0.8s; }
+.grid > div:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.grid > div:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.grid > div:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.grid > div:nth-child(4) {
+  animation-delay: 0.4s;
+}
+.grid > div:nth-child(5) {
+  animation-delay: 0.5s;
+}
+.grid > div:nth-child(6) {
+  animation-delay: 0.6s;
+}
+.grid > div:nth-child(7) {
+  animation-delay: 0.7s;
+}
+.grid > div:nth-child(8) {
+  animation-delay: 0.8s;
+}
 </style>

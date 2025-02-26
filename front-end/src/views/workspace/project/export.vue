@@ -69,11 +69,11 @@ const generateAudio = async () => {
          (messageer) => reject(messageer)
       );
     });
-    await fetchAudioResource();
   } catch (error) {
     message.error('音频生成失败');
   } finally {
     options.audioGenerating = false;
+    chapterClickHandler(options.currentChapter, options.currentChapterId)
   }
 };
 const playAudio = () => {

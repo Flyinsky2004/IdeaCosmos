@@ -116,12 +116,12 @@ func NewProjectAnalysis(c *gin.Context) {
 
 	// 调用流式聊天
 	streamChan, err := util.StreamChatCompletion(context.Background(), util.ChatRequest{
-		Model:       "deepseek-chat",
+		Model:       util.ThinkModelName,
 		Messages:    []util.Message{},
 		Prompt:      "你是一个专业的剧本分析师，擅长分析数据并提供专业的创作建议。",
 		Question:    prompt,
-		Temperature: 0.7,
-		MaxTokens:   8096,
+		Temperature: util.GlobalTemperature,
+		MaxTokens:   8192,
 	})
 
 	if err != nil {

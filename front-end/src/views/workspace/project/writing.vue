@@ -79,6 +79,8 @@ const options = reactive({
   generatedContent: "",
   isEditing: false,
   editingContent: "",
+  aiContentCollapsed: false,
+  currentVersionCollapsed: false,
 });
 
 const processContent = (content) => {
@@ -370,6 +372,14 @@ const submitEditing = () => {
     }
   );
 };
+
+const toggleContentCollapse = (type) => {
+  if (type === 'ai') {
+    options.aiContentCollapsed = !options.aiContentCollapsed;
+  } else if (type === 'current') {
+    options.currentVersionCollapsed = !options.currentVersionCollapsed;
+  }
+};
 </script>
 
 <template>
@@ -565,6 +575,27 @@ const submitEditing = () => {
                 </h3>
                 <div class="flex items-center gap-2">
                   <button
+                    @click="toggleContentCollapse('ai')"
+                    class="flex items-center gap-1 px-2 py-1 text-sm text-gray-500 hover:text-blue-500 transition-colors"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      :class="{ 'rotate-180': !options.aiContentCollapsed }"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                    {{ options.aiContentCollapsed ? '展开' : '折叠' }}
+                  </button>
+                  <button
                     @click="confirmAdoptContent"
                     :disabled="options.isGenerating"
                     class="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -606,27 +637,56 @@ const submitEditing = () => {
                   </button>
                 </div>
               </div>
-              <MdPreview
-                style="background: transparent"
-                :theme="themeStore.currentTheme"
-                editorId="ai-preview"
-                :modelValue="options.generatedContent"
-              />
+              <div 
+                class="content-wrapper overflow-hidden transition-all duration-300" 
+                :class="{ 'collapsed': options.aiContentCollapsed }"
+              >
+                <MdPreview
+                  style="background: transparent"
+                  :theme="themeStore.currentTheme"
+                  editorId="ai-preview"
+                  :modelValue="options.generatedContent"
+                />
+              </div>
             </div>
 
             <!-- 当前版本内容 -->
             <div
-              class="p-4"
+              class="p-4 select-text"
               :class="{
-                'h-[calc(100%-200px)]':
+                'h-[calc(100%-100px)]':
                   options.generatedContent || options.isGenerating,
               }"
             >
-              <h3
-                class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4"
-              >
-                当前版本
-              </h3>
+              <div class="flex items-center justify-between mb-4">
+                <h3
+                  class="text-lg font-semibold text-gray-900 dark:text-gray-100"
+                >
+                  当前版本
+                </h3>
+                <button
+                  v-if="chapter.version_id !== 0"
+                  @click="toggleContentCollapse('current')"
+                  class="flex items-center gap-1 px-2 py-1 text-sm text-gray-500 hover:text-blue-500 transition-colors"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    :class="{ 'rotate-180': !options.currentVersionCollapsed }"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                  {{ options.currentVersionCollapsed ? '展开' : '折叠' }}
+                </button>
+              </div>
               <div
                 v-if="chapter.version_id === 0"
                 class="flex items-center justify-center h-64 text-gray-500"
@@ -648,13 +708,18 @@ const submitEditing = () => {
                   <p>此章节暂无内容</p>
                 </div>
               </div>
-              <MdPreview
+              <div
                 v-else
-                style="background: transparent"
-                :theme="themeStore.currentTheme"
-                editorId="current-preview"
-                :modelValue="options.currentVersion.content"
-              />
+                class="content-wrapper overflow-hidden transition-all duration-300"
+                :class="{ 'collapsed': options.currentVersionCollapsed }"
+              >
+                <MdPreview
+                  style="background: transparent"
+                  :theme="themeStore.currentTheme"
+                  editorId="current-preview"
+                  :modelValue="options.currentVersion.content"
+                />
+              </div>
             </div>
           </template>
         </div>
@@ -742,5 +807,21 @@ const submitEditing = () => {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* 折叠功能样式 */
+.content-wrapper {
+  max-height: 1000px;
+}
+
+.content-wrapper.collapsed {
+  max-height: 150px;
+  position: relative;
+  mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+}
+
+.rotate-180 {
+  transform: rotate(180deg);
 }
 </style>

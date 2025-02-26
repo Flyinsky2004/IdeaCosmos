@@ -7,7 +7,10 @@ import (
 )
 
 const (
-	UseModelName = "deepseek-r1-250120"
+	GlobalTemperature = 0.5
+	ThinkModelName    = "deepseek-r1-250120"
+	AgentModelName    = "deepseek-r1-250120"
+	UseModelName      = "deepseek-v3-241226"
 	// // deepseek官方
 	// OpenAIKey = "sk-dd6f248183a846d692fe78b075696676"
 	// OpenAIBaseURL = "https://api.deepseek.com/v1"
@@ -46,7 +49,7 @@ func StreamChatCompletion(ctx context.Context, request ChatRequest) (<-chan Stre
 	stream, err := client.CreateChatCompletionStream(
 		ctx,
 		openai.ChatCompletionRequest{
-			Model:       UseModelName,
+			Model:       request.Model,
 			Messages:    messages,
 			Temperature: request.Temperature,
 			Stream:      true,

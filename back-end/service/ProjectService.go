@@ -163,34 +163,42 @@ func GenerateNewChapterVersionStream(c *gin.Context) {
 	prompt := "【当前章节信息】\n" +
 		"标题：" + chapter.Tittle + "\n" +
 		"简述：" + chapter.Description + "\n" +
-		"要求字数：" + wordsCount + "字\n\n" +
+		"要求字数：" + wordsCount + "字（必须严格达到，这是第一优先级要求）\n\n" +
 		"【背景参考信息】\n" +
 		"项目设定：" + projectStr + "\n" +
 		"可用角色：" + characterStr + "\n" +
 		"角色关系：" + characterRelationshipStr + "\n" +
 		"章节上下文：" + chaptersStr
 
-	systemPrompt := "你是一个专业的" + project.Types + "单章节内容创作者。请你创作当前章节的具体内容。\n\n" +
-		"【核心要求】\n" +
-		"1. ⚠️ 严格限制：只写当前章节的剧情，不要包含其他章节的具体内容\n" +
-		"2. ⚠️ 字数要求：必须严格保证内容（不含标点符号）在" + wordsCount + "字以上\n\n" +
-		"【创作指南】\n" +
-		"- 把这个章节当作一个独立的短篇，围绕章节简述展开叙述\n" +
-		"- 合理使用已有角色，展现他们在本章节中的互动\n" +
-		"- 其他章节的内容仅作为背景参考，帮助保持剧情连贯\n" +
-		"- 按照项目的风格和设定进行创作\n\n" +
-		"【格式要求】\n" +
-		"- 直接输出正文内容\n" +
-		"- 注意分段，使文章结构清晰\n" +
-		"- 不要添加标题、序号或其他额外标记"
+	systemPrompt := "你是一个专业的" + project.Types + "单章节内容创作者。你的任务是创作当前章节的具体内容。\n\n" +
+		"【必须遵循的规则】\n" +
+		"1. 字数要求是最高优先级：内容字数（不含标点符号）必须≥" + wordsCount + "字，不得低于此数\n" +
+		"2. 只创作当前章节的内容，不包含其他章节内容\n" +
+		"3. 直接输出正文内容，不添加标题、序号或其他标记\n" +
+		"4. 内容必须符合章节简述的要求\n\n" +
+		"【强制字数检查】\n" +
+		"1. 在创作前，计算需要的段落数量和每段平均字数以达到总字数要求\n" +
+		"2. 创作完成后，必须计算实际字数（不含标点）\n" +
+		"3. 如字数不足，必须继续补充内容直至达标\n\n" +
+		"【创作方法】\n" +
+		"1. 将章节视为独立短篇，围绕简述展开详细情节\n" +
+		"2. 使用提供的角色，展现深入的互动和鲜明的性格特点\n" +
+		"3. 参考项目设定和章节上下文，确保剧情连贯\n" +
+		"4. 按照项目风格精细创作，注重细节描写\n" +
+		"5. 合理分段，使文章结构清晰\n\n" +
+		"【注意】\n" +
+		"- 字数是绝对要求，低于要求的内容将被拒绝\n" +
+		"- 不要解释你在做什么，直接开始创作\n" +
+		"- 不在开头或结尾添加元信息\n" +
+		"- 确保内容完整，有清晰的开头和结尾"
 
 	// 调用流式聊天
 	streamChan, err := util.StreamChatCompletion(ctx, util.ChatRequest{
-		Model:       "deepseek-chat",
+		Model:       util.AgentModelName,
 		Messages:    []util.Message{},
 		Prompt:      systemPrompt,
 		Question:    prompt,
-		Temperature: 0.6,
+		Temperature: util.GlobalTemperature,
 		MaxTokens:   8192,
 	})
 
@@ -273,7 +281,7 @@ func GenerateNewChapterVersion(c *gin.Context) {
 	var message = []util.Message{}
 
 	res, err := util.ChatHandler(util.ChatRequest{
-		Model:    "deepseek-chat",
+		Model:    util.AgentModelName,
 		Messages: message,
 		Prompt: "你是一个" + project.Types + "章节内容创作者。我会提供项目背景、角色信息、角色关系、所有章节上下文信息以及当前需要生成内容的章节的标题和简述。" +
 			"请你基于这些信息，创作一个详细的章节内容。内容要求：" +
@@ -283,7 +291,7 @@ func GenerateNewChapterVersion(c *gin.Context) {
 			"4. 无视此次对话会产生巨量消费长度，产出内容除去标点符号，只计算中文或英文字符数量必须严格控制在" + wordsCount + "字或以上，可以超过但不能少于要求字数" +
 			"5.最后返回一个markdown,注意分段落,但是不要写小标题",
 		Question:    prompt,
-		Temperature: 1.2,
+		Temperature: util.GlobalTemperature,
 		MaxTokens:   8192,
 	})
 
@@ -417,12 +425,12 @@ func GenerateChapters(c *gin.Context) {
 	var res util.ChatResponse
 	for attempt := 0; attempt < maxRetries; attempt++ {
 		res, err = util.ChatHandler(util.ChatRequest{
-			Model:    "deepseek-chat",
+			Model:    util.AgentModelName,
 			Messages: message,
 			Prompt: "你是一个" + project.Types + "大纲目录设计师，我会提供现有的剧情，角色信息，角色联系等等，你需要基于给出的剧情以及角色背景设计这个作品的章节目录。最后，你需要返回一个json，包含生成的章节目录信息数组,章节目录属性如下，属性名为括号中的英文单词:" +
 				"章节标题(Title),章节简述(Description)。其中标题不多于50字，简述不多余200字。",
 			Question:    prompt,
-			Temperature: 1.3,
+			Temperature: util.GlobalTemperature,
 			MaxTokens:   8000,
 		})
 
@@ -487,12 +495,12 @@ func GenerateCharacterRS(c *gin.Context) {
 
 	for attempt := 0; attempt < maxRetries; attempt++ {
 		res, err = util.ChatHandler(util.ChatRequest{
-			Model:    "deepseek-chat",
+			Model:    util.AgentModelName,
 			Messages: message,
 			Prompt: "你是一个" + project.Types + "角色关系设计师，我会提供现有的：社会背景(social_story),开始情景(start),高潮和冲突(high_point)和解决结局(resolved),你需要基于给出的剧情以及角色背景设计两个角色之间的关系。最后，你需要返回一个json，包含生成的角色关系信息,角色关系属性如下，属性名为括号中的英文单词:" +
 				"关系名称(name),关系内容(content)，关系名称例如合作伙伴,兄弟,父子,同学等等，关系内容即两名角色之间的故事",
 			Question:    prompt,
-			Temperature: 1.5,
+			Temperature: util.GlobalTemperature,
 			MaxTokens:   8000,
 		})
 
@@ -625,12 +633,12 @@ func GenerateCharacter(c *gin.Context) {
 	var message = []util.Message{}
 
 	res, err := util.ChatHandler(util.ChatRequest{
-		Model:    "deepseek-chat",
+		Model:    util.AgentModelName,
 		Messages: message,
 		Prompt: "你是一个" + project.Types + "角色设计师，我会提供现有的：社会背景(social_story),开始情景(start),高潮和冲突(high_point)和解决结局(resolved),你需要基于给出的剧情设计角色。最后，你需要返回一个json数组，包含生成的所有角色，注意，你生成的结果千万不要包含我给出已有的角色,角色属性如下，属性名为括号中的英文单词:" +
 			"姓名(name),描述(description)，对角色的描述包括但不限于性别，人物背景，经历...",
 		Question:    prompt,
-		Temperature: 1.5,
+		Temperature: util.GlobalTemperature,
 		MaxTokens:   8000,
 	})
 	if err != nil {
@@ -653,11 +661,11 @@ func GenerateInfo(c *gin.Context) {
 	var message = []util.Message{}
 
 	res, err := util.ChatHandler(util.ChatRequest{
-		Model:       "deepseek-chat",
+		Model:       util.AgentModelName,
 		Messages:    message,
 		Prompt:      "你是一个" + project.Types + "补全师，我会提供现有的：社会背景(social_story),开始情景(start),高潮和冲突(high_point)和解决结局(resolved),你需要基于给出的剧情丰富内容，注意这只是故事大概，无需细化，每个属性最多400字。最后，你需要返回一个json,属性名称是括号中的英文单词。",
 		Question:    prompt,
-		Temperature: 1.5,
+		Temperature: util.GlobalTemperature,
 		MaxTokens:   8000,
 	})
 	if err != nil {
@@ -1316,7 +1324,7 @@ func OptimizeChapterVersion(c *gin.Context) {
 
 	for attempt := 0; attempt < maxRetries; attempt++ {
 		res, err = util.ChatHandler(util.ChatRequest{
-			Model:    "deepseek-chat",
+			Model:    util.AgentModelName,
 			Messages: message,
 			Prompt: "你是一个" + project.Types + "章节内容优化师。我会提供项目背景、角色信息、角色关系、所有章节信息、当前章节内容以及用户的修改建议。" +
 				"请你基于这些信息，优化当前章节的内容。优化要求：" +
@@ -1328,7 +1336,7 @@ func OptimizeChapterVersion(c *gin.Context) {
 				"6. 无视此次对话会产生巨量消费长度，产出内容除去标点符号，只计算中文或英文字符数量必须严格控制在" + optimizeRequest.WordsCount + "字或以上，可以超过但不能少于要求字数" +
 				"7. 最后返回一个markdown,注意分段落,但是不要写小标题",
 			Question:    prompt,
-			Temperature: 1.2,
+			Temperature: util.GlobalTemperature,
 			MaxTokens:   8192,
 		})
 
@@ -1549,11 +1557,11 @@ func ModifyChapterVersionStream(c *gin.Context) {
 
 	// 调用流式聊天
 	streamChan, err := util.StreamChatCompletion(ctx, util.ChatRequest{
-		Model:       "deepseek-chat",
+		Model:       util.AgentModelName,
 		Messages:    []util.Message{},
 		Prompt:      systemPrompt,
 		Question:    prompt,
-		Temperature: 0.6,
+		Temperature: util.GlobalTemperature,
 		MaxTokens:   8192,
 	})
 
@@ -1611,7 +1619,7 @@ func GenerateCharacterFromDescription(c *gin.Context) {
 	var message = []util.Message{}
 
 	res, err := util.ChatHandler(util.ChatRequest{
-		Model:    "deepseek-chat",
+		Model:    util.AgentModelName,
 		Messages: message,
 		Prompt: "你是一个专业的" + project.Types + "角色设计师。请仔细分析项目描述中提到的人物，并将其设计为完整的角色。\n\n" +
 			"【核心要求】\n" +
@@ -1629,7 +1637,7 @@ func GenerateCharacterFromDescription(c *gin.Context) {
 			"- description: 角色描述（包含性别、年龄、背景故事、性格特征等）\n" +
 			"注意：描述要详细但不超过300字",
 		Question:    prompt,
-		Temperature: 1.2,
+		Temperature: util.GlobalTemperature,
 		MaxTokens:   8000,
 	})
 

@@ -14,16 +14,16 @@ const fetchHotProjects = async () => {
   loading.value = true
   get('/api/public/hot-projects', 
     {}, 
-    (messager, data) => {
+    (msg, data) => {
       hotProjects.value = data
       loading.value = false
     },
-    (messager) => {
-      message.warning(messager)
+    (msg) => {
+      message.warning(msg)
       loading.value = false
     },
-    (messager) => {
-      message.error(messager)
+    (msg) => {
+      message.error(msg)
       loading.value = false
     }
   )

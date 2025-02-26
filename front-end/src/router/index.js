@@ -115,37 +115,81 @@ const router = createRouter({
                     component: () => import('@/views/workspace/project/chapterView.vue'),
                 }
             ]
-        },
+        },{
+            path: '/admin',
+            name: 'admin',
+            component: () => import('@/views/admin/framework.vue'),
+            
+            children:[
+                {
+                    name: 'adminDashboard',
+                    path: 'dashboard',
+                    component: () => import('@/views/admin/Dashboard.vue')
+                }, {
+                    name: 'userManagement',
+                    path: 'users',
+                    component: () => import('@/views/admin/UserManagement.vue')
+                }, {
+                    name: 'chapterManagement',
+                    path: 'chapters',
+                    component: () => import('@/views/admin/ChapterManagement.vue')
+                }, {
+                    name: 'chapterReview',
+                    path: 'chapters/review/:id',
+                    component: () => import('@/views/admin/ChapterReview.vue')
+                }, {
+                    name: 'projectManagement',
+                    path: 'projects',
+                    component: () => import('@/views/admin/ProjectManagement.vue')
+                }
+            ]
+        }
     ]
 })
 
-// BAD
+// 路由守卫逻辑
 router.beforeEach((to, from, next) => {
     const userStore = useUserStore()
+    
+    // 处理无需登录的路由
     if (to.path === '/' || to.path.startsWith('/auth')) {
         next()
-    } else {
-        if (userStore.isLogin) {
+        return
+    }
+    
+    // 处理需要管理员权限的路由
+    if (to.matched.some(record => record.meta.requiresAdmin)) {
+        if (userStore.isLogin && userStore.user?.permission >= 1) {
             next()
         } else {
-            get('/api/user/me', {},
-                (message, data) => {
-                    userStore.login(data)
-                    next()
-                }, (messager, data) => {
-                    message.info('您还尚未登录，请先登录！');
-                    setTimeout(() => {
-                        next('/auth/login')
-                    }, 2000)
-                }, (messager, data) => {
-                    message.info('您还尚未登录，请先登录！');
-                    setTimeout(() => {
-                        next('/auth/login')
-                    }, 2000)
-                }
-            )
+            message.info('此页面需要管理员权限，请使用管理员账号登录！');
+            setTimeout(() => {
+                next('/auth/login')
+            }, 2000)
         }
-
+        return
+    }
+    
+    // 处理普通需登录路由
+    if (userStore.isLogin) {
+        next()
+    } else {
+        get('/api/user/me', {},
+            (message, data) => {
+                userStore.login(data)
+                next()
+            }, (messager, data) => {
+                message.info('您还尚未登录，请先登录！');
+                setTimeout(() => {
+                    next('/auth/login')
+                }, 2000)
+            }, (messager, data) => {
+                message.info('您还尚未登录，请先登录！');
+                setTimeout(() => {
+                    next('/auth/login')
+                }, 2000)
+            }
+        )
     }
 })
 export default router

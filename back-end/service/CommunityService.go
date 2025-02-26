@@ -6,7 +6,9 @@ import (
 	"back-end/entity/pojo"
 	"encoding/json"
 	"net/http"
+	"sort"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -768,4 +770,187 @@ func GetEmotionAnalysis(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto.SuccessResponse(result))
+}
+
+// AddVersionComment 添加版本评论
+func AddVersionComment(c *gin.Context) {
+	userId, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "未登录"))
+		return
+	}
+
+	var requestBody struct {
+		VersionId uint   `json:"version_id" binding:"required"`
+		Content   string `json:"content" binding:"required"`
+		Type      string `json:"type" binding:"required"` // "reader" 或 "author"
+	}
+
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "请求参数错误"))
+		return
+	}
+
+	// 获取版本信息
+	var version pojo.ChapterVersion
+	if err := config.MysqlDataBase.First(&version, requestBody.VersionId).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "版本不存在"))
+		return
+	}
+
+	// 检查权限
+	if requestBody.Type == "author" {
+		// 只有项目作者才能添加作者评论
+		// 获取章节信息
+		var chapter pojo.Chapter
+		if err := config.MysqlDataBase.First(&chapter, version.ChapterID).Error; err != nil {
+			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取章节信息失败"))
+			return
+		}
+
+		// 检查是否是项目团队成员
+		isTeamMember, err := isUserInProjectTeam(uint(userId.(int)), chapter.ProjectID)
+		if err != nil {
+			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "验证用户权限失败"))
+			return
+		}
+
+		if !isTeamMember {
+			c.JSON(http.StatusOK, dto.ErrorResponse[string](403, "只有项目团队成员才能添加作者评论"))
+			return
+		}
+
+		// 创建作者评论
+		authorComment := pojo.AuthorComment{
+			Content:   requestBody.Content,
+			VersionId: requestBody.VersionId,
+			UserId:    uint(userId.(int)),
+		}
+
+		if err := config.MysqlDataBase.Create(&authorComment).Error; err != nil {
+			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "添加评论失败"))
+			return
+		}
+
+	} else if requestBody.Type == "reader" {
+		// 创建读者评论
+		readerComment := pojo.ReaderComment{
+			Content:   requestBody.Content,
+			VersionId: requestBody.VersionId,
+			UserId:    uint(userId.(int)),
+		}
+
+		if err := config.MysqlDataBase.Create(&readerComment).Error; err != nil {
+			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "添加评论失败"))
+			return
+		}
+	} else {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "无效的评论类型"))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse("评论成功"))
+}
+
+// GetVersionComments 获取版本评论
+func GetVersionComments(c *gin.Context) {
+	versionId := c.Query("version_id")
+	commentType := c.Query("type") // 可选，"reader", "author" 或 "all"
+
+	vid, err := strconv.Atoi(versionId)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "无效的版本ID"))
+		return
+	}
+
+	type CommentWithType struct {
+		ID        uint      `json:"id"`
+		Content   string    `json:"content"`
+		VersionId uint      `json:"version_id"`
+		UserId    uint      `json:"user_id"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+		Type      string    `json:"type"` // "reader" 或 "author"
+		User      pojo.User `json:"user"`
+	}
+
+	var comments []CommentWithType
+
+	if commentType == "reader" || commentType == "all" || commentType == "" {
+		var readerComments []pojo.ReaderComment
+		if err := config.MysqlDataBase.Where("version_id = ?", vid).
+			Preload("User").
+			Order("created_at desc").
+			Find(&readerComments).Error; err != nil {
+			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取读者评论失败"))
+			return
+		}
+
+		for _, comment := range readerComments {
+			comments = append(comments, CommentWithType{
+				ID:        comment.ID,
+				Content:   comment.Content,
+				VersionId: comment.VersionId,
+				UserId:    comment.UserId,
+				CreatedAt: comment.CreatedAt,
+				UpdatedAt: comment.UpdatedAt,
+				Type:      "reader",
+				User:      comment.User,
+			})
+		}
+	}
+
+	if commentType == "author" || commentType == "all" || commentType == "" {
+		var authorComments []pojo.AuthorComment
+		if err := config.MysqlDataBase.Where("version_id = ?", vid).
+			Preload("User").
+			Order("created_at desc").
+			Find(&authorComments).Error; err != nil {
+			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取作者评论失败"))
+			return
+		}
+
+		for _, comment := range authorComments {
+			comments = append(comments, CommentWithType{
+				ID:        comment.ID,
+				Content:   comment.Content,
+				VersionId: comment.VersionId,
+				UserId:    comment.UserId,
+				CreatedAt: comment.CreatedAt,
+				UpdatedAt: comment.UpdatedAt,
+				Type:      "author",
+				User:      comment.User,
+			})
+		}
+	}
+
+	// 按时间排序
+	sort.Slice(comments, func(i, j int) bool {
+		return comments[i].CreatedAt.After(comments[j].CreatedAt)
+	})
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(comments))
+}
+
+// 辅助函数: 检查用户是否是项目团队成员
+func isUserInProjectTeam(userId uint, projectId uint) (bool, error) {
+	var project pojo.Project
+	if err := config.MysqlDataBase.Preload("Team").First(&project, projectId).Error; err != nil {
+		return false, err
+	}
+
+	if project.Team.LeaderId == userId {
+		return true, nil
+	}
+
+	var count int64
+	err := config.MysqlDataBase.Model(&pojo.JoinRequest{}).
+		Where("team_id = ? AND user_id = ? AND status = 1", project.TeamID, userId).
+		Count(&count).Error
+
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
 }

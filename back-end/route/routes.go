@@ -38,6 +38,8 @@ func RegisterRoutes(r *gin.Engine) {
 		userGroup.POST("uploadImage", service.UploadImage)
 		userGroup.GET("getWebpImageBase64", service.GetImageBase64)
 		userGroup.POST("addProjectComment", service.AddProjectComment)
+		userGroup.POST("addVersionComment", service.AddVersionComment)
+		userGroup.GET("getVersionComments", service.GetVersionComments)
 		userGroup.GET("/favorite/add", service.AddFavorite)
 		userGroup.GET("/favorite/remove", service.RemoveFavorite)
 		userGroup.GET("/favorite/check", service.CheckFavorite)
@@ -87,6 +89,28 @@ func RegisterRoutes(r *gin.Engine) {
 		projectGroup.GET("generateChapterAudio", service.GenerateChapterAudio)
 		projectGroup.GET("/analysis/watches-likes", service.GetWatchesAndLikesAnalysis)
 		projectGroup.GET("/analysis/style-type", service.GetStyleAndTypeAnalysis)
+	}
+
+	// 新增管理员路由组
+	adminGroup := r.Group("/api/admin", preHandler(), service.AdminAuthMiddleware())
+	{
+		adminGroup.GET("/dashboard", service.GetAdminDashboard)
+
+		// 用户管理
+		adminGroup.GET("/users", service.GetUsers)
+		adminGroup.GET("/users/:id", service.GetUser)
+		adminGroup.POST("/users/:id", service.UpdateUser)
+		adminGroup.POST("/users/:id/delete", service.DeleteUser)
+		adminGroup.POST("/users/:id/status", service.UpdateUserStatus)
+		adminGroup.POST("/users/:id/role", service.UpdateUserRole)
+
+		// 章节管理
+		adminGroup.GET("/chapters", service.GetChapters)
+		adminGroup.GET("/chapters/:id", service.GetChapter)
+		adminGroup.POST("/chapters/:id/review", service.ReviewChapter)
+		adminGroup.POST("/chapters/:id/delete", service.DeleteChapter)
+		adminGroup.POST("/chapters/:id/score", service.UpdateChapterScore)
+		adminGroup.GET("/chapters/:id/ai-score", service.AIScoreChapter)
 	}
 
 	websocketGroup := r.Group("/api/ws")
