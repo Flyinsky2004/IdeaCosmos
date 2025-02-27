@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, reactive } from 'vue'
 import { get, post, postJSON } from '@/util/request'
-import { message } from 'ant-design-vue'
+import { message,Modal } from 'ant-design-vue'
 import SpinLoaderLarge from '@/components/spinLoaderLarge.vue'
 import { BACKEND_DOMAIN } from "@/util/VARRIBLES"
 import { useUserStore } from '@/stores/user'
@@ -49,7 +49,7 @@ const fetchUsers = async () => {
 
 // 删除用户 - 修改为JSON提交
 const deleteUser = (userId) => {
-  message.confirm({
+  Modal.confirm({
     title: '确认删除',
     content: '您确定要删除此用户吗？此操作不可撤销。',
     okText: '确认',

@@ -18,7 +18,12 @@ const options = reactive({
 const editState = reactive({
   currentEditingChapter: null,
   editMode: false,
-  deleteConfirmId: null
+  deleteConfirmId: null,
+  newChapter: {
+    Title: "",
+    Description: ""
+  },
+  isCreating: false
 })
 
 // 添加 loading 状态
@@ -87,6 +92,41 @@ const goToWriting = (chapter) => {
   router.push('/workspace/editProject/writing')
 }
 
+// 添加创建章节方法
+const startCreate = () => {
+  editState.isCreating = true
+  editState.newChapter = {
+    Title: "",
+    Description: "",
+    project_id: project.ID
+  }
+}
+
+const submitCreate = () => {
+  if (!editState.newChapter.Title) {
+    message.warning("章节标题不能为空")
+    return
+  }
+  
+  postJSON('/api/project/chapter/create', editState.newChapter, 
+    (msg, data) => {
+      message.success(msg)
+      editState.isCreating = false
+      fetchChapters()
+    },
+    (msg) => {
+      message.warning(msg)
+    },
+    (msg) => {
+      message.error(msg)
+    }
+  )
+}
+
+const cancelCreate = () => {
+  editState.isCreating = false
+}
+
 // 添加编辑相关方法
 const startEdit = (chapter) => {
   editState.currentEditingChapter = { ...chapter }
@@ -94,9 +134,25 @@ const startEdit = (chapter) => {
 }
 
 const saveEdit = () => {
-  // TODO: 实现保存编辑的逻辑
-  editState.editMode = false
-  editState.currentEditingChapter = null
+  if (!editState.currentEditingChapter.Title) {
+    message.warning("章节标题不能为空")
+    return
+  }
+  
+  postJSON('/api/project/chapter/update', editState.currentEditingChapter,
+    (msg, data) => {
+      message.success(msg)
+      fetchChapters()
+      editState.editMode = false
+      editState.currentEditingChapter = null
+    },
+    (msg) => {
+      message.warning(msg)
+    },
+    (msg) => {
+      message.error(msg)
+    }
+  )
 }
 
 const cancelEdit = () => {
@@ -112,6 +168,23 @@ const confirmDelete = (chapterId) => {
 const cancelDelete = () => {
   editState.deleteConfirmId = null
 }
+
+const executeDelete = (chapterId) => {
+  postJSON('/api/project/chapter/delete', 
+    { chapter_id: chapterId },
+    (msg) => {
+      message.success(msg)
+      fetchChapters()
+      editState.deleteConfirmId = null
+    },
+    (msg) => {
+      message.warning(msg)
+    },
+    (msg) => {
+      message.error(msg)
+    }
+  )
+}
 </script>
 
 <template>
@@ -121,16 +194,27 @@ const cancelDelete = () => {
       <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
         章节管理
       </h1>
-      <button 
-        @click="generateChapters"
-        :disabled="options.isChapterGenerating"
-        class="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:opacity-90 transition-all flex items-center gap-2"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-        </svg>
-        {{ options.isChapterGenerating ? '生成中...' : 'AI 生成章节' }}
-      </button>
+      <div class="flex gap-3">
+        <button 
+          @click="startCreate"
+          class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all flex items-center gap-2"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          添加章节
+        </button>
+        <button 
+          @click="generateChapters"
+          :disabled="options.isChapterGenerating"
+          class="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:opacity-90 transition-all flex items-center gap-2"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+          </svg>
+          {{ options.isChapterGenerating ? '生成中...' : 'AI 生成章节' }}
+        </button>
+      </div>
     </div>
 
     <!-- 加载状态显示 -->
@@ -140,6 +224,88 @@ const cancelDelete = () => {
 
     <!-- 章节内容区域 -->
     <template v-else>
+      <!-- 创建章节表单 -->
+      <div v-if="editState.isCreating" class="bg-white dark:bg-zinc-900 rounded-xl border theme-border p-6 animate__animated animate__fadeIn">
+        <h2 class="text-lg font-semibold text-blue-500 mb-4">添加新章节</h2>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">章节标题</label>
+            <input 
+              v-model="editState.newChapter.Title" 
+              type="text" 
+              class="w-full p-2 border theme-border rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+              placeholder="请输入章节标题"
+            />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">章节简介</label>
+            <textarea 
+              v-model="editState.newChapter.Description" 
+              class="w-full p-2 border theme-border rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors resize-none min-h-[100px]"
+              placeholder="请输入章节简介"
+            ></textarea>
+          </div>
+          
+          <div class="flex justify-end space-x-3 pt-3">
+            <button 
+              @click="cancelCreate" 
+              class="px-4 py-2 border theme-border rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors"
+            >
+              取消
+            </button>
+            <button 
+              @click="submitCreate" 
+              class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              创建章节
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 编辑章节表单 -->
+      <div v-if="editState.editMode" class="bg-white dark:bg-zinc-900 rounded-xl border theme-border p-6 animate__animated animate__fadeIn">
+        <h2 class="text-lg font-semibold text-blue-500 mb-4">编辑章节</h2>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">章节标题</label>
+            <input 
+              v-model="editState.currentEditingChapter.Title" 
+              type="text" 
+              class="w-full p-2 border theme-border rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+              placeholder="请输入章节标题"
+            />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">章节简介</label>
+            <textarea 
+              v-model="editState.currentEditingChapter.Description" 
+              class="w-full p-2 border theme-border rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors resize-none min-h-[100px]"
+              placeholder="请输入章节简介"
+            ></textarea>
+          </div>
+          
+          <div class="flex justify-end space-x-3 pt-3">
+            <button 
+              @click="cancelEdit" 
+              class="px-4 py-2 border theme-border rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors"
+            >
+              取消
+            </button>
+            <button 
+              @click="saveEdit" 
+              class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              保存修改
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="relative min-h-[200px] bg-white dark:bg-zinc-900 rounded-xl border theme-border p-6">
         <!-- 空状态提示 -->
         <div v-if="options.chapters.length === 0 && options.generatedChapters.length === 0" 
@@ -156,6 +322,21 @@ const cancelDelete = () => {
                :key="chapter.ID"
                class="group relative animate__animated animate__fadeIn"
                :style="{ animationDelay: `${index * 0.1}s` }">
+            
+            <!-- 删除确认浮层 -->
+            <div v-if="editState.deleteConfirmId === chapter.ID" 
+                 class="absolute inset-0 bg-white dark:bg-zinc-800 bg-opacity-95 dark:bg-opacity-95 z-10 rounded-xl border border-red-500 dark:border-red-600 p-4 flex flex-col items-center justify-center animate__animated animate__fadeIn">
+              <p class="text-center text-red-600 dark:text-red-500 mb-4">确定要删除此章节吗？</p>
+              <div class="flex gap-4">
+                <button @click="cancelDelete" class="px-4 py-2 border theme-border rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors">
+                  取消
+                </button>
+                <button @click="executeDelete(chapter.ID)" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                  删除
+                </button>
+              </div>
+            </div>
+            
             <!-- 章节卡片 -->
             <div class="w-full p-4 rounded-xl bg-white dark:bg-zinc-800 border theme-border hover:border-blue-500 dark:hover:border-blue-400 transition-all duration-300 group-hover:shadow-lg">
               <div class="flex items-center justify-between mb-3">
@@ -192,7 +373,9 @@ const cancelDelete = () => {
           </div>
 
           <!-- 添加新章节按钮 -->
-          <div class="w-full p-4 rounded-xl border-2 border-dashed theme-border hover:border-blue-500 dark:hover:border-blue-400 transition-all duration-300 cursor-pointer group animate__animated animate__fadeIn"
+          <div 
+               @click="startCreate"
+               class="w-full p-4 rounded-xl border-2 border-dashed theme-border hover:border-blue-500 dark:hover:border-blue-400 transition-all duration-300 cursor-pointer group animate__animated animate__fadeIn"
                :style="{ animationDelay: `${options.chapters.length * 0.1}s` }">
             <div class="flex flex-col items-center justify-center h-40 text-gray-400 group-hover:text-blue-500">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -263,10 +263,10 @@ const getScoreLevelText = (score) => {
             </div>
             
             <!-- AI评分按钮 -->
-            <div class="mb-4 mt-4">
+            <div class="mb-4 mt-4 w-full flex flex-col">
               <a-button 
+                class="w-full mx-auto"
                 @click="requestAIScore" 
-                class="w-full" 
                 :loading="aiScoreLoading"
                 type="dashed"
               >

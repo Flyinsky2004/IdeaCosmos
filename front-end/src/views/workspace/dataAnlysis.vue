@@ -211,6 +211,106 @@ const emotionAnalytics = computed(() => {
   }
 })
 
+// 添加新的计算属性用于数据概览
+const dataOverview = computed(() => {
+  if (!projectData.value.length) return null
+  
+  // 计算总观看和收藏
+  const totalWatches = projectData.value.reduce((sum, item) => sum + item.watch_count, 0)
+  const totalFavorites = projectData.value.reduce((sum, item) => sum + item.favorite_count, 0)
+  
+  // 计算互动率
+  const interactionRate = totalWatches > 0 ? 
+    ((totalFavorites / totalWatches) * 100).toFixed(1) : 0
+  
+  // 计算最受欢迎的项目
+  const projectStats = projectData.value.reduce((acc, curr) => {
+    if (!acc[curr.project_name]) {
+      acc[curr.project_name] = { watches: 0, favorites: 0 }
+    }
+    acc[curr.project_name].watches += curr.watch_count
+    acc[curr.project_name].favorites += curr.favorite_count
+    return acc
+  }, {})
+  
+  const popularProject = Object.entries(projectStats)
+    .sort((a, b) => (b[1].watches + b[1].favorites) - (a[1].watches + a[1].favorites))
+    .map(([name, stats]) => ({ name, ...stats }))[0] || { name: '暂无数据', watches: 0, favorites: 0 }
+  
+  // 计算最受欢迎的风格
+  let popularStyle = { style: '暂无数据', count: 0 }
+  if (styleData.value.length) {
+    const styleStats = styleData.value.reduce((acc, curr) => {
+      if (!acc[curr.style]) {
+        acc[curr.style] = 0
+      }
+      acc[curr.style] += curr.watch_count + curr.like_count
+      return acc
+    }, {})
+    
+    const topStyle = Object.entries(styleStats)
+      .sort((a, b) => b[1] - a[1])[0]
+    
+    if (topStyle) {
+      popularStyle = { style: topStyle[0], count: topStyle[1] }
+    }
+  }
+  
+  // 计算主要情绪
+  let mainEmotion = { emotion: '暂无数据', count: 0 }
+  if (emotionData.value.length) {
+    const emotionStats = emotionData.value.reduce((acc, curr) => {
+      if (!acc[curr.emotion]) {
+        acc[curr.emotion] = 0
+      }
+      acc[curr.emotion] += curr.count
+      return acc
+    }, {})
+    
+    const topEmotion = Object.entries(emotionStats)
+      .sort((a, b) => b[1] - a[1])[0]
+    
+    if (topEmotion) {
+      mainEmotion = { emotion: topEmotion[0], count: topEmotion[1] }
+    }
+  }
+  
+  // 计算近期趋势
+  const recentDates = [...new Set(projectData.value.map(item => item.date))]
+    .sort()
+    .slice(-5)
+  
+  const recentTrend = recentDates.map(date => {
+    const dayData = projectData.value.filter(item => item.date === date)
+    return {
+      date: date.split('T')[0],
+      watches: dayData.reduce((sum, item) => sum + item.watch_count, 0),
+      favorites: dayData.reduce((sum, item) => sum + item.favorite_count, 0)
+    }
+  })
+  
+  // 计算增长率
+  let growthRate = 0
+  if (recentTrend.length >= 2) {
+    const oldValue = recentTrend[0].watches
+    const newValue = recentTrend[recentTrend.length - 1].watches
+    growthRate = oldValue > 0 ? 
+      (((newValue - oldValue) / oldValue) * 100).toFixed(1) : 0
+  }
+  
+  return {
+    totalProjects: [...new Set(projectData.value.map(item => item.project_name))].length,
+    totalWatches,
+    totalFavorites,
+    interactionRate,
+    popularProject,
+    popularStyle,
+    mainEmotion,
+    recentTrend,
+    growthRate
+  }
+})
+
 // 初始化图表
 const initCharts = () => {
   const watchChart = echarts.init(document.getElementById('watchChart'))
@@ -1407,7 +1507,7 @@ watch([styleData, emotionData], ([newStyleData, newEmotionData]) => {
         </div>
         <!-- 数据概览卡片 -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <!-- 项目数量卡片 -->
+          <!-- 项目数据卡片 -->
           <div class="bg-white dark:bg-zinc-800 rounded-xl p-6 border theme-border hover:shadow-lg transition-shadow animate__animated animate__fadeIn animate__delay-1s">
             <div class="flex items-center gap-3 mb-4">
               <div class="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
@@ -1416,15 +1516,36 @@ watch([styleData, emotionData], ([newStyleData, newEmotionData]) => {
                 </svg>
               </div>
               <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                项目总数
+                项目概览
               </h3>
             </div>
-            <div class="text-3xl font-bold text-indigo-500">
-              {{ projectStats.totalProjects }}
+            <div class="space-y-3">
+              <div class="flex justify-between items-center">
+                <span class="text-gray-600 dark:text-gray-400">项目总数</span>
+                <span class="text-xl font-bold text-indigo-500">{{ dataOverview?.totalProjects || 0 }}</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-600 dark:text-gray-400">最受欢迎项目</span>
+                <span class="text-md font-medium text-indigo-500">{{ dataOverview?.popularProject.name }}</span>
+              </div>
+              <div class="mt-2 pt-2 border-t dark:border-zinc-700">
+                <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">近期观看增长率</div>
+                <div class="flex items-center gap-2">
+                  <div class="text-lg font-bold" :class="dataOverview?.growthRate > 0 ? 'text-green-500' : 'text-red-500'">
+                    {{ dataOverview?.growthRate > 0 ? '+' : '' }}{{ dataOverview?.growthRate }}%
+                  </div>
+                  <svg v-if="dataOverview?.growthRate > 0" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                  </svg>
+                  <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- 总观看数卡片 -->
+          <!-- 观看与互动卡片 -->
           <div class="bg-white dark:bg-zinc-800 rounded-xl p-6 border theme-border hover:shadow-lg transition-shadow animate__animated animate__fadeIn animate__delay-2s">
             <div class="flex items-center gap-3 mb-4">
               <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
@@ -1434,28 +1555,61 @@ watch([styleData, emotionData], ([newStyleData, newEmotionData]) => {
                 </svg>
               </div>
               <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                总观看
+                观看与互动
               </h3>
             </div>
-            <div class="text-3xl font-bold text-blue-500">
-              {{ projectStats.totalWatches }}
+            <div class="space-y-3">
+              <div class="flex justify-between items-center">
+                <span class="text-gray-600 dark:text-gray-400">总观看</span>
+                <span class="text-xl font-bold text-blue-500">{{ dataOverview?.totalWatches.toLocaleString() || 0 }}</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-600 dark:text-gray-400">总收藏</span>
+                <span class="text-xl font-bold text-blue-500">{{ dataOverview?.totalFavorites.toLocaleString() || 0 }}</span>
+              </div>
+              <div class="mt-2 pt-2 border-t dark:border-zinc-700">
+                <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">互动率 (收藏/观看)</div>
+                <div class="flex items-center gap-2">
+                  <div class="w-full bg-gray-200 dark:bg-zinc-700 rounded-full h-2.5">
+                    <div class="bg-blue-500 h-2.5 rounded-full" :style="`width: ${Math.min(dataOverview?.interactionRate || 0, 100)}%`"></div>
+                  </div>
+                  <span class="text-sm font-medium text-blue-500">{{ dataOverview?.interactionRate || 0 }}%</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- 总收藏数卡片 -->
+          <!-- 内容偏好卡片 -->
           <div class="bg-white dark:bg-zinc-800 rounded-xl p-6 border theme-border hover:shadow-lg transition-shadow animate__animated animate__fadeIn animate__delay-3s">
             <div class="flex items-center gap-3 mb-4">
               <div class="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.597-1.597L14.146 6.32a15.996 15.996 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42" />
                 </svg>
               </div>
               <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                总收藏
+                内容偏好
               </h3>
             </div>
-            <div class="text-3xl font-bold text-amber-500">
-              {{ projectStats.totalFavorites }}
+            <div class="space-y-3">
+              <div class="flex justify-between items-center">
+                <span class="text-gray-600 dark:text-gray-400">最受欢迎风格</span>
+                <span class="text-md font-medium text-amber-500">{{ dataOverview?.popularStyle.style }}</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-600 dark:text-gray-400">主要情绪反应</span>
+                <span class="text-md font-medium text-amber-500">{{ dataOverview?.mainEmotion.emotion }}</span>
+              </div>
+              <div class="mt-2 pt-2 border-t dark:border-zinc-700">
+                <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">近期观看趋势</div>
+                <div class="flex items-end justify-between h-12 mt-1">
+                  <div v-for="(item, index) in dataOverview?.recentTrend" :key="index" class="flex flex-col items-center">
+                    <div class="text-[10px] text-gray-400">{{ item.date.slice(-2) }}日</div>
+                    <div class="w-8 bg-gradient-to-t from-amber-500 to-amber-300 dark:from-amber-600 dark:to-amber-400 rounded-sm" 
+                         :style="`height: ${Math.max(item.watches / (Math.max(...(dataOverview?.recentTrend || []).map(i => i.watches)) || 1) * 100, 5)}%`"></div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1520,7 +1674,7 @@ watch([styleData, emotionData], ([newStyleData, newEmotionData]) => {
           </div>
 
           <!-- 情绪分析图表 -->
-          <div class="bg-white dark:bg-zinc-800 rounded-xl p-6 border theme-border hover:shadow-lg transition-shadow animate__animated animate__fadeIn animate__delay-8s lg:col-span-2">
+          <div class="bg-white dark:bg-zinc-800 rounded-xl p-6 border theme-border hover:shadow-lg transition-shadow animate__animated animate__fadeIn animate__delay-8s">
             <div class="flex items-center gap-3 mb-4">
               <div class="p-2 bg-rose-100 dark:bg-rose-900/30 rounded-lg">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">

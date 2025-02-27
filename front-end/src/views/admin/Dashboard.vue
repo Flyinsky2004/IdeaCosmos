@@ -182,7 +182,7 @@ const formatDate = (dateString) => {
               </a-avatar>
               <div class="ml-3 flex-grow">
                 <p class="font-medium text-gray-900 dark:text-gray-100">{{ user.username }}</p>
-                <p class="text-sm text-gray-500 dark:text-gray-400">活跃度: {{ user.activityCount }}</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">活跃度: {{ user.activity_count }}</p>
               </div>
             </div>
           </div>

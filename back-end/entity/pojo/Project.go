@@ -26,6 +26,7 @@ type Project struct {
 	Team         Team           `json:"team" bind:"omitempty" gorm:"foreignKey:TeamID"`
 	Watches      uint           `json:"watches" gorm:"default:0"`
 	Favorites    uint           `json:"favorites" gorm:"default:0"`
+	Status       string         `json:"status" gorm:"type:varchar(20);default:'normal'"`
 }
 type Character struct {
 	gorm.Model

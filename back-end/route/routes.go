@@ -41,8 +41,6 @@ func RegisterRoutes(r *gin.Engine) {
 		userGroup.POST("addVersionComment", service.AddVersionComment)
 		userGroup.GET("getVersionComments", service.GetVersionComments)
 		userGroup.GET("/favorite/add", service.AddFavorite)
-		userGroup.GET("/favorite/remove", service.RemoveFavorite)
-		userGroup.GET("/favorite/check", service.CheckFavorite)
 		userGroup.POST("/feeling/add", service.AddVersionFeeling)
 		userGroup.GET("/feeling/get", service.GetVersionFeeling)
 		userGroup.GET("/analysis/emotions", service.GetEmotionAnalysis)
@@ -58,6 +56,11 @@ func RegisterRoutes(r *gin.Engine) {
 		teamGroup.POST("updateRequest", service.UpdateRequest)
 		teamGroup.GET("getRequests", service.GetPendingRequests)
 		teamGroup.GET("myTeam", service.GetMyTeam)
+		teamGroup.POST("joinByInviteCode", service.JoinTeamByInviteCode)
+		teamGroup.GET("members", service.GetTeamMembers)
+		teamGroup.GET("regenerateInviteCode", service.RegenerateInviteCode)
+		teamGroup.GET("detail", service.GetTeamDetail)
+		teamGroup.GET("getTeamByInviteCode", service.GetTeamByInviteCode)
 	}
 
 	projectGroup := r.Group("/api/project", preHandler())
@@ -89,6 +92,13 @@ func RegisterRoutes(r *gin.Engine) {
 		projectGroup.GET("generateChapterAudio", service.GenerateChapterAudio)
 		projectGroup.GET("/analysis/watches-likes", service.GetWatchesAndLikesAnalysis)
 		projectGroup.GET("/analysis/style-type", service.GetStyleAndTypeAnalysis)
+		projectGroup.POST("creator/comment/add", service.AddCreatorComment)
+		projectGroup.GET("creator/comment/list", service.GetCreatorComments)
+		projectGroup.POST("creator/comment/delete", service.DeleteCreatorComment)
+		projectGroup.POST("chapter/create", service.CreateChapter)
+		projectGroup.POST("chapter/update", service.UpdateChapter)
+		projectGroup.POST("chapter/delete", service.DeleteChapter)
+		projectGroup.POST("deleteCharacter", service.DeleteCharacter)
 	}
 
 	// 新增管理员路由组
@@ -108,9 +118,20 @@ func RegisterRoutes(r *gin.Engine) {
 		adminGroup.GET("/chapters", service.GetChapters)
 		adminGroup.GET("/chapters/:id", service.GetChapter)
 		adminGroup.POST("/chapters/:id/review", service.ReviewChapter)
-		adminGroup.POST("/chapters/:id/delete", service.DeleteChapter)
+		adminGroup.POST("/chapters/:id/delete", service.DeleteChapterAdmin)
 		adminGroup.POST("/chapters/:id/score", service.UpdateChapterScore)
 		adminGroup.GET("/chapters/:id/ai-score", service.AIScoreChapter)
+
+		// 项目管理
+		adminGroup.GET("/projects", service.GetProjects)
+		adminGroup.GET("/projects/:id", service.GetProject)
+		adminGroup.POST("/projects/:id/status", service.UpdateProjectStatus)
+		adminGroup.POST("/projects/:id/delete", service.DeleteProject)
+		adminGroup.GET("/projects/stats", service.GetProjectStats)
+
+		// 数据分析
+		adminGroup.GET("/statistics/overview", service.GetAdminStatistics)
+		adminGroup.GET("/statistics/project-types", service.GetProjectTypeStats)
 	}
 
 	websocketGroup := r.Group("/api/ws")

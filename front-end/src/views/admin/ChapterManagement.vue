@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { get, postJSON } from '@/util/request'
-import { message } from 'ant-design-vue'
+import { message, Modal } from 'ant-design-vue'
 import SpinLoaderLarge from '@/components/spinLoaderLarge.vue'
 import { parseDateTime } from '@/util/common'
 import { useRouter } from 'vue-router'
@@ -104,14 +104,16 @@ const getScoreLevelText = (score) => {
     return { text: '良好', color: 'blue' }
   } else if (score >= 50) {
     return { text: '一般', color: 'orange' }
-  } else {
+  } else if (score > 0) {
     return { text: '敏感', color: 'red' }
+  } else {
+    return { text: '暂无评分', color: 'default' }
   }
 }
 
 // 删除章节
 const deleteChapter = (chapterId) => {
-  message.confirm({
+  Modal.confirm({
     title: '确认删除',
     content: '您确定要删除该章节吗？此操作不可撤销。',
     okText: '确认',

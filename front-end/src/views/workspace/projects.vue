@@ -68,17 +68,14 @@ const enterProject = (project) => {
 
     <template v-else>
       <!-- 顶部欢迎区域 -->
-      <div class="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border theme-border animate__animated animate__fadeIn animate__delay-1s">
-        <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent mb-2">
-          创剧空间
-        </h1>
-        <p class="text-gray-600 dark:text-gray-400 leading-relaxed">
-          我们的团队功能支持您将创剧空间中的项目与您的团队绑定，使您的团队成员一同加入您的精彩内容创作！
-          <br/>
-          <span class="text-sm font-medium mt-2 inline-block">
-            支持功能：项目多人分工协作 / 实时评论反馈 / 项目版本控制
-          </span>
-        </p>
+      <div class="border p-4 workspace-box w-fit rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 dark:border-gray-700 animate__animated animate__fadeIn animate__delay-1s">
+        <h1 class="text-2xl font-serif mb-2 text-blue-700 dark:text-blue-400">创剧空间</h1>
+        <span class="text-sm dark:text-gray-300">我们的团队功能支持您将创剧空间中的项目与您的团队绑定，使您的团队成员一同加入您的精彩内容创作！</span>
+        <div class="mt-2 flex flex-wrap gap-3">
+          <div class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full dark:bg-blue-900 dark:text-blue-200">项目多人分工协作</div>
+          <div class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full dark:bg-green-900 dark:text-green-200">实时评论反馈</div>
+          <div class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full dark:bg-purple-900 dark:text-purple-200">项目版本控制</div>
+        </div>
       </div>
 
       <!-- 项目列表区域 -->

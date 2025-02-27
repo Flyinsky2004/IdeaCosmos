@@ -42,6 +42,7 @@ func main() {
 		&pojo.Favourite{},
 		&pojo.Watch{},
 		&pojo.Feeling{},
+		&pojo.CreatorComment{},
 	)
 
 	// 重新启用外键检查

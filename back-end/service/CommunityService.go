@@ -6,154 +6,226 @@ import (
 	"back-end/entity/pojo"
 	"encoding/json"
 	"net/http"
-	"sort"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
+// GetIndexCoverList 获取首页封面列表
 func GetIndexCoverList(c *gin.Context) {
-	pageIndex := c.Query("pageIndex")
-	pageIndexInt, _ := strconv.Atoi(pageIndex)
-	var results []pojo.Project
-	err := config.MysqlDataBase.Preload("Team").Limit(10).Order("created_at desc").Offset(pageIndexInt).Find(&results).Error
-	if err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "查询数据库时发生错误"))
+	limitStr := c.Query("limit")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 {
+		limit = 5 // 默认获取5条记录
+	}
+
+	sortBy := c.Query("sort_by")
+	switch sortBy {
+	case "new":
+		// 获取最新项目
+		var projects []pojo.Project
+		if err := config.MysqlDataBase.Where("status != ?", "banned").Order("created_at DESC").Limit(limit).Find(&projects).Error; err != nil {
+			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目列表失败"))
+			return
+		}
+
+		c.JSON(http.StatusOK, dto.SuccessResponse(projects))
+		return
+	case "hot":
+		// 获取热门项目（根据浏览量）
+		var projects []pojo.Project
+		query := `
+		SELECT p.* FROM projects p
+		LEFT JOIN (
+			SELECT project_id, COUNT(*) as watch_count
+			FROM watches
+			WHERE watches.deleted_at IS NULL 
+			GROUP BY project_id
+		) w ON p.id = w.project_id
+		WHERE p.deleted_at IS NULL AND p.status != 'banned'
+		ORDER BY w.watch_count DESC, p.created_at DESC
+		LIMIT ?
+		`
+		if err := config.MysqlDataBase.Raw(query, limit).Scan(&projects).Error; err != nil {
+			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目列表失败"))
+			return
+		}
+
+		c.JSON(http.StatusOK, dto.SuccessResponse(projects))
+		return
+	case "featured":
+		// 获取推荐项目
+		var projects []pojo.Project
+		if err := config.MysqlDataBase.Where("status = ?", "featured").Order("created_at DESC").Limit(limit).Find(&projects).Error; err != nil {
+			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目列表失败"))
+			return
+		}
+
+		c.JSON(http.StatusOK, dto.SuccessResponse(projects))
+		return
+	default:
+		// 默认随机获取项目
+		var projects []pojo.Project
+		if err := config.MysqlDataBase.Where("status != ?", "banned").Order("RAND()").Limit(limit).Find(&projects).Error; err != nil {
+			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目列表失败"))
+			return
+		}
+
+		c.JSON(http.StatusOK, dto.SuccessResponse(projects))
 		return
 	}
-	c.JSON(http.StatusOK, dto.SuccessResponse(results))
 }
 
-// 获取项目详情
+// GetProjectDetail 获取项目详情
 func GetProjectDetail(c *gin.Context) {
-	projectId := c.Query("project_id")
-	userId := c.Query("user_id") // 从查询参数获取可选的userId
-
-	id, err := strconv.Atoi(projectId)
-	if err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "无效的项目ID"))
-		return
-	}
-
+	id := c.Param("id")
 	var project pojo.Project
-	// 预加载 Team 信息并获取项目
-	err = config.MysqlDataBase.Preload("Team").First(&project, id).Error
-	if err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "项目不存在"))
+	if err := config.MysqlDataBase.First(&project, id).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "项目不存在"))
 		return
 	}
 
-	// 增加浏览量并记录观看记录
-	tx := config.MysqlDataBase.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	// 更新项目观看数
-	if err := tx.Model(&project).Update("watches", project.Watches+1).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "更新观看数失败"))
+	// 检查项目状态
+	if project.Status == "banned" {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](403, "该项目已下架"))
 		return
 	}
 
-	// 如果提供了userId,添加观看记录
-	if userId != "" {
-		uid, err := strconv.Atoi(userId)
-		if err == nil {
-			watch := pojo.Watch{
-				UserId:    uint(uid),
-				ProjectId: uint(id),
-			}
-
-			if err := tx.Create(&watch).Error; err != nil {
-				tx.Rollback()
-				c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "记录观看历史失败"))
-				return
-			}
-		}
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "数据库事务提交失败"))
+	// 获取项目的浏览量
+	var watchCount int64
+	if err := config.MysqlDataBase.Model(&pojo.Watch{}).Where("project_id = ?", id).Count(&watchCount).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目浏览量失败"))
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.SuccessResponse(project))
+	// 获取项目的收藏量
+	var favoriteCount int64
+	if err := config.MysqlDataBase.Model(&pojo.Favourite{}).Where("project_id = ?", id).Count(&favoriteCount).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目收藏量失败"))
+		return
+	}
+
+	// 获取项目的章节数
+	var chapterCount int64
+	if err := config.MysqlDataBase.Model(&pojo.Chapter{}).Where("project_id = ?", id).Count(&chapterCount).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目章节数失败"))
+		return
+	}
+
+	// 如果用户已登录，检查是否已收藏
+	var isFavorite bool
+	userId, exists := c.Get("userId")
+	if exists {
+		var count int64
+		config.MysqlDataBase.Model(&pojo.Favourite{}).
+			Where("user_id = ? AND project_id = ?", userId, id).
+			Count(&count)
+		isFavorite = count > 0
+	}
+
+	// 收集项目详情
+	var projectDetail struct {
+		pojo.Project
+		WatchCount    int64 `json:"watch_count"`
+		FavoriteCount int64 `json:"favorite_count"`
+		ChapterCount  int64 `json:"chapter_count"`
+		IsFavorite    bool  `json:"is_favorite"`
+	}
+
+	projectDetail.Project = project
+	projectDetail.WatchCount = watchCount
+	projectDetail.FavoriteCount = favoriteCount
+	projectDetail.ChapterCount = chapterCount
+	projectDetail.IsFavorite = isFavorite
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(projectDetail))
 }
 
-// 获取项目角色列表
+// GetProjectCharacters 获取项目角色
 func GetProjectCharacters(c *gin.Context) {
-	projectId := c.Query("project_id")
-	id, err := strconv.Atoi(projectId)
-	if err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "无效的项目ID"))
+	projectId := c.Param("id")
+
+	// 检查项目状态
+	var project pojo.Project
+	if err := config.MysqlDataBase.First(&project, projectId).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "项目不存在"))
+		return
+	}
+
+	if project.Status == "banned" {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](403, "该项目已下架"))
 		return
 	}
 
 	var characters []pojo.Character
-	err = config.MysqlDataBase.Where("project_id = ?", id).Find(&characters).Error
-	if err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "查询角色信息失败"))
+	if err := config.MysqlDataBase.Where("project_id = ?", projectId).Find(&characters).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取角色列表失败"))
 		return
 	}
 
-	// 获取角色关系
-	var relationships []pojo.CharacterRelationShip
-	err = config.MysqlDataBase.Where("first_character_id IN (?) OR second_character_id IN (?)",
-		getCharacterIds(characters), getCharacterIds(characters)).
-		Preload("FirstCharacter").
-		Preload("SecondCharacter").
-		Find(&relationships).Error
-	if err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "查询角色关系失败"))
-		return
-	}
-
-	response := struct {
-		Characters    []pojo.Character             `json:"characters"`
-		Relationships []pojo.CharacterRelationShip `json:"relationships"`
-	}{
-		Characters:    characters,
-		Relationships: relationships,
-	}
-
-	c.JSON(http.StatusOK, dto.SuccessResponse(response))
+	c.JSON(http.StatusOK, dto.SuccessResponse(characters))
 }
 
-// 获取项目章节列表
+// GetProjectChapters 获取项目章节列表
 func GetProjectChapters(c *gin.Context) {
-	projectId := c.Query("project_id")
-	id, err := strconv.Atoi(projectId)
-	if err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "无效的项目ID"))
+	projectId := c.Param("id")
+
+	// 检查项目状态
+	var project pojo.Project
+	if err := config.MysqlDataBase.First(&project, projectId).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "项目不存在"))
+		return
+	}
+
+	if project.Status == "banned" {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](403, "该项目已下架"))
 		return
 	}
 
 	var chapters []pojo.Chapter
-	err = config.MysqlDataBase.Where("project_id = ?", id).
-		Preload("CurrentVersion").
-		Preload("CurrentVersion.User").
-		Find(&chapters).Error
-	if err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "查询章节信息失败"))
+	if err := config.MysqlDataBase.Where("project_id = ?", projectId).
+		Order("created_at ASC").
+		Preload("CurrentVersion", "status = 'approved'"). // 只加载已审核通过的当前版本
+		Find(&chapters).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取章节列表失败"))
 		return
 	}
 
 	c.JSON(http.StatusOK, dto.SuccessResponse(chapters))
 }
 
-// 辅助函数：获取角色ID列表
-func getCharacterIds(characters []pojo.Character) []uint {
-	ids := make([]uint, len(characters))
-	for i, char := range characters {
-		ids[i] = char.ID
+// GetChapterDetail 获取章节详细信息
+func GetChapterDetail(c *gin.Context) {
+	chapterId := c.Param("id")
+
+	var chapter pojo.Chapter
+	if err := config.MysqlDataBase.
+		Preload("CurrentVersion", "status = 'approved'"). // 只加载已审核通过的当前版本
+		First(&chapter, chapterId).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "章节不存在"))
+		return
 	}
-	return ids
+
+	// 检查项目状态
+	var project pojo.Project
+	if err := config.MysqlDataBase.First(&project, chapter.ProjectID).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目信息失败"))
+		return
+	}
+
+	if project.Status == "banned" {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](403, "该项目已下架"))
+		return
+	}
+
+	// 检查是否有已审核通过的当前版本
+	if chapter.CurrentVersion.ID == 0 {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](403, "该章节暂无已审核通过的内容"))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(chapter))
 }
 
 // 获取项目评论
@@ -215,59 +287,34 @@ func AddProjectComment(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.SuccessResponse(comment))
 }
 
-// GetChapterDetail 获取篇章详情
-func GetChapterDetail(c *gin.Context) {
-	chapterId := c.Query("id")
-
-	// 获取章节信息
-	var chapter pojo.Chapter
-	if err := config.MysqlDataBase.
-		Preload("CurrentVersion").
-		Preload("CurrentVersion.User").
-		Where("id = ?", chapterId).
-		First(&chapter).Error; err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "没有找到对应章节"))
-		return
-	}
-
-	// 获取项目信息
-	var project pojo.Project
-	if err := config.MysqlDataBase.
-		Where("id = ?", chapter.ProjectID).
-		First(&project).Error; err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目信息失败"))
-		return
-	}
-
-	// 构建返回数据
-	response := struct {
-		Chapter pojo.Chapter `json:"chapter"`
-		Project pojo.Project `json:"project"`
-	}{
-		Chapter: chapter,
-		Project: project,
-	}
-
-	c.JSON(http.StatusOK, dto.SuccessResponse(response))
-}
-
-// GetHotProjects 获取观看数前10的项目
+// GetHotProjects 获取热门项目
 func GetHotProjects(c *gin.Context) {
-	var projects []pojo.Project
+	var hotProjects []struct {
+		pojo.Project
+		WatchCount int64 `json:"watch_count"`
+	}
 
-	// 直接按观看数降序排序获取前10个项目，预加载Team信息
-	err := config.MysqlDataBase.
-		Preload("Team").
-		Order("watches desc").
-		Limit(10).
-		Find(&projects).Error
+	// 获取热门项目，根据浏览量排序，排除已下架项目
+	query := `
+	SELECT p.*, COALESCE(w.watch_count, 0) as watch_count
+	FROM projects p
+	LEFT JOIN (
+		SELECT project_id, COUNT(*) as watch_count
+		FROM watches
+		WHERE watches.deleted_at IS NULL
+		GROUP BY project_id
+	) w ON p.id = w.project_id
+	WHERE p.deleted_at IS NULL AND p.status != 'banned'
+	ORDER BY w.watch_count DESC, p.created_at DESC
+	LIMIT 10
+	`
 
-	if err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[[]pojo.Project](500, "获取热门项目失败"))
+	if err := config.MysqlDataBase.Raw(query).Scan(&hotProjects).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取热门项目失败"))
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.SuccessResponse(projects))
+	c.JSON(http.StatusOK, dto.SuccessResponse(hotProjects))
 }
 
 // 添加收藏
@@ -394,10 +441,10 @@ func GetWatchesAndLikesAnalysis(c *gin.Context) {
 		teamIds[i] = team.ID
 	}
 
-	// 获取团队的所有项目
+	// 获取团队的所有项目 - 只考虑未被下架的项目
 	var projects []pojo.Project
 	if err := config.MysqlDataBase.
-		Where("team_id IN ?", teamIds).
+		Where("team_id IN ? AND status != ?", teamIds, "banned").
 		Find(&projects).Error; err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目信息失败"))
 		return
@@ -502,9 +549,9 @@ func GetStyleAndTypeAnalysis(c *gin.Context) {
 		return
 	}
 
-	// 获取所有项目
+	// 获取所有未被下架的项目
 	var projects []pojo.Project
-	if err := config.MysqlDataBase.Find(&projects).Error; err != nil {
+	if err := config.MysqlDataBase.Where("status != ?", "banned").Find(&projects).Error; err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目信息失败"))
 		return
 	}
@@ -608,6 +655,65 @@ func GetStyleAndTypeAnalysis(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.SuccessResponse(result))
 }
 
+// GetVersionFeeling 获取用户对版本的情绪评价
+func GetVersionFeeling(c *gin.Context) {
+	userId, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "未登录"))
+		return
+	}
+
+	versionId := c.Query("version_id")
+	vid, err := strconv.Atoi(versionId)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "无效的版本ID"))
+		return
+	}
+
+	// 检查版本状态
+	var version pojo.ChapterVersion
+	if err := config.MysqlDataBase.First(&version, vid).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "版本不存在"))
+		return
+	}
+
+	if version.Status != "approved" {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](403, "该章节版本未通过审核"))
+		return
+	}
+
+	// 检查项目状态
+	var chapter pojo.Chapter
+	if err := config.MysqlDataBase.First(&chapter, version.ChapterID).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "章节不存在"))
+		return
+	}
+
+	var project pojo.Project
+	if err := config.MysqlDataBase.First(&project, chapter.ProjectID).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "项目不存在"))
+		return
+	}
+
+	if project.Status == "banned" {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](403, "该项目已下架"))
+		return
+	}
+
+	var feeling pojo.Feeling
+	err = config.MysqlDataBase.Where("user_id = ? AND version_id = ?", userId, vid).First(&feeling).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusOK, dto.SuccessResponse("获取失败"))
+			return
+		}
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取情绪评价失败"))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(feeling))
+}
+
 // AddVersionFeeling 添加用户对版本的情绪评价
 func AddVersionFeeling(c *gin.Context) {
 	userId, exists := c.Get("userId")
@@ -619,6 +725,38 @@ func AddVersionFeeling(c *gin.Context) {
 	var feeling pojo.Feeling
 	if err := c.ShouldBindJSON(&feeling); err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "请求参数错误"))
+		return
+	}
+
+	// 获取版本信息并检查状态
+	var version pojo.ChapterVersion
+	if err := config.MysqlDataBase.First(&version, feeling.VersionId).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "版本不存在"))
+		return
+	}
+
+	// 检查版本状态是否已审核通过
+	if version.Status != "approved" {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](403, "该章节版本未通过审核，无法评价"))
+		return
+	}
+
+	// 获取章节信息
+	var chapter pojo.Chapter
+	if err := config.MysqlDataBase.First(&chapter, version.ChapterID).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取章节信息失败"))
+		return
+	}
+
+	// 检查项目状态
+	var project pojo.Project
+	if err := config.MysqlDataBase.First(&project, chapter.ProjectID).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目信息失败"))
+		return
+	}
+
+	if project.Status == "banned" {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](403, "该项目已下架，无法评价"))
 		return
 	}
 
@@ -644,35 +782,6 @@ func AddVersionFeeling(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.SuccessResponse("评价成功"))
 }
 
-// GetVersionFeeling 获取用户对版本的情绪评价
-func GetVersionFeeling(c *gin.Context) {
-	userId, exists := c.Get("userId")
-	if !exists {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "未登录"))
-		return
-	}
-
-	versionId := c.Query("version_id")
-	vid, err := strconv.Atoi(versionId)
-	if err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "无效的版本ID"))
-		return
-	}
-
-	var feeling pojo.Feeling
-	err = config.MysqlDataBase.Where("user_id = ? AND version_id = ?", userId, vid).First(&feeling).Error
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusOK, dto.SuccessResponse("获取失败"))
-			return
-		}
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取情绪评价失败"))
-		return
-	}
-
-	c.JSON(http.StatusOK, dto.SuccessResponse(feeling))
-}
-
 // GetEmotionAnalysis 获取情绪分析数据
 func GetEmotionAnalysis(c *gin.Context) {
 	userId, exists := c.Get("userId")
@@ -696,10 +805,10 @@ func GetEmotionAnalysis(c *gin.Context) {
 		teamIds[i] = team.ID
 	}
 
-	// 获取团队的所有项目
+	// 获取团队的所有项目 - 只考虑未被下架的项目
 	var projects []pojo.Project
 	if err := config.MysqlDataBase.
-		Where("team_id IN ?", teamIds).
+		Where("team_id IN ? AND status != ?", teamIds, "banned").
 		Find(&projects).Error; err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目信息失败"))
 		return
@@ -720,17 +829,22 @@ func GetEmotionAnalysis(c *gin.Context) {
 		var chapters []pojo.Chapter
 		if err := config.MysqlDataBase.
 			Where("project_id = ?", project.ID).
-			Preload("CurrentVersion").
+			Preload("CurrentVersion", "status = 'approved'"). // 只获取已通过审核的版本
 			Find(&chapters).Error; err != nil {
 			continue
 		}
 
-		// 获取所有版本ID
-		versionIds := make([]uint, len(chapters))
-		for i, chapter := range chapters {
+		// 获取所有通过审核的版本ID
+		var versionIds []uint
+		for _, chapter := range chapters {
 			if chapter.CurrentVersion.ID != 0 {
-				versionIds[i] = chapter.CurrentVersion.ID
+				versionIds = append(versionIds, chapter.CurrentVersion.ID)
 			}
+		}
+
+		// 如果没有通过审核的版本，跳过
+		if len(versionIds) == 0 {
+			continue
 		}
 
 		// 获取情绪统计数据
@@ -772,6 +886,71 @@ func GetEmotionAnalysis(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.SuccessResponse(result))
 }
 
+// GetVersionComments 获取版本评论
+func GetVersionComments(c *gin.Context) {
+	versionId := c.Param("id")
+
+	// 检查版本状态
+	var version pojo.ChapterVersion
+	if err := config.MysqlDataBase.First(&version, versionId).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "版本不存在"))
+		return
+	}
+
+	if version.Status != "approved" {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](403, "该章节版本未通过审核"))
+		return
+	}
+
+	// 获取章节和项目信息
+	var chapter pojo.Chapter
+	if err := config.MysqlDataBase.First(&chapter, version.ChapterID).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取章节信息失败"))
+		return
+	}
+
+	var project pojo.Project
+	if err := config.MysqlDataBase.First(&project, chapter.ProjectID).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目信息失败"))
+		return
+	}
+
+	if project.Status == "banned" {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](403, "该项目已下架"))
+		return
+	}
+
+	// 获取作者评论
+	var authorComments []pojo.AuthorComment
+	if err := config.MysqlDataBase.
+		Where("version_id = ?", versionId).
+		Preload("User").
+		Find(&authorComments).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取作者评论失败"))
+		return
+	}
+
+	// 获取读者评论
+	var readerComments []pojo.ReaderComment
+	if err := config.MysqlDataBase.
+		Where("version_id = ?", versionId).
+		Preload("User").
+		Find(&readerComments).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取读者评论失败"))
+		return
+	}
+
+	// 响应数据
+	var response struct {
+		AuthorComments []pojo.AuthorComment `json:"author_comments"`
+		ReaderComments []pojo.ReaderComment `json:"reader_comments"`
+	}
+	response.AuthorComments = authorComments
+	response.ReaderComments = readerComments
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(response))
+}
+
 // AddVersionComment 添加版本评论
 func AddVersionComment(c *gin.Context) {
 	userId, exists := c.Get("userId")
@@ -791,24 +970,41 @@ func AddVersionComment(c *gin.Context) {
 		return
 	}
 
-	// 获取版本信息
+	// 获取版本信息并检查状态
 	var version pojo.ChapterVersion
 	if err := config.MysqlDataBase.First(&version, requestBody.VersionId).Error; err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "版本不存在"))
 		return
 	}
 
+	// 检查版本状态是否已审核通过
+	if version.Status != "approved" {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](403, "该章节版本未通过审核，无法评论"))
+		return
+	}
+
+	// 获取章节信息
+	var chapter pojo.Chapter
+	if err := config.MysqlDataBase.First(&chapter, version.ChapterID).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取章节信息失败"))
+		return
+	}
+
+	// 检查项目状态
+	var project pojo.Project
+	if err := config.MysqlDataBase.First(&project, chapter.ProjectID).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目信息失败"))
+		return
+	}
+
+	if project.Status == "banned" {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](403, "该项目已下架，无法评论"))
+		return
+	}
+
 	// 检查权限
 	if requestBody.Type == "author" {
 		// 只有项目作者才能添加作者评论
-		// 获取章节信息
-		var chapter pojo.Chapter
-		if err := config.MysqlDataBase.First(&chapter, version.ChapterID).Error; err != nil {
-			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取章节信息失败"))
-			return
-		}
-
-		// 检查是否是项目团队成员
 		isTeamMember, err := isUserInProjectTeam(uint(userId.(int)), chapter.ProjectID)
 		if err != nil {
 			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "验证用户权限失败"))
@@ -850,86 +1046,6 @@ func AddVersionComment(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto.SuccessResponse("评论成功"))
-}
-
-// GetVersionComments 获取版本评论
-func GetVersionComments(c *gin.Context) {
-	versionId := c.Query("version_id")
-	commentType := c.Query("type") // 可选，"reader", "author" 或 "all"
-
-	vid, err := strconv.Atoi(versionId)
-	if err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "无效的版本ID"))
-		return
-	}
-
-	type CommentWithType struct {
-		ID        uint      `json:"id"`
-		Content   string    `json:"content"`
-		VersionId uint      `json:"version_id"`
-		UserId    uint      `json:"user_id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Type      string    `json:"type"` // "reader" 或 "author"
-		User      pojo.User `json:"user"`
-	}
-
-	var comments []CommentWithType
-
-	if commentType == "reader" || commentType == "all" || commentType == "" {
-		var readerComments []pojo.ReaderComment
-		if err := config.MysqlDataBase.Where("version_id = ?", vid).
-			Preload("User").
-			Order("created_at desc").
-			Find(&readerComments).Error; err != nil {
-			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取读者评论失败"))
-			return
-		}
-
-		for _, comment := range readerComments {
-			comments = append(comments, CommentWithType{
-				ID:        comment.ID,
-				Content:   comment.Content,
-				VersionId: comment.VersionId,
-				UserId:    comment.UserId,
-				CreatedAt: comment.CreatedAt,
-				UpdatedAt: comment.UpdatedAt,
-				Type:      "reader",
-				User:      comment.User,
-			})
-		}
-	}
-
-	if commentType == "author" || commentType == "all" || commentType == "" {
-		var authorComments []pojo.AuthorComment
-		if err := config.MysqlDataBase.Where("version_id = ?", vid).
-			Preload("User").
-			Order("created_at desc").
-			Find(&authorComments).Error; err != nil {
-			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取作者评论失败"))
-			return
-		}
-
-		for _, comment := range authorComments {
-			comments = append(comments, CommentWithType{
-				ID:        comment.ID,
-				Content:   comment.Content,
-				VersionId: comment.VersionId,
-				UserId:    comment.UserId,
-				CreatedAt: comment.CreatedAt,
-				UpdatedAt: comment.UpdatedAt,
-				Type:      "author",
-				User:      comment.User,
-			})
-		}
-	}
-
-	// 按时间排序
-	sort.Slice(comments, func(i, j int) bool {
-		return comments[i].CreatedAt.After(comments[j].CreatedAt)
-	})
-
-	c.JSON(http.StatusOK, dto.SuccessResponse(comments))
 }
 
 // 辅助函数: 检查用户是否是项目团队成员

@@ -248,6 +248,158 @@ const generateMainCharacters = () => {
     }
   );
 };
+
+// 添加手动创建角色的状态
+const manualCharacterModal = reactive({
+  visible: false,
+  loading: false
+});
+
+// 添加新角色表单
+const newCharacterForm = reactive({
+  name: '',
+  description: '',
+  project_id: project.ID,
+  avatar: 'default-avatar.png' // 默认头像
+});
+
+// 重置表单
+const resetCharacterForm = () => {
+  newCharacterForm.name = '';
+  newCharacterForm.description = '';
+};
+
+// 手动创建角色方法
+const createCharacter = () => {
+  // 表单验证
+  if (!newCharacterForm.name.trim()) {
+    message.warning('请输入角色名称');
+    return;
+  }
+  
+  if (!newCharacterForm.description.trim()) {
+    message.warning('请输入角色描述');
+    return;
+  }
+  
+  manualCharacterModal.loading = true;
+  
+  postJSON(
+    '/api/project/createCharacter',
+    newCharacterForm,
+    (msg, data) => {
+      message.success('角色创建成功');
+      manualCharacterModal.visible = false;
+      manualCharacterModal.loading = false;
+      resetCharacterForm();
+      fetchCharacters(); // 刷新角色列表
+    },
+    (msg) => {
+      message.warning(msg);
+      manualCharacterModal.loading = false;
+    },
+    (msg) => {
+      message.error(msg);
+      manualCharacterModal.loading = false;
+    }
+  );
+};
+
+// 添加角色编辑功能
+const editCharacterModal = reactive({
+  visible: false,
+  loading: false,
+  character: {
+    ID: null,
+    name: '',
+    description: '',
+    project_id: project.ID
+  }
+});
+
+// 打开编辑角色模态框
+const openEditCharacterModal = (character) => {
+  editCharacterModal.character.ID = character.ID;
+  editCharacterModal.character.name = character.name;
+  editCharacterModal.character.description = character.description;
+  editCharacterModal.character.project_id = character.project_id;
+  editCharacterModal.visible = true;
+};
+
+// 更新角色
+const updateCharacter = () => {
+  // 表单验证
+  if (!editCharacterModal.character.name.trim()) {
+    message.warning('请输入角色名称');
+    return;
+  }
+  
+  if (!editCharacterModal.character.description.trim()) {
+    message.warning('请输入角色描述');
+    return;
+  }
+  
+  editCharacterModal.loading = true;
+  
+  postJSON(
+    '/api/project/updateCharacter',
+    editCharacterModal.character,
+    (msg, data) => {
+      message.success('角色更新成功');
+      editCharacterModal.visible = false;
+      editCharacterModal.loading = false;
+      fetchCharacters(); // 刷新角色列表
+    },
+    (msg) => {
+      message.warning(msg);
+      editCharacterModal.loading = false;
+    },
+    (msg) => {
+      message.error(msg);
+      editCharacterModal.loading = false;
+    }
+  );
+};
+
+// 删除角色相关功能
+const deleteModal = reactive({
+  visible: false,
+  loading: false,
+  characterId: null,
+  characterName: ''
+});
+
+// 打开删除确认框
+const openDeleteModal = (character) => {
+  deleteModal.characterId = character.ID;
+  deleteModal.characterName = character.name;
+  deleteModal.visible = true;
+};
+
+// 执行删除角色
+const deleteCharacter = () => {
+  deleteModal.loading = true;
+  
+  postJSON(
+    '/api/project/deleteCharacter',
+    { character_id: deleteModal.characterId },
+    (msg) => {
+      message.success('角色删除成功');
+      deleteModal.visible = false;
+      deleteModal.loading = false;
+      fetchCharacters(); // 刷新角色列表
+      fetchCharacterRs(); // 刷新角色关系
+    },
+    (msg) => {
+      message.warning(msg);
+      deleteModal.loading = false;
+    },
+    (msg) => {
+      message.error(msg);
+      deleteModal.loading = false;
+    }
+  );
+};
 </script>
 
 <template>
@@ -260,6 +412,27 @@ const generateMainCharacters = () => {
         角色管理
       </h1>
       <div class="flex items-center gap-4">
+        <!-- 添加手动创建角色按钮 -->
+        <button
+          @click="manualCharacterModal.visible = true"
+          class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all flex items-center gap-2"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 4.5v15m7.5-7.5h-15"
+            />
+          </svg>
+          创建角色
+        </button>
+        
         <button
           @click="generateMainCharacters"
           :disabled="options.isMainCharactersGenerating"
@@ -374,7 +547,7 @@ const generateMainCharacters = () => {
             <!-- 悬浮操作按钮 -->
             <div
               v-show="hoverState.characterId === character.ID"
-              class="absolute inset-0 bg-black/60 flex items-center justify-center gap-4 animate__animated animate__fadeIn animate__faster"
+              class="absolute inset-0 bg-black/60 flex items-center justify-center gap-2 animate__animated animate__fadeIn animate__faster"
             >
               <button
                 @click="generateAvatar(character)"
@@ -396,7 +569,8 @@ const generateMainCharacters = () => {
                 AI 重绘
               </button>
               <button
-                class="px-3 py-1.5 bg-white text-gray-700 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-1"
+                @click="openEditCharacterModal(character)"
+                class="px-3 py-1.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors flex items-center gap-1"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -408,10 +582,30 @@ const generateMainCharacters = () => {
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"
-                    d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
+                    d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5
+                    7.125"
                   />
                 </svg>
-                上传
+                编辑
+              </button>
+              <button
+                @click="openDeleteModal(character)"
+                class="px-3 py-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center gap-1"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+                  />
+                </svg>
+                删除
               </button>
             </div>
           </div>
@@ -621,6 +815,109 @@ const generateMainCharacters = () => {
             </svg>
             {{ options.isCharacterRSGenerating ? "生成中..." : "AI 生成关系" }}
           </button>
+        </div>
+      </div>
+    </a-modal>
+    
+    <!-- 手动创建角色模态框 -->
+    <a-modal
+      v-model:open="manualCharacterModal.visible"
+      title="创建新角色"
+      :confirmLoading="manualCharacterModal.loading"
+      @ok="createCharacter"
+      @cancel="resetCharacterForm"
+      :okButtonProps="{
+        class: 'bg-blue-500 hover:bg-blue-600 border-blue-500 hover:border-blue-600',
+      }"
+    >
+      <div class="space-y-6">
+        <div class="flex flex-col space-y-2">
+          <label class="text-gray-700 dark:text-gray-300 font-medium">角色名称 <span class="text-red-500">*</span></label>
+          <input
+            v-model="newCharacterForm.name"
+            class="input1"
+            placeholder="例如：李明、张华、艾米莉..."
+          />
+        </div>
+        
+        <div class="flex flex-col space-y-2">
+          <label class="text-gray-700 dark:text-gray-300 font-medium">角色描述 <span class="text-red-500">*</span></label>
+          <textarea
+            v-model="newCharacterForm.description"
+            class="input1"
+            placeholder="描述角色的性格、背景、特点、目标、动机等..."
+          ></textarea>
+        </div>
+        
+        <div class="flex items-center justify-center p-4 bg-gray-50 dark:bg-zinc-900 rounded-lg">
+          <p class="text-gray-500 dark:text-gray-400 text-sm">
+            角色头像将使用系统默认头像，创建后可通过"生成头像"功能为角色生成AI头像
+          </p>
+        </div>
+      </div>
+    </a-modal>
+
+    <!-- 编辑角色模态框 -->
+    <a-modal
+      v-model:open="editCharacterModal.visible"
+      title="编辑角色"
+      :confirmLoading="editCharacterModal.loading"
+      @ok="updateCharacter"
+      :okButtonProps="{
+        class: 'bg-blue-500 hover:bg-blue-600 border-blue-500 hover:border-blue-600',
+      }"
+    >
+      <div class="space-y-6">
+        <div class="flex flex-col space-y-2">
+          <label class="text-gray-700 dark:text-gray-300 font-medium">角色名称 <span class="text-red-500">*</span></label>
+          <input
+            v-model="editCharacterModal.character.name"
+            class="input1"
+            placeholder="例如：李明、张华、艾米莉..."
+          />
+        </div>
+        
+        <div class="flex flex-col space-y-2">
+          <label class="text-gray-700 dark:text-gray-300 font-medium">角色描述 <span class="text-red-500">*</span></label>
+          <textarea
+            v-model="editCharacterModal.character.description"
+            class="input1"
+            placeholder="描述角色的性格、背景、特点、目标、动机等..."
+            rows="6"
+          ></textarea>
+        </div>
+      </div>
+    </a-modal>
+
+    <!-- 删除角色确认模态框 -->
+    <a-modal
+      v-model:open="deleteModal.visible"
+      title="删除角色"
+      :confirmLoading="deleteModal.loading"
+      @ok="deleteCharacter"
+      okText="删除"
+      cancelText="取消"
+      :okButtonProps="{
+        class: 'bg-red-500 hover:bg-red-600 border-red-500 hover:border-red-600',
+      }"
+    >
+      <div class="p-4">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="text-red-500">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">确认删除角色？</h3>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">您即将删除角色 <strong class="text-red-500">{{ deleteModal.characterName }}</strong>，此操作不可撤销。</p>
+          </div>
+        </div>
+        
+        <div class="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
+          <p class="text-amber-800 dark:text-amber-400 text-sm">
+            <strong>注意：</strong> 删除角色将同时删除与该角色相关的所有角色关系。
+          </p>
         </div>
       </div>
     </a-modal>

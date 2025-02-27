@@ -496,7 +496,7 @@ func ReviewChapter(c *gin.Context) {
 }
 
 // DeleteChapter 删除章节
-func DeleteChapter(c *gin.Context) {
+func DeleteChapterAdmin(c *gin.Context) {
 	chapterID := c.Param("id")
 
 	// 查找章节
@@ -703,4 +703,710 @@ func AIScoreChapter(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto.SuccessResponse(result))
+}
+
+// GetProjects 获取所有项目列表（分页、搜索、筛选）
+func GetProjects(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	keyword := c.Query("keyword")
+	typeFilter := c.Query("type")
+	statusFilter := c.Query("status") // 添加状态筛选
+
+	offset := (page - 1) * pageSize
+
+	// 构建查询
+	query := config.MysqlDataBase.Model(&pojo.Project{}).
+		Preload("Team")
+
+	// 按关键词搜索
+	if keyword != "" {
+		query = query.Where("project_name LIKE ? OR social_story LIKE ?", "%"+keyword+"%", "%"+keyword+"%")
+	}
+
+	// 按类型筛选
+	if typeFilter != "" {
+		query = query.Where("types = ?", typeFilter)
+	}
+
+	// 按状态筛选
+	if statusFilter != "" {
+		query = query.Where("status = ?", statusFilter)
+	}
+
+	// 统计总数
+	var total int64
+	query.Count(&total)
+
+	// 获取分页数据
+	var projects []pojo.Project
+	err := query.Limit(pageSize).Offset(offset).Order("updated_at DESC").Find(&projects).Error
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目列表失败"))
+		return
+	}
+
+	// 计算每个项目章节版本的平均评分
+	type ProjectScore struct {
+		ProjectID  uint
+		AvgScore   float64
+		ChapterNum int
+	}
+	var projectScores []ProjectScore
+
+	// 获取所有项目ID
+	var projectIDs []uint
+	for _, project := range projects {
+		projectIDs = append(projectIDs, project.ID)
+	}
+
+	// 如果有项目，计算平均分
+	if len(projectIDs) > 0 {
+		rows, err := config.MysqlDataBase.Raw(`
+			SELECT c.project_id, AVG(cv.score) as avg_score, COUNT(DISTINCT c.id) as chapter_num
+			FROM chapters c
+			JOIN chapter_versions cv ON c.version_id = cv.id
+			WHERE c.project_id IN ?
+			GROUP BY c.project_id
+		`, projectIDs).Rows()
+
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var ps ProjectScore
+				rows.Scan(&ps.ProjectID, &ps.AvgScore, &ps.ChapterNum)
+				projectScores = append(projectScores, ps)
+			}
+		}
+	}
+
+	// 构建项目数据，添加平均分
+	type ProjectWithScore struct {
+		pojo.Project
+		AvgScore   float64 `json:"avg_score"`
+		ChapterNum int     `json:"chapter_num"`
+	}
+
+	var projectsWithScore []ProjectWithScore
+	for _, project := range projects {
+		pws := ProjectWithScore{Project: project, AvgScore: 0, ChapterNum: 0}
+
+		// 查找对应项目的得分
+		for _, ps := range projectScores {
+			if ps.ProjectID == project.ID {
+				pws.AvgScore = ps.AvgScore
+				pws.ChapterNum = ps.ChapterNum
+				break
+			}
+		}
+
+		projectsWithScore = append(projectsWithScore, pws)
+	}
+
+	// 构造返回数据
+	result := map[string]interface{}{
+		"projects": projectsWithScore,
+		"total":    total,
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(result))
+}
+
+// GetProject 获取单个项目详情
+func GetProject(c *gin.Context) {
+	projectID := c.Param("id")
+
+	var project pojo.Project
+	err := config.MysqlDataBase.Preload("Team").Where("id = ?", projectID).First(&project).Error
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](404, "项目不存在"))
+		return
+	}
+
+	// 获取项目相关的章节
+	var chapters []pojo.Chapter
+	config.MysqlDataBase.Where("project_id = ?", project.ID).Order("id ASC").Find(&chapters)
+
+	// 获取项目相关的角色
+	var characters []pojo.Character
+	config.MysqlDataBase.Where("project_id = ?", project.ID).Find(&characters)
+
+	// 计算项目章节的平均评分
+	var avgScore float64
+	var chapterCount int64
+	if len(chapters) > 0 {
+		var chapterIDs []uint
+		for _, chapter := range chapters {
+			if chapter.VersionID > 0 {
+				chapterIDs = append(chapterIDs, chapter.ID)
+			}
+		}
+
+		if len(chapterIDs) > 0 {
+			row := config.MysqlDataBase.Raw(`
+				SELECT AVG(cv.score) as avg_score, COUNT(DISTINCT c.id) as chapter_count
+				FROM chapters c
+				JOIN chapter_versions cv ON c.version_id = cv.id
+				WHERE c.id IN ?
+			`, chapterIDs).Row()
+
+			row.Scan(&avgScore, &chapterCount)
+		}
+	}
+
+	result := map[string]interface{}{
+		"project":       project,
+		"chapters":      chapters,
+		"characters":    characters,
+		"avg_score":     avgScore,
+		"chapter_count": chapterCount,
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(result))
+}
+
+// UpdateProjectStatus 更新项目状态（如推荐显示、禁用等）
+func UpdateProjectStatus(c *gin.Context) {
+	projectID := c.Param("id")
+	var statusRequest struct {
+		Status string `json:"status"` // featured, normal, banned
+	}
+
+	if err := c.ShouldBindJSON(&statusRequest); err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "无效的请求数据"))
+		return
+	}
+
+	var project pojo.Project
+	if err := config.MysqlDataBase.Where("id = ?", projectID).First(&project).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](404, "项目不存在"))
+		return
+	}
+
+	// 验证状态值
+	validStatus := map[string]bool{
+		"featured": true,
+		"normal":   true,
+		"banned":   true,
+	}
+
+	if !validStatus[statusRequest.Status] {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "无效的状态值"))
+		return
+	}
+
+	// 更新项目状态
+	project.Status = statusRequest.Status
+
+	// 保存更改
+	tx := config.MysqlDataBase.Begin()
+	if err := tx.Save(&project).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "更新项目状态失败"))
+		return
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "更新项目状态失败"))
+		return
+	}
+
+	// 构建返回消息
+	message := "项目状态已更新"
+	switch statusRequest.Status {
+	case "featured":
+		message = "项目已设为推荐"
+	case "normal":
+		message = "项目已设为正常状态"
+	case "banned":
+		message = "项目已下架"
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(message))
+}
+
+// DeleteProject 删除项目
+func DeleteProject(c *gin.Context) {
+	projectID := c.Param("id")
+
+	var project pojo.Project
+	if err := config.MysqlDataBase.Where("id = ?", projectID).First(&project).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](404, "项目不存在"))
+		return
+	}
+
+	// 开始事务
+	tx := config.MysqlDataBase.Begin()
+
+	// 删除相关的章节版本
+	// 首先获取所有章节
+	var chapters []pojo.Chapter
+	if err := tx.Where("project_id = ?", project.ID).Find(&chapters).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "删除项目失败"))
+		return
+	}
+
+	// 获取所有章节的ID
+	var chapterIDs []uint
+	for _, chapter := range chapters {
+		chapterIDs = append(chapterIDs, chapter.ID)
+	}
+
+	// 如果有章节，删除相关的章节版本
+	if len(chapterIDs) > 0 {
+		if err := tx.Where("chapter_id IN ?", chapterIDs).Delete(&pojo.ChapterVersion{}).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "删除项目失败"))
+			return
+		}
+	}
+
+	// 删除章节
+	if err := tx.Where("project_id = ?", project.ID).Delete(&pojo.Chapter{}).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "删除项目失败"))
+		return
+	}
+
+	// 删除角色关系
+	if err := tx.Exec("DELETE cr FROM character_relation_ships cr JOIN characters c1 ON cr.first_character_id = c1.id WHERE c1.project_id = ?", project.ID).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "删除项目失败"))
+		return
+	}
+
+	// 删除角色
+	if err := tx.Where("project_id = ?", project.ID).Delete(&pojo.Character{}).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "删除项目失败"))
+		return
+	}
+
+	// 删除项目
+	if err := tx.Delete(&project).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "删除项目失败"))
+		return
+	}
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "删除项目失败"))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse("项目删除成功"))
+}
+
+// GetProjectStats 获取项目统计数据
+func GetProjectStats(c *gin.Context) {
+	// 项目类型分布
+	var typeStats []struct {
+		Type  string `json:"type"`
+		Count int64  `json:"count"`
+	}
+	config.MysqlDataBase.Model(&pojo.Project{}).
+		Select("types as type, COUNT(*) as count").
+		Group("types").
+		Find(&typeStats)
+
+	// 每月项目创建数量
+	var monthlyStats []struct {
+		Month string `json:"month"`
+		Count int64  `json:"count"`
+	}
+	config.MysqlDataBase.Model(&pojo.Project{}).
+		Select("DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as count").
+		Group("month").
+		Order("month").
+		Find(&monthlyStats)
+
+	// 最活跃的团队（创建项目最多）
+	var teamStats []struct {
+		TeamID       uint   `json:"team_id"`
+		TeamName     string `json:"team_name"`
+		ProjectCount int64  `json:"project_count"`
+	}
+	config.MysqlDataBase.Model(&pojo.Project{}).
+		Select("projects.team_id, teams.username as team_name, COUNT(*) as project_count").
+		Joins("JOIN teams ON projects.team_id = teams.id").
+		Group("projects.team_id").
+		Order("project_count DESC").
+		Limit(5).
+		Find(&teamStats)
+
+	result := map[string]interface{}{
+		"typeStats":    typeStats,
+		"monthlyStats": monthlyStats,
+		"teamStats":    teamStats,
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(result))
+}
+
+// GetAdminStatistics 获取管理员数据统计信息
+func GetAdminStatistics(c *gin.Context) {
+	// 1. 项目相关统计
+	var projectStats struct {
+		TotalProjects      int64   `json:"total_projects"`
+		NormalProjects     int64   `json:"normal_projects"`
+		BannedProjects     int64   `json:"banned_projects"`
+		AvgScore           float64 `json:"avg_score"`
+		TotalWatches       int64   `json:"total_watches"`
+		TotalFavorites     int64   `json:"total_favorites"`
+		ChapterCount       int64   `json:"chapter_count"`
+		HighestRatedID     uint    `json:"highest_rated_id"`
+		HighestRatedName   string  `json:"highest_rated_name"`
+		HighestRatedScore  float64 `json:"highest_rated_score"`
+		MostWatchedID      uint    `json:"most_watched_id"`
+		MostWatchedName    string  `json:"most_watched_name"`
+		MostWatchedCount   uint    `json:"most_watched_count"`
+		MostFavoritedID    uint    `json:"most_favorited_id"`
+		MostFavoritedName  string  `json:"most_favorited_name"`
+		MostFavoritedCount uint    `json:"most_favorited_count"`
+	}
+
+	// 总项目数
+	config.MysqlDataBase.Model(&pojo.Project{}).Count(&projectStats.TotalProjects)
+
+	// 正常项目数
+	config.MysqlDataBase.Model(&pojo.Project{}).Where("status = ? OR status IS NULL", "normal").Count(&projectStats.NormalProjects)
+
+	// 下架项目数
+	config.MysqlDataBase.Model(&pojo.Project{}).Where("status = ?", "banned").Count(&projectStats.BannedProjects)
+
+	// 总观看和收藏数
+	config.MysqlDataBase.Model(&pojo.Project{}).Select("SUM(watches) as total_watches, SUM(favorites) as total_favorites").
+		Row().Scan(&projectStats.TotalWatches, &projectStats.TotalFavorites)
+
+	// 章节总数
+	config.MysqlDataBase.Model(&pojo.Chapter{}).Count(&projectStats.ChapterCount)
+
+	// 计算平均评分
+	var totalScore int64
+	var ratedChapterCount int64
+	rows, err := config.MysqlDataBase.Model(&pojo.ChapterVersion{}).
+		Where("score > 0").
+		Select("SUM(score) as total_score, COUNT(*) as rated_count").
+		Rows()
+
+	if err == nil && rows.Next() {
+		rows.Scan(&totalScore, &ratedChapterCount)
+		if ratedChapterCount > 0 {
+			projectStats.AvgScore = float64(totalScore) / float64(ratedChapterCount)
+		}
+		rows.Close()
+	}
+
+	// 评分最高的项目
+	var highestRatedProject struct {
+		ProjectID uint
+		Name      string
+		AvgScore  float64
+	}
+
+	// 这个查询比较复杂，需要先查出每个章节的最新版本评分，然后按项目分组计算平均分
+	subQuery := config.MysqlDataBase.Model(&pojo.Chapter{}).
+		Select("project_id, AVG(chapter_versions.score) as avg_score").
+		Joins("JOIN chapter_versions ON chapters.version_id = chapter_versions.id").
+		Where("chapter_versions.score > 0").
+		Group("project_id").
+		Order("avg_score DESC").
+		Limit(1)
+
+	subQuery.Row().Scan(&highestRatedProject.ProjectID, &highestRatedProject.AvgScore)
+
+	if highestRatedProject.ProjectID > 0 {
+		config.MysqlDataBase.Model(&pojo.Project{}).
+			Select("project_name").
+			Where("id = ?", highestRatedProject.ProjectID).
+			Row().Scan(&highestRatedProject.Name)
+
+		projectStats.HighestRatedID = highestRatedProject.ProjectID
+		projectStats.HighestRatedName = highestRatedProject.Name
+		projectStats.HighestRatedScore = highestRatedProject.AvgScore
+	}
+
+	// 观看最多的项目
+	var mostWatchedProject pojo.Project
+	config.MysqlDataBase.Model(&pojo.Project{}).
+		Order("watches DESC").
+		First(&mostWatchedProject)
+
+	if mostWatchedProject.ID > 0 {
+		projectStats.MostWatchedID = mostWatchedProject.ID
+		projectStats.MostWatchedName = mostWatchedProject.ProjectName
+		projectStats.MostWatchedCount = mostWatchedProject.Watches
+	}
+
+	// 收藏最多的项目
+	var mostFavoritedProject pojo.Project
+	config.MysqlDataBase.Model(&pojo.Project{}).
+		Order("favorites DESC").
+		First(&mostFavoritedProject)
+
+	if mostFavoritedProject.ID > 0 {
+		projectStats.MostFavoritedID = mostFavoritedProject.ID
+		projectStats.MostFavoritedName = mostFavoritedProject.ProjectName
+		projectStats.MostFavoritedCount = mostFavoritedProject.Favorites
+	}
+
+	// 2. 用户相关统计
+	var userStats struct {
+		TotalUsers     int64 `json:"total_users"`
+		AdminUsers     int64 `json:"admin_users"`
+		NormalUsers    int64 `json:"normal_users"`
+		BannedUsers    int64 `json:"banned_users"`
+		NewUsersToday  int64 `json:"new_users_today"`
+		NewUsersWeek   int64 `json:"new_users_week"`
+		NewUsersMonth  int64 `json:"new_users_month"`
+		MostActiveUser struct {
+			ID       uint   `json:"id"`
+			Username string `json:"username"`
+			Projects int64  `json:"projects"`
+		} `json:"most_active_user"`
+	}
+
+	// 总用户数
+	config.MysqlDataBase.Model(&pojo.User{}).Count(&userStats.TotalUsers)
+
+	// 管理员用户数
+	config.MysqlDataBase.Model(&pojo.User{}).Where("permission >= ?", 1).Count(&userStats.AdminUsers)
+
+	// 正常用户数
+	config.MysqlDataBase.Model(&pojo.User{}).Where("group = ? OR group IS NULL", 0).Count(&userStats.NormalUsers)
+
+	// 封禁用户数
+	config.MysqlDataBase.Model(&pojo.User{}).Where("group = ?", 1).Count(&userStats.BannedUsers)
+
+	// 今日新用户
+	config.MysqlDataBase.Model(&pojo.User{}).
+		Where("created_at >= ?", time.Now().Format("2006-01-02")).
+		Count(&userStats.NewUsersToday)
+
+	// 本周新用户
+	weekStart := time.Now().AddDate(0, 0, -int(time.Now().Weekday()))
+	config.MysqlDataBase.Model(&pojo.User{}).
+		Where("created_at >= ?", weekStart.Format("2006-01-02")).
+		Count(&userStats.NewUsersWeek)
+
+	// 本月新用户
+	monthStart := time.Date(time.Now().Year(), time.Now().Month(), 1, 0, 0, 0, 0, time.Local)
+	config.MysqlDataBase.Model(&pojo.User{}).
+		Where("created_at >= ?", monthStart.Format("2006-01-02")).
+		Count(&userStats.NewUsersMonth)
+
+	// 最活跃用户（创建项目最多）
+	config.MysqlDataBase.Raw(`
+		SELECT users.id, users.username, COUNT(projects.id) as project_count
+		FROM users
+		JOIN teams ON users.id = teams.leader_id
+		JOIN projects ON teams.id = projects.team_id
+		GROUP BY users.id
+		ORDER BY project_count DESC
+		LIMIT 1
+	`).Row().Scan(&userStats.MostActiveUser.ID, &userStats.MostActiveUser.Username, &userStats.MostActiveUser.Projects)
+
+	// 3. 审核相关统计
+	var reviewStats struct {
+		TotalReviews      int64   `json:"total_reviews"`
+		ApprovedReviews   int64   `json:"approved_reviews"`
+		RejectedReviews   int64   `json:"rejected_reviews"`
+		PendingReviews    int64   `json:"pending_reviews"`
+		ApprovalRate      float64 `json:"approval_rate"`
+		AvgProcessingTime float64 `json:"avg_processing_time"` // 平均处理时间（天）
+		AvgScore          float64 `json:"avg_score"`           // 平均评分
+		ReviewsToday      int64   `json:"reviews_today"`
+		ReviewsWeek       int64   `json:"reviews_week"`
+		ReviewsMonth      int64   `json:"reviews_month"`
+	}
+
+	// 总审核数
+	//totalVersions := config.MysqlDataBase.Model(&pojo.ChapterVersion{}).Count(&reviewStats.TotalReviews)
+
+	// 通过的审核
+	config.MysqlDataBase.Model(&pojo.ChapterVersion{}).
+		Where("status = ?", "approved").
+		Count(&reviewStats.ApprovedReviews)
+
+	// 拒绝的审核
+	config.MysqlDataBase.Model(&pojo.ChapterVersion{}).
+		Where("status = ?", "rejected").
+		Count(&reviewStats.RejectedReviews)
+
+	// 待审核
+	config.MysqlDataBase.Model(&pojo.ChapterVersion{}).
+		Where("status = ? OR status IS NULL", "pending").
+		Count(&reviewStats.PendingReviews)
+
+	// 通过率
+	if reviewStats.TotalReviews > 0 {
+		reviewStats.ApprovalRate = float64(reviewStats.ApprovedReviews) / float64(reviewStats.TotalReviews) * 100
+	}
+
+	// 平均评分
+	if ratedChapterCount > 0 {
+		reviewStats.AvgScore = float64(totalScore) / float64(ratedChapterCount)
+	}
+
+	// 今日审核数
+	config.MysqlDataBase.Model(&pojo.ChapterVersion{}).
+		Where("updated_at >= ? AND (status = ? OR status = ?)",
+			time.Now().Format("2006-01-02"), "approved", "rejected").
+		Count(&reviewStats.ReviewsToday)
+
+	// 本周审核数
+	config.MysqlDataBase.Model(&pojo.ChapterVersion{}).
+		Where("updated_at >= ? AND (status = ? OR status = ?)",
+			weekStart.Format("2006-01-02"), "approved", "rejected").
+		Count(&reviewStats.ReviewsWeek)
+
+	// 本月审核数
+	config.MysqlDataBase.Model(&pojo.ChapterVersion{}).
+		Where("updated_at >= ? AND (status = ? OR status = ?)",
+			monthStart.Format("2006-01-02"), "approved", "rejected").
+		Count(&reviewStats.ReviewsMonth)
+
+	// 4. 时间趋势数据
+	var trendData struct {
+		UserRegistration []struct {
+			Date  string `json:"date"`
+			Count int64  `json:"count"`
+		} `json:"user_registration"`
+		ProjectCreation []struct {
+			Date  string `json:"date"`
+			Count int64  `json:"count"`
+		} `json:"project_creation"`
+		ChapterReviews []struct {
+			Date     string `json:"date"`
+			Approved int64  `json:"approved"`
+			Rejected int64  `json:"rejected"`
+		} `json:"chapter_reviews"`
+		ScoreDistribution []struct {
+			ScoreRange string `json:"score_range"`
+			Count      int64  `json:"count"`
+		} `json:"score_distribution"`
+	}
+
+	// 用户注册趋势（过去12个月）
+	rows, err = config.MysqlDataBase.Raw(`
+		SELECT DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as count
+		FROM users
+		WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+		GROUP BY month
+		ORDER BY month
+	`).Rows()
+
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var item struct {
+				Date  string `json:"date"`
+				Count int64  `json:"count"`
+			}
+			rows.Scan(&item.Date, &item.Count)
+			trendData.UserRegistration = append(trendData.UserRegistration, item)
+		}
+	}
+
+	// 项目创建趋势（过去12个月）
+	rows, err = config.MysqlDataBase.Raw(`
+		SELECT DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as count
+		FROM projects
+		WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+		GROUP BY month
+		ORDER BY month
+	`).Rows()
+
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var item struct {
+				Date  string `json:"date"`
+				Count int64  `json:"count"`
+			}
+			rows.Scan(&item.Date, &item.Count)
+			trendData.ProjectCreation = append(trendData.ProjectCreation, item)
+		}
+	}
+
+	// 章节审核趋势（过去12个月）
+	rows, err = config.MysqlDataBase.Raw(`
+		SELECT 
+			DATE_FORMAT(updated_at, '%Y-%m') as month, 
+			SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved,
+			SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected
+		FROM chapter_versions
+		WHERE updated_at >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+		AND (status = 'approved' OR status = 'rejected')
+		GROUP BY month
+		ORDER BY month
+	`).Rows()
+
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var item struct {
+				Date     string `json:"date"`
+				Approved int64  `json:"approved"`
+				Rejected int64  `json:"rejected"`
+			}
+			rows.Scan(&item.Date, &item.Approved, &item.Rejected)
+			trendData.ChapterReviews = append(trendData.ChapterReviews, item)
+		}
+	}
+
+	// 评分分布
+	scoreRanges := []struct {
+		Min   int
+		Max   int
+		Label string
+	}{
+		{0, 20, "0-20"},
+		{21, 40, "21-40"},
+		{41, 60, "41-60"},
+		{61, 80, "61-80"},
+		{81, 100, "81-100"},
+	}
+
+	for _, r := range scoreRanges {
+		var count int64
+		config.MysqlDataBase.Model(&pojo.ChapterVersion{}).
+			Where("score >= ? AND score <= ?", r.Min, r.Max).
+			Count(&count)
+
+		trendData.ScoreDistribution = append(trendData.ScoreDistribution, struct {
+			ScoreRange string `json:"score_range"`
+			Count      int64  `json:"count"`
+		}{
+			ScoreRange: r.Label,
+			Count:      count,
+		})
+	}
+
+	// 组合所有统计数据
+	result := map[string]interface{}{
+		"project_stats": projectStats,
+		"user_stats":    userStats,
+		"review_stats":  reviewStats,
+		"trend_data":    trendData,
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(result))
+}
+
+// GetProjectTypeStats 获取项目类型统计
+func GetProjectTypeStats(c *gin.Context) {
+	var typeStats []struct {
+		Type  string `json:"type"`
+		Count int64  `json:"count"`
+	}
+
+	config.MysqlDataBase.Model(&pojo.Project{}).
+		Select("types as type, COUNT(*) as count").
+		Group("types").
+		Find(&typeStats)
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(typeStats))
 }

@@ -40,7 +40,7 @@ func GetCurrentChapterVersion(c *gin.Context) {
 
 	// 如果章节没有关联版本，返回空
 	if chapter.VersionID == 0 {
-		c.JSON(http.StatusOK, dto.SuccessResponse[string](""))
+		c.JSON(http.StatusOK, dto.SuccessResponse(""))
 		return
 	}
 
@@ -341,6 +341,115 @@ func CreateNewChapterMulti(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.SuccessResponse("应用成功！"))
 }
 
+// DeleteCharacter 删除角色
+func DeleteCharacter(c *gin.Context) {
+	userId, _ := c.Get("userId")
+	var reqBody struct {
+		CharacterID uint `json:"character_id" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&reqBody); err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "提交了错误的表单"))
+		return
+	}
+
+	// 获取角色信息
+	var character pojo.Character
+	if err := config.MysqlDataBase.First(&character, reqBody.CharacterID).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](404, "角色不存在"))
+		return
+	}
+
+	// 检查用户权限
+	isValidPermission, err := checkProjectPermission(uint(userId.(int)), character.ProjectID)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "验证用户权限时发生错误"))
+		return
+	}
+	if !isValidPermission {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](403, "没有权限删除该角色"))
+		return
+	}
+
+	// 开始事务
+	tx := config.MysqlDataBase.Begin()
+
+	// 首先删除与该角色相关的所有角色关系
+	if err := tx.Where("first_character_id = ? OR second_character_id = ?", reqBody.CharacterID, reqBody.CharacterID).Delete(&pojo.CharacterRelationShip{}).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "删除角色关系失败："+err.Error()))
+		return
+	}
+
+	// 删除角色
+	if err := tx.Delete(&character).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "删除角色失败："+err.Error()))
+		return
+	}
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "删除角色失败："+err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse("角色删除成功"))
+}
+
+// UpdateCharacter 更新角色信息
+func UpdateCharacter(c *gin.Context) {
+	userId, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "未登录或用户信息获取失败"))
+		return
+	}
+
+	var characterUpdate pojo.Character
+	// 绑定更新数据
+	if err := c.ShouldBindJSON(&characterUpdate); err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "请求参数错误"))
+		return
+	}
+
+	// 获取原有角色信息以确认项目ID和其他不可修改的字段
+	var originalCharacter pojo.Character
+	if err := config.MysqlDataBase.First(&originalCharacter, characterUpdate.ID).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](404, "角色不存在"))
+		return
+	}
+
+	// 检查权限
+	hasPermission, err := checkProjectPermission(uint(userId.(int)), originalCharacter.ProjectID)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "验证权限时发生错误"))
+		return
+	}
+	if !hasPermission {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](403, "您没有权限修改该角色"))
+		return
+	}
+
+	// 只更新允许修改的字段
+	originalCharacter.Name = characterUpdate.Name
+	originalCharacter.Description = characterUpdate.Description
+	// Avatar通常由专门的上传或生成接口处理，此处不更新
+
+	tx := config.MysqlDataBase.Begin()
+	if err := tx.Save(&originalCharacter).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "更新角色失败："+err.Error()))
+		return
+	}
+	if err := tx.Commit().Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "提交事务失败："+err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponseWithMessage("角色更新成功", originalCharacter))
+}
+
 // GetAllChapters 获取某个项目的所有章节
 func GetAllChapters(c *gin.Context) {
 	userId, _ := c.Get("userId")
@@ -606,7 +715,7 @@ func CreateCharacterArray(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.SuccessResponseWithMessage[string]("角色添加成功！", ""))
+	c.JSON(http.StatusOK, dto.SuccessResponseWithMessage("角色添加成功！", ""))
 }
 
 // GenerateCharacter Ai角色生成
@@ -740,7 +849,7 @@ func GetProjectList(c *gin.Context) {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "查询数据库时发生错误"))
 		return
 	}
-	c.JSON(http.StatusOK, dto.SuccessResponseWithMessage[[]pojo.Project]("查询成功", prsm))
+	c.JSON(http.StatusOK, dto.SuccessResponseWithMessage("查询成功", prsm))
 }
 
 // CreateProject 创建新项目
@@ -772,7 +881,7 @@ func CreateProject(c *gin.Context) {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "创建项目失败 code: 2"))
 		return
 	}
-	c.JSON(http.StatusOK, dto.SuccessResponseWithMessage[string]("项目创建成功！", ""))
+	c.JSON(http.StatusOK, dto.SuccessResponseWithMessage("项目创建成功！", ""))
 }
 
 // UpdateProject 更新项目信息
@@ -822,7 +931,7 @@ func UpdateProject(c *gin.Context) {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "保存项目信息时发生错误。code : 2"))
 		return
 	}
-	c.JSON(http.StatusOK, dto.SuccessResponse[string]("更新成功"))
+	c.JSON(http.StatusOK, dto.SuccessResponse("更新成功"))
 }
 
 // GetCharacters 获取角色
@@ -893,7 +1002,7 @@ func CreateCharacter(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.SuccessResponseWithMessage[string]("角色添加成功！", ""))
+	c.JSON(http.StatusOK, dto.SuccessResponseWithMessage("角色添加成功！", ""))
 }
 
 // 检查用户是否有权限操作项目
@@ -919,51 +1028,6 @@ func checkProjectPermission(userId uint, projectID uint) (bool, error) {
 	}
 
 	return true, nil
-}
-
-// UpdateCharacter 更新角色信息
-func UpdateCharacter(c *gin.Context) {
-	userId, exists := c.Get("userId")
-	if !exists {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "未登录或用户信息获取失败"))
-		return
-	}
-
-	var character pojo.Character
-	// 绑定更新数据
-	if err := c.ShouldBindJSON(&character); err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "请求参数错误"))
-		return
-	}
-	// 获取原有角色信息
-	if err := config.MysqlDataBase.First(&character, character.ID).Error; err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "角色不存在"))
-		return
-	}
-
-	// 检查权限
-	hasPermission, err := checkProjectPermission(uint(userId.(int)), character.ProjectID)
-	if err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "验证权限时发生错误"))
-		return
-	}
-	if !hasPermission {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](401, "您没有权限修改该角色"))
-		return
-	}
-
-	tx := config.MysqlDataBase.Begin()
-	if err := tx.Model(&pojo.Character{}).Where("id = ?", character.ID).Updates(character).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "更新角色失败"))
-		return
-	}
-	if err := tx.Commit().Error; err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "更新角色失败"))
-		return
-	}
-
-	c.JSON(http.StatusOK, dto.SuccessResponse[string]("更新成功"))
 }
 
 // CreateCharacterRelationship 创建角色关系
@@ -1018,7 +1082,7 @@ func CreateCharacterRelationship(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.SuccessResponse[pojo.CharacterRelationShip](relationship))
+	c.JSON(http.StatusOK, dto.SuccessResponse(relationship))
 }
 
 // UpdateCharacterRelationship 更新角色关系
@@ -1074,7 +1138,7 @@ func UpdateCharacterRelationship(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.SuccessResponse[string]("更新成功"))
+	c.JSON(http.StatusOK, dto.SuccessResponse("更新成功"))
 }
 
 // DeleteCharacterRelationship 更新角色关系
@@ -1128,7 +1192,7 @@ func DeleteCharacterRelationship(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.SuccessResponse[string]("删除成功"))
+	c.JSON(http.StatusOK, dto.SuccessResponse("删除成功"))
 }
 
 // GetCharacterRelationships 获取角色的所有关系
@@ -1665,4 +1729,148 @@ func GenerateCharacterFromDescription(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto.SuccessResponse(res))
+}
+
+// CreateChapter 创建单个章节
+func CreateChapter(c *gin.Context) {
+	userId, _ := c.Get("userId")
+	var chapter pojo.Chapter
+
+	if err := c.ShouldBindJSON(&chapter); err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "提交了错误的表单"))
+		return
+	}
+
+	// 检查用户权限
+	isValidPermission, err := checkProjectPermission(uint(userId.(int)), chapter.ProjectID)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "验证用户权限时发生错误"))
+		return
+	}
+	if !isValidPermission {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](403, "没有权限访问该项目"))
+		return
+	}
+
+	// 创建章节
+	tx := config.MysqlDataBase.Begin()
+	if err := tx.Create(&chapter).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "创建章节失败："+err.Error()))
+		return
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "保存章节失败："+err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponseWithMessage("章节创建成功", chapter))
+}
+
+// UpdateChapter 更新章节信息
+func UpdateChapter(c *gin.Context) {
+	userId, _ := c.Get("userId")
+	var chapter pojo.Chapter
+
+	if err := c.ShouldBindJSON(&chapter); err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "提交了错误的表单"))
+		return
+	}
+
+	// 获取原有章节信息
+	var existingChapter pojo.Chapter
+	if err := config.MysqlDataBase.First(&existingChapter, chapter.ID).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](404, "章节不存在"))
+		return
+	}
+
+	// 检查用户权限
+	isValidPermission, err := checkProjectPermission(uint(userId.(int)), existingChapter.ProjectID)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "验证用户权限时发生错误"))
+		return
+	}
+	if !isValidPermission {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](403, "没有权限编辑该章节"))
+		return
+	}
+
+	// 只更新允许修改的字段
+	existingChapter.Tittle = chapter.Tittle
+	existingChapter.Description = chapter.Description
+
+	// 更新章节
+	tx := config.MysqlDataBase.Begin()
+	if err := tx.Save(&existingChapter).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "更新章节失败："+err.Error()))
+		return
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "保存章节失败："+err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponseWithMessage("章节更新成功", existingChapter))
+}
+
+// DeleteChapter 删除章节
+func DeleteChapter(c *gin.Context) {
+	userId, _ := c.Get("userId")
+	var reqBody struct {
+		ChapterID uint `json:"chapter_id" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&reqBody); err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "提交了错误的表单"))
+		return
+	}
+
+	// 获取章节信息
+	var chapter pojo.Chapter
+	if err := config.MysqlDataBase.First(&chapter, reqBody.ChapterID).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](404, "章节不存在"))
+		return
+	}
+
+	// 检查用户权限
+	isValidPermission, err := checkProjectPermission(uint(userId.(int)), chapter.ProjectID)
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "验证用户权限时发生错误"))
+		return
+	}
+	if !isValidPermission {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](403, "没有权限删除该章节"))
+		return
+	}
+
+	// 开始事务
+	tx := config.MysqlDataBase.Begin()
+
+	// 先删除该章节的所有版本
+	if err := tx.Where("chapter_id = ?", reqBody.ChapterID).Delete(&pojo.ChapterVersion{}).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "删除章节版本失败："+err.Error()))
+		return
+	}
+
+	// 删除章节
+	if err := tx.Delete(&chapter).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "删除章节失败："+err.Error()))
+		return
+	}
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "删除章节失败："+err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse("章节删除成功"))
 }

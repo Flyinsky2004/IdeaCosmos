@@ -39,3 +39,11 @@ type Feeling struct {
 	VersionId uint   `json:"version_id" gorm:"type:bigint unsigned"`
 	Feeling   string `json:"feeling" gorm:"type:varchar(50)"`
 }
+
+type CreatorComment struct {
+	gorm.Model
+	Content   string `gorm:"type:text"`
+	VersionId uint   `json:"version_id" gorm:"type:bigint unsigned"`
+	UserId    uint   `json:"userId" gorm:"type:bigint unsigned"`
+	User      User   `json:"user" gorm:"foreignKey:UserId"`
+}

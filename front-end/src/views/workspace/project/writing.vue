@@ -1,18 +1,21 @@
 <script setup>
-import { onMounted, reactive, ref, h } from "vue";
+import { onMounted, reactive, ref, h, watch } from "vue";
 import { MdPreview, MdEditor } from "md-editor-v3";
 import "md-editor-v3/lib/preview.css";
 import "md-editor-v3/lib/style.css";
 import { useThemeStore } from "@/stores/theme";
 import Loader from "@/components/loader.vue";
 import { get, post, postJSON } from "@/util/request";
-import { BACKEND_DOMAIN } from "@/util/VARRIBLES";
+import { BACKEND_DOMAIN, FRONTEND_DOMAIN, imagePrefix } from "@/util/VARRIBLES";
 import { message, Modal, InputNumber } from "ant-design-vue";
 const themeStore = useThemeStore();
 const chapter = JSON.parse(localStorage.getItem("chapter"));
 import SpinLoaderLarge from "@/components/spinLoaderLarge.vue";
+import { useUserStore } from "@/stores/user";
 // 添加 loading 状态
 const loading = ref(true);
+const userId = localStorage.getItem("userId");
+const userStore = useUserStore()
 
 onMounted(() => {
   // 修改现有的 onMounted
@@ -35,6 +38,7 @@ const fetchCurrentChapterVersion = () => {
       },
       (messager, data) => {
         options.currentVersion = data;
+        fetchVersionComments(data.ID);
         resolve();
       },
       (messager, data) => {
@@ -337,6 +341,7 @@ const switchToVersion = (version) => {
   options.currentVersion = version;
   chapter.version_id = version.ID;
   localStorage.setItem("chapter", JSON.stringify(chapter));
+  fetchVersionComments(version.ID);
 };
 
 const startEditing = () => {
@@ -380,6 +385,115 @@ const toggleContentCollapse = (type) => {
     options.currentVersionCollapsed = !options.currentVersionCollapsed;
   }
 };
+
+// 评论相关状态
+const commentState = reactive({
+  comments: [],
+  loadingComments: false,
+  commentContent: "",
+  submittingComment: false,
+});
+
+// 获取版本评论
+const fetchVersionComments = (versionId) => {
+  if (!versionId) return;
+  
+  commentState.loadingComments = true;
+  get(
+    "/api/project/creator/comment/list",
+    {
+      version_id: versionId,
+    },
+    (msg, data) => {
+      commentState.comments = data;
+      commentState.loadingComments = false;
+    },
+    (msg) => {
+      message.warning(msg);
+      commentState.loadingComments = false;
+    },
+    (msg) => {
+      message.error(msg);
+      commentState.loadingComments = false;
+    }
+  );
+};
+
+// 添加评论
+const submitComment = () => {
+  if (!commentState.commentContent.trim()) {
+    message.warning("评论内容不能为空");
+    return;
+  }
+  
+  if (!options.currentVersion.ID) {
+    message.warning("请先选择一个版本");
+    return;
+  }
+  
+  commentState.submittingComment = true;
+  
+  postJSON(
+    "/api/project/creator/comment/add",
+    {
+      version_id: options.currentVersion.ID,
+      content: commentState.commentContent,
+    },
+    (msg, data) => {
+      message.success(msg);
+      commentState.commentContent = "";
+      fetchVersionComments(options.currentVersion.ID);
+      commentState.submittingComment = false;
+    },
+    (msg) => {
+      message.warning(msg);
+      commentState.submittingComment = false;
+    },
+    (msg) => {
+      message.error(msg);
+      commentState.submittingComment = false;
+    }
+  );
+};
+
+// 删除评论
+const deleteComment = (commentId) => {
+  Modal.confirm({
+    title: "删除确认",
+    content: "确定要删除这条评论吗？",
+    okText: "确定",
+    cancelText: "取消",
+    onOk() {
+      postJSON(
+        "/api/project/creator/comment/delete",
+        {
+          comment_id: commentId,
+        },
+        (msg) => {
+          message.success(msg);
+          fetchVersionComments(options.currentVersion.ID);
+        },
+        (msg) => {
+          message.warning(msg);
+        },
+        (msg) => {
+          message.error(msg);
+        }
+      );
+    },
+  });
+};
+
+// 监听当前版本变化，加载评论
+watch(
+  () => options.currentVersion,
+  (newVal) => {
+    if (newVal && newVal.ID) {
+      fetchVersionComments(newVal.ID);
+    }
+  },
+  { deep: true }
+);
 </script>
 
 <template>
@@ -719,6 +833,97 @@ const toggleContentCollapse = (type) => {
                   editorId="current-preview"
                   :modelValue="options.currentVersion.content"
                 />
+              </div>
+            </div>
+
+            <!-- 评论区域 -->
+            <div v-if="chapter.version_id !== 0" class="bg-white dark:bg-zinc-900 border theme-border rounded-xl p-4 mt-4 animate__animated animate__fadeIn">
+              <h3 class="text-lg font-semibold text-blue-500 mb-4">版本讨论</h3>
+              
+              <!-- 评论输入框 -->
+              <div class="mb-6">
+                <div class="flex items-start gap-3">
+                  <div class="w-10 h-10 overflow-hidden rounded-full flex-shrink-0">
+                    <img 
+                      :src="BACKEND_DOMAIN + (userStore.user?.avatar || 'uploads/default-avatar.png')" 
+                      class="w-full h-full object-cover" 
+                      alt="用户头像"
+                    />
+                  </div>
+                  <div class="flex-grow">
+                    <textarea 
+                      v-model="commentState.commentContent"
+                      class="w-full min-h-[80px] p-3 rounded-lg border theme-border bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors resize-none"
+                      placeholder="在这里添加你对这个版本的想法和建议..."
+                      :disabled="commentState.submittingComment"
+                    ></textarea>
+                    <div class="flex justify-end mt-2">
+                      <button 
+                        @click="submitComment"
+                        :disabled="commentState.submittingComment"
+                        class="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                        发送
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 评论列表 -->
+              <div class="space-y-6">
+                <!-- 加载状态 -->
+                <div v-if="commentState.loadingComments" class="flex justify-center py-4">
+                  <Loader />
+                </div>
+                
+                <!-- 没有评论 -->
+                <div v-else-if="commentState.comments.length === 0" class="text-center py-10 text-gray-500 dark:text-gray-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  <p>还没有评论，快来发表第一条评论吧！</p>
+                </div>
+                
+                <!-- 评论列表 -->
+                <div v-else class="space-y-4">
+                  <div v-for="comment in commentState.comments" :key="comment.ID" class="border-b theme-border last:border-0 pb-4 last:pb-0">
+                    <div class="flex items-start gap-3">
+                      <div class="w-10 h-10 overflow-hidden rounded-full flex-shrink-0">
+                        <img 
+                          :src="BACKEND_DOMAIN + (comment.user?.avatar || '/avatar/default.jpg')" 
+                          class="w-full h-full object-cover" 
+                          alt="用户头像"
+                        />
+                      </div>
+                      <div class="flex-grow">
+                        <div class="flex items-center justify-between">
+                          <div>
+                            <span class="font-medium text-gray-900 dark:text-gray-100">
+                              {{ comment.user?.nickname || comment.user?.username || '未知用户' }}
+                            </span>
+                            <span class="text-xs text-gray-500 ml-2">
+                              {{ new Date(comment.CreatedAt).toLocaleString() }}
+                            </span>
+                          </div>
+                          <button 
+                            v-if="comment.UserId === parseInt(userId)"
+                            @click="deleteComment(comment.ID)"
+                            class="text-gray-500 hover:text-red-500 transition-colors"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                        <p class="mt-2 text-gray-700 dark:text-gray-300">{{ comment.Content }}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </template>

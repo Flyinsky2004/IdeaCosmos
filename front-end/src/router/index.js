@@ -30,7 +30,7 @@ const router = createRouter({
             component: () => import('@/views/workspace/framework.vue'),
             children: [
                 {
-                    name: 'dataAnlysis',
+                    name: 'dataAnlysiss',
                     path: 'dataAnlysis',
                     component: () => import('@/views/workspace/dataAnlysis.vue')
                 }, {
@@ -90,6 +90,7 @@ const router = createRouter({
             component: () => import('@/views/community/Framework.vue'),
             children:[
                 {
+                    name: 'sy',
                     path: '',
                     component: () => import('@/views/community/Index.vue')
                   },
@@ -141,9 +142,17 @@ const router = createRouter({
                     name: 'projectManagement',
                     path: 'projects',
                     component: () => import('@/views/admin/ProjectManagement.vue')
+                },{
+                    name: "dataAnlysis",
+                    path: "statistics",
+                    component: () => import('@/views/admin/DataAnlysis.vue')
                 }
             ]
-        }
+        },{
+            path: '/team-request/:inviteCode',
+            name: 'TeamRequest',
+            component: () => import('@/views/workspace/TeamRequest.vue')
+          }
     ]
 })
 
