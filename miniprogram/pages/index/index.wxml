@@ -1,0 +1,250 @@
+<!--index.wxml-->
+<view class="container">
+  <!-- 顶部导航栏 -->
+  <view class="nav-bar">
+    <!-- 搜索框 -->
+    <view class="search-bar">
+      <input 
+        type="text" 
+        placeholder="搜索创意项目..." 
+        bindinput="onSearchInput"
+        class="search-input"
+      />
+      <view class="search-icon">
+        <icon type="search" size="16" color="#9ca3af"/>
+      </view>
+    </view>
+
+    <!-- 导航标签 -->
+    <view class="nav-tabs">
+      <view 
+        class="tab {{currentTab === 'latest' ? 'active' : ''}}" 
+        bindtap="switchTab" 
+        data-tab="latest"
+      >
+        <text>推荐</text>
+        <view wx:if="{{currentTab === 'latest'}}" class="tab-indicator"></view>
+      </view>
+      <view 
+        class="tab {{currentTab === 'hot' ? 'active' : ''}}" 
+        bindtap="switchTab" 
+        data-tab="hot"
+      >
+        <text>热门</text>
+        <view wx:if="{{currentTab === 'hot'}}" class="tab-indicator"></view>
+      </view>
+      <view 
+        class="tab {{currentTab === 'categories' ? 'active' : ''}}" 
+        bindtap="switchTab" 
+        data-tab="categories"
+      >
+        <text>分类</text>
+        <view wx:if="{{currentTab === 'categories'}}" class="tab-indicator"></view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 内容区域 -->
+  <scroll-view 
+    scroll-y 
+    class="content-area" 
+    bindscrolltolower="loadMore" 
+    refresher-enabled="{{true}}" 
+    bindrefresherrefresh="onRefresh" 
+    refresher-triggered="{{isRefreshing}}"
+  >
+    <!-- 页面标题 -->
+    <view class="page-title-container">
+      <view class="title-indicator"></view>
+      <view class="page-title">创意社区</view>
+      <view class="title-badge">Beta</view>
+    </view>
+
+    <!-- 加载状态 -->
+    <view wx:if="{{loading}}" class="loading-container">
+      <view class="loading-spinner"></view>
+      <text class="loading-text">正在加载精彩内容...</text>
+    </view>
+
+    <!-- 分类视图 -->
+    <view wx:if="{{currentTab === 'categories'}}" class="categories-container">
+      <!-- 分类标题 -->
+      <view class="category-title-container">
+        <view class="title-indicator"></view>
+        <view class="category-title">分类浏览</view>
+      </view>
+
+      <!-- 分类网格 -->
+      <view class="categories-grid">
+        <view 
+          wx:for="{{categories}}" 
+          wx:key="name"
+          class="category-item {{selectedCategory === item.name ? 'active' : ''}}"
+          bindtap="selectCategory"
+          data-category="{{item.name}}"
+        >
+          <icon type="{{item.icon}}" size="14" wx:if="{{selectedCategory === item.name}}"/>
+          <text>{{item.name}}</text>
+        </view>
+      </view>
+
+      <!-- 分类项目列表 -->
+      <view class="category-projects" wx:if="{{selectedCategory}}">
+        <view 
+          wx:for="{{categoryProjects}}" 
+          wx:key="ID"
+          class="project-card"
+          bindtap="goToDetail"
+          data-id="{{item.ID}}"
+        >
+          <!-- 项目封面 -->
+          <view class="cover-container">
+            <image 
+              src="{{item.coverImageUrl}}" 
+              mode="aspectFill" 
+              class="project-cover"
+              lazy-load="true"
+            />
+            <view class="project-type">{{item.types}}</view>
+            <view class="cover-gradient"></view>
+          </view>
+
+          <!-- 项目信息 -->
+          <view class="project-info">
+            <view class="project-title">{{item.project_name}}</view>
+            
+            <!-- 作者和统计信息 -->
+            <view class="meta-info">
+              <view class="author-info">
+                <text class="author-name">{{item.team.username}}</text>
+              </view>
+              <view class="stats-info">
+                <view class="stat-item">
+                  <view class="stat-icon">
+                    <icon type="success" size="12" color="#9ca3af"/>
+                  </view>
+                  <text>{{item.watches}}</text>
+                </view>
+              </view>
+            </view>
+
+            <!-- 项目描述 -->
+            <view class="project-desc">{{item.social_story}}</view>
+
+            <!-- 标签 -->
+            <view class="tags-container">
+              <view 
+                wx:for="{{item.style}}" 
+                wx:key="*this" 
+                wx:for-item="tag"
+                class="tag"
+              >
+                {{tag}}
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <!-- 空状态提示 -->
+        <view wx:if="{{!loading && categoryProjects.length === 0}}" class="empty-state">
+          <view class="empty-icon">
+            <icon type="info" size="48" color="#3f3f46"/>
+          </view>
+          <view class="empty-text">暂无{{selectedCategory}}类作品</view>
+          <view class="empty-subtext">换个分类试试吧</view>
+        </view>
+
+        <!-- 加载更多 -->
+        <view wx:if="{{categoryHasMore && !loading && categoryProjects.length > 0}}" class="load-more" bindtap="loadMore">
+          加载更多
+        </view>
+        <view wx:if="{{!categoryHasMore && categoryProjects.length > 0}}" class="no-more">
+          没有更多内容了
+        </view>
+      </view>
+    </view>
+
+    <!-- 项目列表 -->
+    <view wx:else class="project-grid">
+      <view 
+        wx:for="{{projects}}" 
+        wx:key="ID"
+        class="project-card"
+        bindtap="goToDetail"
+        data-id="{{item.ID}}"
+      >
+        <!-- 项目封面 -->
+        <view class="cover-container">
+          <image 
+            src="{{item.coverImageUrl}}" 
+            mode="aspectFill" 
+            class="project-cover"
+            lazy-load="true"
+          />
+          <view class="project-type">{{item.types}}</view>
+          <view class="cover-gradient"></view>
+        </view>
+
+        <!-- 项目信息 -->
+        <view class="project-info">
+          <view class="project-title">{{item.project_name}}</view>
+          
+          <!-- 作者和统计信息 -->
+          <view class="meta-info">
+            <view class="author-info">
+              <text class="author-name">{{item.team.username}}</text>
+            </view>
+            <view class="stats-info">
+              <view class="stat-item">
+                <view class="stat-icon">
+                  <icon type="success" size="12" color="#9ca3af"/>
+                </view>
+                <text>{{item.watches}}</text>
+              </view>
+            </view>
+          </view>
+
+          <!-- 项目描述 -->
+          <view class="project-desc">{{item.social_story}}</view>
+
+          <!-- 标签 -->
+          <view class="tags-container">
+            <view 
+              wx:for="{{item.style}}" 
+              wx:key="*this" 
+              wx:for-item="tag"
+              class="tag"
+            >
+              {{tag}}
+            </view>
+          </view>
+          
+          <!-- 查看详情按钮 -->
+          <view class="view-details-btn">
+            <text>查看详情</text>
+            <view class="arrow-icon">
+              <icon type="download" size="12" color="#ffffff"/>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 加载更多 -->
+    <view wx:if="{{hasMore && !loading && projects.length > 0}}" class="load-more" bindtap="loadMore">
+      加载更多
+    </view>
+    <view wx:if="{{!hasMore && projects.length > 0}}" class="no-more">
+      没有更多内容了
+    </view>
+    
+    <!-- 空状态 -->
+    <view wx:if="{{!loading && projects.length === 0}}" class="empty-state">
+      <view class="empty-icon">
+        <icon type="info" size="48" color="#3f3f46"/>
+      </view>
+      <view class="empty-text">暂无内容</view>
+      <view class="empty-subtext">请稍后再来查看</view>
+    </view>
+  </scroll-view>
+</view>

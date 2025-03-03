@@ -199,7 +199,7 @@ const fetchComments = async () => {
     },
     (msg, data) => {
       if (data !== null) {
-        comments.value = data;
+        comments.value = data.reader_comments;
       }
     }
   );
@@ -578,11 +578,11 @@ onMounted(() => {
                       </span>
                     </div>
                     <span class="text-sm text-gray-500">
-                      {{ parseDateTime(comment.created_at) }}
+                      {{ parseDateTime(comment.CreatedAt) }}
                     </span>
                   </div>
                   <p class="mt-2 text-gray-700 dark:text-gray-300">
-                    {{ comment.content }}
+                    {{ comment.Content }}
                   </p>
                 </div>
               </div>

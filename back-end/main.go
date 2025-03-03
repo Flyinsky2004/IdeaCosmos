@@ -67,7 +67,7 @@ func printBanner() {
 	// 指定文件路径
 	filePath := "resource/banner.txt" // 替换为你的文件路径
 
-	// 打开文件
+	// 打开文件p
 	file, err := os.Open(filePath)
 	if err != nil {
 		fmt.Printf("无法打开文件: %v\n", err)

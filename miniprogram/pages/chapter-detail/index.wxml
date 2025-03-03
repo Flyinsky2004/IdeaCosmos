@@ -1,0 +1,167 @@
+<view class="container">
+  <!-- 加载状态 -->
+  <view class="loading-container" wx:if="{{loading}}">
+    <loading-spinner />
+  </view>
+
+  <block wx:elif="{{chapter}}">
+    <!-- 导航栏 -->
+    <view class="nav-bar">
+      <view class="back-btn" bindtap="navigateBack">
+        <text class="back-icon">←</text>
+        <text>返回项目</text>
+      </view>
+      <text class="project-name">{{project.project_name}}</text>
+    </view>
+
+    <!-- 章节内容 -->
+    <view class="chapter-container">
+      <!-- 章节头部信息 -->
+      <view class="chapter-header">
+        <text class="chapter-title">{{chapter.Title}}</text>
+        <text class="chapter-desc">{{chapter.Description}}</text>
+        
+        <view class="chapter-meta">
+          <view class="meta-item">
+            <text class="meta-icon">📅</text>
+            <text class="meta-text">创建于 {{formatDate(chapter.CreatedAt)}}</text>
+          </view>
+          <view class="meta-item">
+            <text class="meta-icon">✏️</text>
+            <text class="meta-text">最后更新 {{formatDate(chapter.UpdatedAt)}}</text>
+          </view>
+          <view class="meta-item">
+            <text class="meta-icon">📝</text>
+            <text class="meta-text">字数统计：{{chapter.current_version.content.length}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 音频播放器 -->
+      <view class="audio-player" wx:if="{{chapter.current_version.audio_path}}">
+        <view class="audio-header">
+          <text class="audio-icon">🎵</text>
+          <text class="audio-title">章节音频</text>
+        </view>
+        <audio 
+          src="{{audioUrl}}"
+          id="myAudio"
+          controls
+          bindplay="onAudioPlay"
+          binderror="onAudioError">
+        </audio>
+      </view>
+
+      <!-- 正文内容 -->
+      <view class="content-container">
+        <!-- 字体大小控制 -->
+        <view class="font-control">
+          <text>字体大小</text>
+          <view class="font-buttons">
+            <view 
+              wx:for="{{fontSizes}}" 
+              wx:key="value"
+              class="font-btn {{currentFontSize === item.value ? 'active' : ''}}"
+              bindtap="changeFontSize"
+              data-size="{{item.value}}">
+              {{item.label}}
+            </view>
+          </view>
+        </view>
+
+        <!-- 使用富文本组件显示内容 -->
+        <rich-text 
+          nodes="{{parsedContent}}" 
+          class="chapter-content {{currentFontSize}}"
+        ></rich-text>
+      </view>
+
+      <!-- 情绪评价 -->
+      <view class="emotion-section">
+        <text class="section-title">你对本篇剧情感受如何？</text>
+        <text class="section-subtitle">选择一个最能代表你此刻感受的情绪</text>
+
+        <view wx:if="{{userFeeling}}" class="selected-emotion">
+          <text>你的感受是:</text>
+          <view class="emotion-tag">
+            <text class="emotion-icon">{{emotionMap[userFeeling.feeling].icon}}</text>
+            <text>{{userFeeling.feeling}}</text>
+          </view>
+        </view>
+
+        <view wx:else class="emotions-grid">
+          <view 
+            wx:for="{{emotions}}" 
+            wx:key="name"
+            class="emotion-item {{selectedEmotion === item.name ? 'selected' : ''}}"
+            bindtap="submitFeeling"
+            data-emotion="{{item.name}}">
+            <text class="emotion-icon">{{item.icon}}</text>
+            <text class="emotion-name">{{item.name}}</text>
+            <text class="emotion-desc">{{item.description}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 评论区域 -->
+      <view class="comments-section">
+        <text class="section-title">读者评论</text>
+
+        <!-- 评论输入框 -->
+        <view class="comment-input">
+          <textarea
+            placeholder="分享你的想法..."
+            value="{{commentContent}}"
+            bindinput="onCommentInput"
+            disabled="{{!isLoggedIn}}"
+          ></textarea>
+          <button class="submit-btn" bindtap="submitComment" disabled="{{!isLoggedIn}}">
+            发表评论
+          </button>
+          <text wx:if="{{!isLoggedIn}}" class="login-tip">
+            请先 <text class="login-link" bindtap="navigateToLogin">登录</text> 后再评论
+          </text>
+        </view>
+
+        <!-- 评论类型切换 -->
+        <view class="comment-types">
+          <view 
+            wx:for="{{commentTypes}}" 
+            wx:key="value"
+            class="type-btn {{commentType === item.value ? 'active' : ''}}"
+            bindtap="changeCommentType"
+            data-type="{{item.value}}">
+            {{item.label}}
+          </view>
+        </view>
+
+        <!-- 评论列表 -->
+        <view class="comments-list">
+          <view wx:if="{{comments.length === 0}}" class="no-comments">
+            还没有评论，快来发表第一条评论吧！
+          </view>
+
+          <view 
+            wx:for="{{comments}}" 
+            wx:key="id" 
+            class="comment-item">
+            <image class="commenter-avatar" src="{{item.user.avatar || '/images/default-avatar.png'}}" mode="aspectFill"></image>
+            <view class="comment-content">
+              <view class="comment-header">
+                <text class="commenter-name">{{item.user.nickname || item.user.username}}</text>
+                <text wx:if="{{item.type === 'author'}}" class="author-tag">作者</text>
+              </view>
+              <text class="comment-text">{{item.Content}}</text>
+              <text class="comment-time">{{formatDate(item.CreatedAt)}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <!-- 错误状态 -->
+  <view class="error-container" wx:else>
+    <text>章节不存在或已被删除</text>
+  </view>
+</view> 

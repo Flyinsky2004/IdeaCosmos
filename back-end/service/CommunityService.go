@@ -5,6 +5,7 @@ import (
 	"back-end/entity/dto"
 	"back-end/entity/pojo"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -25,7 +26,7 @@ func GetIndexCoverList(c *gin.Context) {
 	case "new":
 		// 获取最新项目
 		var projects []pojo.Project
-		if err := config.MysqlDataBase.Where("status != ?", "banned").Order("created_at DESC").Limit(limit).Find(&projects).Error; err != nil {
+		if err := config.MysqlDataBase.Where("status != ?", "banned").Preload("Team").Order("created_at DESC").Limit(limit).Find(&projects).Error; err != nil {
 			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目列表失败"))
 			return
 		}
@@ -52,12 +53,18 @@ func GetIndexCoverList(c *gin.Context) {
 			return
 		}
 
+		// 由于Raw查询不支持Preload，需要单独加载Team信息
+		if err := config.MysqlDataBase.Preload("Team").Find(&projects, "id IN ?", getProjectIds(projects)).Error; err != nil {
+			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目团队信息失败"))
+			return
+		}
+
 		c.JSON(http.StatusOK, dto.SuccessResponse(projects))
 		return
 	case "featured":
 		// 获取推荐项目
 		var projects []pojo.Project
-		if err := config.MysqlDataBase.Where("status = ?", "featured").Order("created_at DESC").Limit(limit).Find(&projects).Error; err != nil {
+		if err := config.MysqlDataBase.Where("status = ?", "featured").Preload("Team").Order("created_at DESC").Limit(limit).Find(&projects).Error; err != nil {
 			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目列表失败"))
 			return
 		}
@@ -67,7 +74,7 @@ func GetIndexCoverList(c *gin.Context) {
 	default:
 		// 默认随机获取项目
 		var projects []pojo.Project
-		if err := config.MysqlDataBase.Where("status != ?", "banned").Order("RAND()").Limit(limit).Find(&projects).Error; err != nil {
+		if err := config.MysqlDataBase.Where("status != ?", "banned").Preload("Team").Order("RAND()").Limit(limit).Find(&projects).Error; err != nil {
 			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目列表失败"))
 			return
 		}
@@ -77,9 +84,18 @@ func GetIndexCoverList(c *gin.Context) {
 	}
 }
 
+// getProjectIds 辅助函数：从项目列表中获取所有项目ID
+func getProjectIds(projects []pojo.Project) []uint {
+	ids := make([]uint, len(projects))
+	for i, project := range projects {
+		ids[i] = project.ID
+	}
+	return ids
+}
+
 // GetProjectDetail 获取项目详情
 func GetProjectDetail(c *gin.Context) {
-	id := c.Param("id")
+	id := c.Query("id")
 	var project pojo.Project
 	if err := config.MysqlDataBase.First(&project, id).Error; err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "项目不存在"))
@@ -144,7 +160,7 @@ func GetProjectDetail(c *gin.Context) {
 
 // GetProjectCharacters 获取项目角色
 func GetProjectCharacters(c *gin.Context) {
-	projectId := c.Param("id")
+	projectId := c.Query("id")
 
 	// 检查项目状态
 	var project pojo.Project
@@ -169,7 +185,7 @@ func GetProjectCharacters(c *gin.Context) {
 
 // GetProjectChapters 获取项目章节列表
 func GetProjectChapters(c *gin.Context) {
-	projectId := c.Param("id")
+	projectId := c.Query("id")
 
 	// 检查项目状态
 	var project pojo.Project
@@ -197,8 +213,9 @@ func GetProjectChapters(c *gin.Context) {
 
 // GetChapterDetail 获取章节详细信息
 func GetChapterDetail(c *gin.Context) {
-	chapterId := c.Param("id")
+	chapterId := c.Query("id")
 
+	// 获取章节信息，同时预加载当前版本和项目信息
 	var chapter pojo.Chapter
 	if err := config.MysqlDataBase.
 		Preload("CurrentVersion", "status = 'approved'"). // 只加载已审核通过的当前版本
@@ -207,13 +224,16 @@ func GetChapterDetail(c *gin.Context) {
 		return
 	}
 
-	// 检查项目状态
+	// 获取项目信息
 	var project pojo.Project
-	if err := config.MysqlDataBase.First(&project, chapter.ProjectID).Error; err != nil {
+	if err := config.MysqlDataBase.
+		Preload("Team").
+		First(&project, chapter.ProjectID).Error; err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目信息失败"))
 		return
 	}
 
+	// 检查项目状态
 	if project.Status == "banned" {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](403, "该项目已下架"))
 		return
@@ -225,7 +245,16 @@ func GetChapterDetail(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.SuccessResponse(chapter))
+	// 构造响应数据
+	response := struct {
+		Chapter pojo.Chapter `json:"chapter"`
+		Project pojo.Project `json:"project"`
+	}{
+		Chapter: chapter,
+		Project: project,
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(response))
 }
 
 // 获取项目评论
@@ -888,7 +917,7 @@ func GetEmotionAnalysis(c *gin.Context) {
 
 // GetVersionComments 获取版本评论
 func GetVersionComments(c *gin.Context) {
-	versionId := c.Param("id")
+	versionId := c.Query("version_id")
 
 	// 检查版本状态
 	var version pojo.ChapterVersion
@@ -898,6 +927,7 @@ func GetVersionComments(c *gin.Context) {
 	}
 
 	if version.Status != "approved" {
+		log.Println(version.Status)
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](403, "该章节版本未通过审核"))
 		return
 	}
@@ -1069,4 +1099,53 @@ func isUserInProjectTeam(userId uint, projectId uint) (bool, error) {
 	}
 
 	return count > 0, nil
+}
+
+// GetProjectCharacterRelationships 获取项目下所有角色关系
+func GetProjectCharacterRelationships(c *gin.Context) {
+	projectId := c.Query("id")
+
+	// 检查项目状态
+	var project pojo.Project
+	if err := config.MysqlDataBase.First(&project, projectId).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "项目不存在"))
+		return
+	}
+
+	if project.Status == "banned" {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](403, "该项目已下架"))
+		return
+	}
+
+	// 获取项目下的所有角色ID
+	var characters []pojo.Character
+	if err := config.MysqlDataBase.Where("project_id = ?", projectId).Find(&characters).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取角色列表失败"))
+		return
+	}
+
+	// 如果没有角色，直接返回空数组
+	if len(characters) == 0 {
+		c.JSON(http.StatusOK, dto.SuccessResponse([]pojo.CharacterRelationShip{}))
+		return
+	}
+
+	// 获取角色ID列表
+	characterIds := make([]uint, len(characters))
+	for i, char := range characters {
+		characterIds[i] = char.ID
+	}
+
+	// 获取所有角色关系
+	var relationships []pojo.CharacterRelationShip
+	if err := config.MysqlDataBase.
+		Where("first_character_id IN ? OR second_character_id IN ?", characterIds, characterIds).
+		Preload("FirstCharacter").
+		Preload("SecondCharacter").
+		Find(&relationships).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取角色关系失败"))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(relationships))
 }

@@ -76,10 +76,18 @@ const fetchProjectDetail = async (projectId) => {
 const fetchCharacters = (projectId) => {
   get(
     "/api/public/getProjectCharacters",
-    { project_id: projectId },
+    { id: projectId },
     (messager, data) => {
-      characters.value = data.characters;
-      relationships.value = data.relationships;
+      characters.value = data;
+    },
+    (messager) => message.warning(messager),
+    (messager) => message.error(messager)
+  );
+  get(
+    "/api/public/getProjectCharacterRelationships",
+    { id: projectId },
+    (messager, data) => {
+      relationships.value = data;
     },
     (messager) => message.warning(messager),
     (messager) => message.error(messager)
@@ -93,7 +101,7 @@ const fetchChapters = async (projectId) => {
     const response = await new Promise((resolve, reject) => {
       get(
         "/api/public/getProjectChapters",
-        { project_id: projectId },
+        { id: projectId },
         (messager, data) => resolve(data),
         (messager) => reject(messager),
         (messager) => reject(messager)
