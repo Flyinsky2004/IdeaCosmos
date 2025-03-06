@@ -114,6 +114,13 @@ const router = createRouter({
                     path: 'chapter/:id',
                     name: 'ChapterView',
                     component: () => import('@/views/workspace/project/chapterView.vue'),
+                },{
+                    path: 'chat',
+                    component: () => import('@/views/community/ChatGroups.vue')
+
+                },{
+                    path: 'notifications',
+                    component: () => import('@/views/community/Notifications.vue')
                 }
             ]
         },{

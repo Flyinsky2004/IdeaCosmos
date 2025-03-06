@@ -1,141 +1,213 @@
-<view class="container">
+<view class="container" style="padding-top: 0;">
   <!-- 加载状态 -->
   <view class="loading-container" wx:if="{{loading}}">
     <view class="loading-spinner"></view>
-    <text class="loading-text">加载中...</text>
+    <text class="loading-text">正在加载精彩内容...</text>
   </view>
 
   <block wx:elif="{{project}}">
     <!-- 项目头部信息 -->
-    <view class="project-header">
-      <image class="project-cover" src="{{project.cover_image}}" mode="aspectFill"></image>
+    <view class="project-header" style="margin-top: 0;">
+      <view class="cover-container">
+        <image class="project-cover" src="{{project.cover_image}}" mode="aspectFill"></image>
+        <view class="project-type">{{project.types}}</view>
+        <view class="cover-gradient"></view>
+      </view>
+      
       <view class="header-content">
-        <view class="project-info">
-          <text class="project-title">{{project.project_name}}</text>
-          <text class="project-type">{{project.types}}</text>
-          
-          <!-- 数据统计 -->
-          <view class="stats-container">
+        <view class="project-title">{{project.project_name}}</view>
+        
+        <!-- 作者和统计信息 -->
+        <view class="meta-info">
+          <view class="author-info">
+            <image class="author-avatar" src="{{project.team.avatar}}" mode="aspectFill"></image>
+            <text class="author-name">{{project.team.username}}</text>
+          </view>
+          <view class="stats-info">
             <view class="stat-item">
-              <text class="stat-icon">👁️</text>
-              <text class="stat-value">{{project.watches}} 浏览</text>
+              <view class="stat-icon">👁️</view>
+              <text>{{project.watches}}</text>
             </view>
-            <view class="stat-item" bindtap="toggleFavorite">
-              <text class="stat-icon">{{isFavorited ? '⭐' : '☆'}}</text>
-              <text class="stat-value">{{project.favorites}} 收藏</text>
+            <view class="stat-item favorite-item {{isFavorited ? 'favorited' : ''}}" bindtap="toggleFavorite">
+              <view class="stat-icon">{{isFavorited ? '⭐' : '☆'}}</view>
+              <text>{{project.favorites}}</text>
             </view>
-          </view>
-        </view>
-
-        <!-- 项目描述 -->
-        <view class="description-section">
-          <text class="section-title">剧情简介</text>
-          <text class="description-text">{{project.social_story}}</text>
-        </view>
-
-        <!-- 创作风格标签 -->
-        <view class="tags-section">
-          <text class="section-title">创作风格</text>
-          <view class="tags-container">
-            <text class="tag-item" wx:for="{{project.style}}" wx:key="*this">{{item}}</text>
-          </view>
-        </view>
-
-        <!-- 适宜人群标签 -->
-        <view class="tags-section">
-          <text class="section-title">适宜人群</text>
-          <view class="tags-container">
-            <text class="tag-item market-tag" wx:for="{{project.market_people}}" wx:key="*this">{{item}}</text>
-          </view>
-        </view>
-
-        <!-- 创作团队 -->
-        <view class="team-section">
-          <text class="section-title">创作团队</text>
-          <view class="team-info">
-            <image class="team-avatar" src="{{project.team.avatar}}" mode="aspectFill"></image>
-            <text class="team-name">{{project.team.username}}</text>
           </view>
         </view>
       </view>
     </view>
 
-    <!-- 角色列表 -->
-    <view class="section-card">
-      <text class="section-title">角色列表</text>
-      <view class="characters-grid">
-        <view class="character-item" wx:for="{{characters}}" wx:key="ID">
-          <image class="character-avatar" src="{{item.avatar}}" mode="aspectFill"></image>
-          <text class="character-name">{{item.name}}</text>
-          <text class="character-desc">{{item.description}}</text>
+    <!-- 内容区域 -->
+    <view class="content-area">
+      <!-- 项目描述 -->
+      <view class="content-section">
+        <view class="section-header">
+          <text class="section-title" style="color: #F9FAFB;">剧情简介</text>
+        </view>
+        <view class="project-desc" style="color: #F3F4F6;">{{project.social_story}}</view>
+      </view>
+
+      <!-- 创作风格 -->
+      <view class="content-section">
+        <view class="section-header">
+          <text class="section-title" style="color: #F9FAFB;">创作风格</text>
+        </view>
+        <view class="tags-container">
+          <view 
+            wx:for="{{project.style}}" 
+            wx:key="*this" 
+            wx:for-item="tag"
+            class="tag"
+            style="color: #F3F4F6; background-color: rgba(107, 114, 128, 0.4);"
+          >
+            {{tag}}
+          </view>
         </view>
       </view>
-    </view>
 
-    <!-- 章节列表 -->
-    <view class="section-card">
-      <view class="section-header">
-        <text class="section-title">创作篇章</text>
-        <text class="chapter-count">共 {{chapters.length}} 章</text>
+      <!-- 适宜人群 -->
+      <view class="content-section">
+        <view class="section-header">
+          <text class="section-title" style="color: #F9FAFB;">适宜人群</text>
+        </view>
+        <view class="tags-container">
+          <view 
+            wx:for="{{project.market_people}}" 
+            wx:key="*this" 
+            class="tag market-tag"
+            style="color: #F3F4F6; background-color: rgba(107, 114, 128, 0.4);"
+          >
+            {{item}}
+          </view>
+        </view>
       </view>
-      <view class="chapters-container">
-        <view class="chapter-item {{item.CurrentVersion.ID === 0 ? 'pending' : ''}}" 
-              wx:for="{{chapters}}" 
+
+      <!-- 角色列表 -->
+      <view class="content-section" wx:if="{{characters.length > 0}}">
+        <view class="section-header">
+          <text class="section-title">角色列表</text>
+        </view>
+        <scroll-view scroll-x enable-flex class="characters-scroll" show-scrollbar="false">
+          <view class="characters-container">
+            <view 
+              class="character-item" 
+              wx:for="{{characters}}" 
               wx:key="ID"
-              bindtap="navigateToChapter"
-              data-id="{{item.ID}}">
-          <view class="chapter-info">
-            <text class="chapter-title">{{item.Title}}</text>
-            <text class="chapter-status {{item.CurrentVersion.ID === 0 ? 'pending' : 'published'}}">
-              {{item.CurrentVersion.ID === 0 ? '未开始创作' : '已发布'}}
-            </text>
+            >
+              <image class="character-avatar" src="{{item.avatar}}" mode="aspectFill"></image>
+              <view class="character-info">
+                <text class="character-name">{{item.name}}</text>
+                <text class="character-desc">{{item.description}}</text>
+              </view>
+            </view>
           </view>
-          <text class="chapter-desc">{{item.Description}}</text>
-          <view class="chapter-meta">
-            <text class="update-time">更新于 {{item.UpdatedAt}}</text>
-            <text class="word-count" wx:if="{{item.CurrentVersion.ID !== 0}}">
-              字数：{{item.CurrentVersion.content.length}}
-            </text>
+        </scroll-view>
+      </view>
+
+      <!-- 章节列表 -->
+      <view class="content-section">
+        <view class="section-header">
+          <text class="section-title">创作篇章</text>
+          <text class="chapter-count">{{chapters.length}}章</text>
+        </view>
+        
+        <view class="chapters-container">
+          <view 
+            class="chapter-item {{(!item.current_version || item.current_version.ID === 0) ? 'pending' : ''}}" 
+            wx:for="{{chapters}}" 
+            wx:key="ID"
+            bindtap="navigateToChapter"
+            data-id="{{item.ID}}"
+          >
+            <view class="chapter-info">
+              <text class="chapter-title">{{item.Title}}</text>
+              <text class="chapter-status {{(!item.current_version || item.current_version.ID === 0) ? 'pending' : 'published'}}">
+                {{(!item.current_version || item.current_version.ID === 0) ? '未开始' : '已发布'}}
+              </text>
+            </view>
+            <text class="chapter-desc">{{item.Description}}</text>
+            <view class="chapter-meta">
+              <text class="update-time">更新于 {{item.UpdatedAt}}</text>
+              <text class="word-count" wx:if="{{item.current_version && item.current_version.ID !== 0}}">
+                字数：{{item.current_version.content.length}}
+              </text>
+            </view>
+          </view>
+        </view>
+        
+        <!-- 空状态 -->
+        <view wx:if="{{chapters.length === 0}}" class="empty-state">
+          <view class="empty-icon">
+            <icon type="info" size="40" color="#3f3f46"/>
+          </view>
+          <view class="empty-text">暂无章节</view>
+          <view class="empty-subtext">作者正在创作中...</view>
+        </view>
+      </view>
+
+      <!-- 评论区域 -->
+      <view class="content-section">
+        <view class="section-header">
+          <text class="section-title">项目评论</text>
+        </view>
+        
+        <view class="comment-input">
+          <textarea 
+            placeholder="分享你的想法..." 
+            value="{{commentContent}}" 
+            bindinput="onCommentInput"
+            class="input-area"
+            placeholder-class="placeholder-style"
+            maxlength="200"
+          ></textarea>
+          <button class="submit-btn" bindtap="submitComment">发表</button>
+        </view>
+        
+        <view class="comments-list">
+          <block wx:if="{{comments.length > 0}}">
+            <view class="comment-item" wx:for="{{comments}}" wx:key="ID">
+              <image class="commenter-avatar" src="{{ item.user.avatar}}" mode="aspectFill"></image>
+              <view class="comment-content">
+                <view class="comment-header">
+                  <text class="commenter-name">{{item.user.nickname || item.user.username}}</text>
+                  <text class="comment-time">{{item.CreatedAt}}</text>
+                </view>
+                <text class="comment-text">{{item.Content}}</text>
+              </view>
+            </view>
+          </block>
+          
+          <!-- 空状态 -->
+          <view wx:else class="empty-state">
+            <view class="empty-icon">
+              <icon type="info" size="40" color="#3f3f46"/>
+            </view>
+            <view class="empty-text">暂无评论</view>
+            <view class="empty-subtext">来说两句吧~</view>
           </view>
         </view>
       </view>
     </view>
 
-    <!-- 评论区域 -->
-    <view class="section-card">
-      <text class="section-title">项目评论</text>
-      <view class="comment-input">
-        <textarea 
-          placeholder="分享你的想法..." 
-          value="{{commentContent}}" 
-          bindinput="onCommentInput"
-          class="input-area"
-          placeholder-class="placeholder-style"
-        ></textarea>
-        <button class="submit-btn" bindtap="submitComment">发表评论</button>
-      </view>
-      <view class="comments-list">
-        <block wx:if="{{comments.length > 0}}">
-          <view class="comment-item" wx:for="{{comments}}" wx:key="ID">
-            <image class="commenter-avatar" src="{{item.user.avatar}}" mode="aspectFill"></image>
-            <view class="comment-content">
-              <view class="comment-header">
-                <text class="commenter-name">{{item.user.nickname || item.user.username}}</text>
-                <text class="comment-time">{{item.CreatedAt}}</text>
-              </view>
-              <text class="comment-text">{{item.Content}}</text>
-            </view>
-          </view>
-        </block>
-        <view wx:else class="empty-comments">
-          <text class="empty-text">暂无评论，来说两句吧~</text>
-        </view>
-      </view>
+    <!-- 底部操作栏 -->
+    <view class="action-bar">
+      <button class="action-btn favorite-btn {{isFavorited ? 'favorited' : ''}}" bindtap="toggleFavorite">
+        <view class="btn-icon">{{isFavorited ? '⭐' : '☆'}}</view>
+        <text>{{isFavorited ? '已收藏' : '收藏'}}</text>
+      </button>
+      <button class="action-btn share-btn" open-type="share">
+        <view class="btn-icon">🔗</view>
+        <text>分享</text>
+      </button>
     </view>
   </block>
 
   <!-- 错误状态 -->
   <view class="error-container" wx:else>
-    <text class="error-text">项目不存在或已被删除</text>
+    <view class="empty-icon">
+      <icon type="warn" size="40" color="#3f3f46"/>
+    </view>
+    <view class="empty-text">项目不存在或已被删除</view>
+    <view class="empty-subtext">请返回首页查看其他项目</view>
   </view>
 </view> 

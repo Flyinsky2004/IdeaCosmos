@@ -1,0 +1,13 @@
+/* components/divider/index.wxss */
+.divider {
+  height: 1px;
+  background-color: rgba(63, 63, 70, 0.7);
+  width: 100%;
+}
+
+/* 暗色模式适配 */
+@media (prefers-color-scheme: dark) {
+  .divider {
+    background-color: #27272a;
+  }
+} 

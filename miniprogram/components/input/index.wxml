@@ -1,0 +1,11 @@
+<input 
+  class="custom-input"
+  value="{{value}}"
+  type="{{type}}"
+  password="{{password}}"
+  placeholder="{{placeholder}}"
+  placeholder-style="color: rgba(156, 163, 175, 0.8);"
+  bindinput="handleInput"
+  focus="{{focus}}"
+  disabled="{{disabled}}"
+/> 

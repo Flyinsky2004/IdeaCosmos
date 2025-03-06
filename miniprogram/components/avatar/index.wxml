@@ -1,0 +1,9 @@
+<view class="avatar-wrapper" bindtap="handleTap">
+  <image class="avatar" src="{{src}}" mode="aspectFill"/>
+  <view wx:if="{{editable}}" class="avatar-overlay">
+    <view class="camera-icon">
+      <view class="icon-circle"></view>
+    </view>
+    <text class="overlay-text">{{overlayText}}</text>
+  </view>
+</view> 

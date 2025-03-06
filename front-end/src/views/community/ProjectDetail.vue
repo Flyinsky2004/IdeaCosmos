@@ -47,7 +47,7 @@ const fetchProjectDetail = async (projectId) => {
   try {
     // 构建请求参数
     const params = {
-      project_id: projectId
+      id: projectId
     }
     
     // 如果用户已登录,添加user_id参数

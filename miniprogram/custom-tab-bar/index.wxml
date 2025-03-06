@@ -1,0 +1,19 @@
+<!--custom-tab-bar/index.wxml-->
+<view class="tab-bar">
+  <view class="tab-bar-item {{selected === 0 ? 'active' : ''}}" data-index="0" data-path="/pages/index/index" bindtap="switchTab">
+    <icon type="success" size="24" color="{{selected === 0 ? '#3b82f6' : '#9ca3af'}}"/>
+    <text>浏览</text>
+  </view>
+  <view class="tab-bar-item {{selected === 1 ? 'active' : ''}}" data-index="1" data-path="/pages/notification/index" bindtap="switchTab">
+    <icon type="info" size="24" color="{{selected === 1 ? '#3b82f6' : '#9ca3af'}}"/>
+    <text>通知</text>
+  </view>
+  <view class="tab-bar-item {{selected === 2 ? 'active' : ''}}" data-index="2" data-path="/pages/message/index" bindtap="switchTab">
+    <icon type="chat" size="24" color="{{selected === 2 ? '#3b82f6' : '#9ca3af'}}"/>
+    <text>私信</text>
+  </view>
+  <view class="tab-bar-item {{selected === 3 ? 'active' : ''}}" data-index="3" data-path="/pages/profile/index" bindtap="switchTab">
+    <icon type="personal" size="24" color="{{selected === 3 ? '#3b82f6' : '#9ca3af'}}"/>
+    <text>我的</text>
+  </view>
+</view> 

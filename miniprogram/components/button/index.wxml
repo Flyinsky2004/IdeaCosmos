@@ -1,0 +1,7 @@
+<button 
+  class="custom-btn {{type}} {{disabled ? 'disabled' : ''}} {{block ? 'block' : ''}}"
+  hover-class="{{type === 'danger' ? 'btn-hover-danger' : 'btn-hover'}}"
+  disabled="{{disabled}}"
+  bindtap="handleTap">
+  <slot></slot>
+</button> 

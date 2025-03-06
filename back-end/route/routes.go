@@ -103,6 +103,40 @@ func RegisterRoutes(r *gin.Engine) {
 		projectGroup.POST("deleteCharacter", service.DeleteCharacter)
 	}
 
+	// 新增通知服务路由组
+	notificationGroup := r.Group("/api/notifications", preHandler())
+	{
+		notificationGroup.GET("", service.GetUserNotifications)
+		notificationGroup.GET("/:id", service.GetNotificationDetail)
+		notificationGroup.POST("/:id/read", service.MarkNotificationAsRead)
+		notificationGroup.POST("/read-all", service.MarkAllNotificationsAsRead)
+		notificationGroup.DELETE("/:id", service.DeleteNotification)
+		notificationGroup.DELETE("", service.DeleteAllNotifications)
+		notificationGroup.GET("/unread-count", service.GetUnreadNotificationCount)
+		notificationGroup.GET("/settings", service.GetNotificationSettings)
+		notificationGroup.POST("/settings", service.UpdateNotificationSettings)
+	}
+
+	// 新增群组聊天服务路由组
+	chatGroup := r.Group("/api/chat", preHandler())
+	{
+		// 群组管理
+		chatGroup.POST("/groups", service.CreateChatGroup)
+		chatGroup.GET("/groups", service.GetUserChatGroups)
+		chatGroup.GET("/groups/:id", service.GetChatGroupDetail)
+		chatGroup.PUT("/groups/:id", service.UpdateChatGroup)
+		chatGroup.DELETE("/groups/:id", service.DeleteChatGroup)
+
+		// 成员管理
+		chatGroup.POST("/groups/:id/members", service.AddGroupMember)
+		chatGroup.DELETE("/groups/:id/members/:userId", service.RemoveGroupMember)
+		chatGroup.POST("/groups/:id/leave", service.LeaveGroup)
+		chatGroup.GET("/groups/:id/members", service.GetGroupMembers)
+		chatGroup.PUT("/groups/:id/members/:userId", service.UpdateGroupMemberInfo)
+		chatGroup.POST("/groups/:id/members/:userId/mute", service.MuteGroupMember)
+		chatGroup.POST("/groups/:id/members/:userId/admin", service.SetGroupAdmin)
+	}
+
 	// 新增管理员路由组
 	adminGroup := r.Group("/api/admin", preHandler(), service.AdminAuthMiddleware())
 	{
@@ -134,6 +168,7 @@ func RegisterRoutes(r *gin.Engine) {
 		// 数据分析
 		adminGroup.GET("/statistics/overview", service.GetAdminStatistics)
 		adminGroup.GET("/statistics/project-types", service.GetProjectTypeStats)
+		adminGroup.POST("/notifications/system", service.SendSystemNotification)
 	}
 
 	websocketGroup := r.Group("/api/ws")

@@ -275,5 +275,13 @@ Page({
     } finally {
       this.setData({ loading: false })
     }
+  },
+  onShow() {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({
+        selected: 0
+      });
+    }
+    // 如果有其他 onShow 逻辑，保留它们
   }
 })

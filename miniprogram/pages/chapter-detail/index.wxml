@@ -1,34 +1,30 @@
 <view class="container">
   <!-- 加载状态 -->
   <view class="loading-container" wx:if="{{loading}}">
-    <loading-spinner />
+    <view class="loading-spinner"></view>
+    <text class="loading-text">正在加载章节内容...</text>
   </view>
 
   <block wx:elif="{{chapter}}">
-    <!-- 导航栏 -->
-    <view class="nav-bar">
-      <view class="back-btn" bindtap="navigateBack">
-        <text class="back-icon">←</text>
-        <text>返回项目</text>
-      </view>
-      <text class="project-name">{{project.project_name}}</text>
-    </view>
 
     <!-- 章节内容 -->
     <view class="chapter-container">
       <!-- 章节头部信息 -->
       <view class="chapter-header">
-        <text class="chapter-title">{{chapter.Title}}</text>
+        <view class="page-title-container">
+          <view class="title-indicator"></view>
+          <text class="chapter-title">{{chapter.Title}}</text>
+        </view>
         <text class="chapter-desc">{{chapter.Description}}</text>
         
         <view class="chapter-meta">
           <view class="meta-item">
             <text class="meta-icon">📅</text>
-            <text class="meta-text">创建于 {{formatDate(chapter.CreatedAt)}}</text>
+            <text class="meta-text">创建于 {{chapter.CreatedAt}}</text>
           </view>
           <view class="meta-item">
             <text class="meta-icon">✏️</text>
-            <text class="meta-text">最后更新 {{formatDate(chapter.UpdatedAt)}}</text>
+            <text class="meta-text">最后更新 {{chapter.UpdatedAt}}</text>
           </view>
           <view class="meta-item">
             <text class="meta-icon">📝</text>
@@ -43,13 +39,75 @@
           <text class="audio-icon">🎵</text>
           <text class="audio-title">章节音频</text>
         </view>
-        <audio 
-          src="{{audioUrl}}"
-          id="myAudio"
-          controls
-          bindplay="onAudioPlay"
-          binderror="onAudioError">
-        </audio>
+        
+        <!-- 自定义音频控制器 -->
+        <view class="custom-audio-player">
+          <!-- 隐藏的原生audio组件用于实际播放 -->
+          <audio 
+            src="{{audioUrl}}"
+            id="myAudio"
+            bindplay="onAudioPlay"
+            bindpause="onAudioPause"
+            bindtimeupdate="onAudioTimeUpdate"
+            bindended="onAudioEnded"
+            binderror="onAudioError">
+          </audio>
+          
+          <!-- 播放控制按钮 -->
+          <view class="audio-controls">
+            <!-- 快退15秒 -->
+            <view class="control-btn rewind-btn" bindtap="rewindAudio">
+              <text class="control-icon">⏪</text>
+              <text class="control-text">15s</text>
+            </view>
+            
+            <!-- 播放/暂停按钮 -->
+            <view class="control-btn play-btn {{isPlaying ? 'playing' : ''}}" bindtap="togglePlayAudio">
+              <text class="control-icon">{{isPlaying ? '⏸' : '▶️'}}</text>
+            </view>
+            
+            <!-- 快进15秒 -->
+            <view class="control-btn forward-btn" bindtap="forwardAudio">
+              <text class="control-icon">⏩</text>
+              <text class="control-text">15s</text>
+            </view>
+          </view>
+          
+          <!-- 进度条 -->
+          <view class="progress-container">
+            <text class="time-text">{{currentTimeText}}</text>
+            <view class="progress-bar-container">
+              <slider 
+                class="progress-slider" 
+                min="0" 
+                max="{{audioDuration}}" 
+                value="{{currentTime}}"
+                activeColor="#3b82f6"
+                backgroundColor="rgba(63, 63, 70, 0.6)"
+                block-size="12"
+                block-color="#06b6d4"
+                bindchange="onSliderChange"
+                bindchanging="onSliderChanging"
+              />
+            </view>
+            <text class="time-text">{{durationText}}</text>
+          </view>
+          
+          <!-- 播放速度控制 -->
+          <view class="playback-rate">
+            <text class="rate-label">播放速度:</text>
+            <view class="rate-buttons">
+              <view 
+                wx:for="{{playbackRates}}" 
+                wx:key="value"
+                class="rate-btn {{currentRate === item.value ? 'active' : ''}}"
+                bindtap="changePlaybackRate"
+                data-rate="{{item.value}}">
+                {{item.label}}
+              </view>
+            </view>
+          </view>
+        </view>
       </view>
 
       <!-- 正文内容 -->
@@ -71,14 +129,17 @@
 
         <!-- 使用富文本组件显示内容 -->
         <rich-text 
-          nodes="{{parsedContent}}" 
+          nodes="{{chapter.current_version.content}}" 
           class="chapter-content {{currentFontSize}}"
         ></rich-text>
       </view>
 
       <!-- 情绪评价 -->
       <view class="emotion-section">
-        <text class="section-title">你对本篇剧情感受如何？</text>
+        <view class="section-title-container">
+          <view class="title-indicator"></view>
+          <text class="section-title">你对本篇剧情感受如何？</text>
+        </view>
         <text class="section-subtitle">选择一个最能代表你此刻感受的情绪</text>
 
         <view wx:if="{{userFeeling}}" class="selected-emotion">
@@ -105,7 +166,10 @@
 
       <!-- 评论区域 -->
       <view class="comments-section">
-        <text class="section-title">读者评论</text>
+        <view class="section-title-container">
+          <view class="title-indicator"></view>
+          <text class="section-title">读者评论</text>
+        </view>
 
         <!-- 评论输入框 -->
         <view class="comment-input">
@@ -145,7 +209,7 @@
             wx:for="{{comments}}" 
             wx:key="id" 
             class="comment-item">
-            <image class="commenter-avatar" src="{{item.user.avatar || '/images/default-avatar.png'}}" mode="aspectFill"></image>
+            <image class="commenter-avatar" src="{{'https://idea.1024110.xyz/api/'+item.user.avatar || '/images/default-avatar.png'}}" mode="aspectFill"></image>
             <view class="comment-content">
               <view class="comment-header">
                 <text class="commenter-name">{{item.user.nickname || item.user.username}}</text>
@@ -162,6 +226,10 @@
 
   <!-- 错误状态 -->
   <view class="error-container" wx:else>
-    <text>章节不存在或已被删除</text>
+    <view class="empty-state">
+      <text class="empty-icon">📚</text>
+      <text class="empty-text">章节不存在或已被删除</text>
+      <text class="empty-subtext">请返回项目页面查看其他章节</text>
+    </view>
   </view>
 </view> 

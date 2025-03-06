@@ -1,0 +1,59 @@
+/* components/card/index.wxss */
+.card {
+  background-color: rgba(39, 39, 42, 0.8);
+  border-radius: 24rpx;
+  border: 1px solid rgba(63, 63, 70, 0.7);
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  animation: fadeIn 0.6s ease-out;
+  backdrop-filter: blur(10px);
+  transform: translateZ(0);
+}
+
+.card-header {
+  padding: 40rpx;
+  border-bottom: 1px solid rgba(63, 63, 70, 0.7);
+}
+
+.card-title {
+  font-size: 40rpx;
+  font-weight: bold;
+  color: #f3f4f6;
+}
+
+.card-subtitle {
+  font-size: 24rpx;
+  color: #9ca3af;
+  margin-top: 8rpx;
+}
+
+.card-content {
+  padding: 40rpx;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 暗色模式适配 */
+@media (prefers-color-scheme: dark) {
+  .card {
+    background-color: rgba(24, 24, 27, 0.9);
+    border-color: #27272a;
+  }
+
+  .card-title {
+    color: #e5e7eb;
+  }
+
+  .card-subtitle {
+    color: #9ca3af;
+  }
+} 

@@ -97,7 +97,7 @@ func getProjectIds(projects []pojo.Project) []uint {
 func GetProjectDetail(c *gin.Context) {
 	id := c.Query("id")
 	var project pojo.Project
-	if err := config.MysqlDataBase.First(&project, id).Error; err != nil {
+	if err := config.MysqlDataBase.Preload("Team").First(&project, id).Error; err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "项目不存在"))
 		return
 	}

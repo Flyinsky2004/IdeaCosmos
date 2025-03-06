@@ -1,0 +1,19 @@
+/* components/form-item/index.wxss */
+.form-item {
+  margin-bottom: 32rpx;
+}
+
+.label {
+  display: block;
+  font-size: 28rpx;
+  color: #9ca3af;
+  margin-bottom: 12rpx;
+  font-weight: 500;
+}
+
+/* 暗色模式适配 */
+@media (prefers-color-scheme: dark) {
+  .label {
+    color: #9ca3af;
+  }
+} 

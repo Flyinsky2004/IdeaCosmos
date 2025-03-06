@@ -1,0 +1,81 @@
+<!--pages/profile/index.wxml-->
+<view class="container">
+  <!-- 未登录状态显示登录表单 -->
+  <block wx:if="{{!isLoggedIn}}">
+    <view class="login-card">
+      <view class="login-header">
+        <view class="title">登录</view>
+        <view class="subtitle">欢迎来到创剧星球</view>
+      </view>
+      
+      <view class="form-group">
+        <view class="form-item">
+          <text class="label">用户名</text>
+          <input class="input" value="{{loginForm.username}}" bindinput="handleInput" data-field="username" placeholder="请输入用户名"/>
+        </view>
+        
+        <view class="form-item">
+          <text class="label">密码</text>
+          <input class="input" password value="{{loginForm.password}}" bindinput="handleInput" data-field="password" placeholder="请输入密码"/>
+        </view>
+      </view>
+      
+      <button class="login-btn" hover-class="btn-hover" bindtap="handleLogin">登录</button>
+      
+      <view class="register-link">
+        还没有账号? <text class="link" bindtap="goToRegister">注册一个</text>
+      </view>
+    </view>
+  </block>
+
+  <!-- 已登录状态显示个人信息 -->
+  <block wx:else>
+    <view class="profile-card">
+      <view class="profile-header">
+        <view class="header-title">个人信息</view>
+        <view class="header-subtitle">在这里您可以查看和编辑您的个人信息</view>
+      </view>
+
+      <view class="profile-content">
+        <view class="avatar-section">
+          <view class="avatar-wrapper" bindtap="showChangeAvatar">
+            <image class="avatar" src="{{'https://idea.1024110.xyz/api/' + userInfo.avatar}}" mode="aspectFill"/>
+            <view class="avatar-overlay">
+              <view class="camera-icon">
+                <view class="icon-circle"></view>
+              </view>
+              <text class="overlay-text">更换头像</text>
+            </view>
+          </view>
+          <text class="username-display">{{userInfo.username}}</text>
+        </view>
+
+        <view class="divider"></view>
+
+        <view class="info-section">
+          <view class="info-item">
+            <text class="info-label">用户名</text>
+            <block wx:if="{{isEditing}}">
+              <input class="info-input" value="{{editForm.username}}" bindinput="handleEditInput" data-field="username" placeholder="请输入用户名"/>
+            </block>
+            <block wx:else>
+              <text class="info-value">{{userInfo.username}}</text>
+            </block>
+          </view>
+
+          <view class="info-item">
+            <text class="info-label">邮箱</text>
+            <text class="info-value">{{userInfo.email}}</text>
+          </view>
+
+          <view class="button-group">
+            <button class="edit-btn {{isEditing ? 'save' : ''}}" hover-class="btn-hover" bindtap="handleEdit">
+              {{isEditing ? '保存' : '编辑资料'}}
+            </button>
+            <button wx:if="{{!isEditing}}" class="logout-btn" hover-class="btn-hover-danger" bindtap="handleLogout">退出登录</button>
+          </view>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>

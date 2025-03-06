@@ -1,6 +1,6 @@
-// const BACKEND_DOMAIN = 'http://localhost:8080/api/'
-// const FRONTEND_DOMAIN = 'http://localhost:5173/'
-// const imagePrefix = 'http://localhost:8080/api/uploads/'
+const BACKEND_DOMAIN = 'http://localhost:8080/api/'
+const FRONTEND_DOMAIN = 'http://localhost:5173/'
+const imagePrefix = 'http://localhost:8080/api/uploads/'
 
 // 获取当前域名
 const currentDomain = window.location.protocol + '//' + window.location.host
@@ -9,9 +9,9 @@ const currentDomain = window.location.protocol + '//' + window.location.host
 const isDevEnv = process.env.NODE_ENV === 'development'
 const apiPrefix = isDevEnv ? '/api' : '/api'
 
-const BACKEND_DOMAIN = `${currentDomain}${apiPrefix}/`
-const FRONTEND_DOMAIN = `${currentDomain}/`
-const imagePrefix = `${currentDomain}${apiPrefix}/uploads/`
+// const BACKEND_DOMAIN = `${currentDomain}${apiPrefix}/`
+// const FRONTEND_DOMAIN = `${currentDomain}/`
+// const imagePrefix = `${currentDomain}${apiPrefix}/uploads/`
 
 export { imagePrefix , BACKEND_DOMAIN , audioModels , femaleAvatar , maleAvatar ,FRONTEND_DOMAIN}
 const audioModels = [

@@ -1,0 +1,378 @@
+/* pages/profile/index.wxss */
+.container {
+  min-height: 100vh;
+  background-color: #18181b;
+  color: #f3f4f6;
+  padding: 40rpx 32rpx;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* 卡片通用样式 */
+.login-card,
+.profile-card {
+  background-color: rgba(39, 39, 42, 0.8);
+  border-radius: 24rpx;
+  border: 1px solid rgba(63, 63, 70, 0.7);
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  animation: fadeIn 0.6s ease-out;
+  backdrop-filter: blur(10px);
+  transform: translateZ(0);
+}
+
+/* 登录表单样式 */
+.login-card {
+  padding: 48rpx 40rpx;
+  max-width: 650rpx;
+  margin: 0 auto;
+}
+
+.login-header {
+  margin-bottom: 48rpx;
+}
+
+.title {
+  font-size: 48rpx;
+  text-align: center;
+  color: #f3f4f6;
+  font-weight: bold;
+  letter-spacing: 2rpx;
+}
+
+.subtitle {
+  font-size: 32rpx;
+  text-align: center;
+  color: #9ca3af;
+  margin-top: 16rpx;
+}
+
+.form-group {
+  margin-bottom: 40rpx;
+}
+
+.form-item {
+  margin-bottom: 32rpx;
+}
+
+.label {
+  display: block;
+  font-size: 28rpx;
+  color: #9ca3af;
+  margin-bottom: 12rpx;
+  font-weight: 500;
+}
+
+.input {
+  width: 100%;
+  height: 88rpx;
+  padding: 0 24rpx;
+  background-color: rgba(63, 63, 70, 0.6);
+  border: 2rpx solid rgba(82, 82, 91, 0.5);
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  color: #f3f4f6;
+  transition: all 0.3s;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  border-color: #3b82f6;
+  background-color: rgba(63, 63, 70, 0.8);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.login-btn {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  background: linear-gradient(to right, #3b82f6, #06b6d4);
+  color: #fff;
+  border-radius: 12rpx;
+  margin-top: 16rpx;
+  font-size: 32rpx;
+  font-weight: 500;
+  box-shadow: 0 4rpx 12rpx rgba(59, 130, 246, 0.3);
+  border: none;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.btn-hover {
+  opacity: 0.9;
+  transform: translateY(2rpx);
+  box-shadow: 0 2rpx 6rpx rgba(59, 130, 246, 0.2);
+}
+
+.btn-hover-danger {
+  opacity: 0.9;
+  transform: translateY(2rpx);
+  box-shadow: 0 2rpx 6rpx rgba(239, 68, 68, 0.2);
+}
+
+.register-link {
+  text-align: center;
+  margin-top: 32rpx;
+  font-size: 28rpx;
+  color: #9ca3af;
+}
+
+.link {
+  color: #3b82f6;
+  transition: all 0.3s;
+  font-weight: 500;
+}
+
+.link:active {
+  opacity: 0.8;
+  color: #2563eb;
+}
+
+/* 个人信息样式 */
+.profile-card {
+  width: 100%;
+  max-width: 700rpx;
+  margin: 0 auto;
+}
+
+.profile-header {
+  padding: 40rpx;
+  border-bottom: 1px solid rgba(63, 63, 70, 0.7);
+}
+
+.header-title {
+  font-size: 40rpx;
+  font-weight: bold;
+  color: #f3f4f6;
+}
+
+.header-subtitle {
+  font-size: 24rpx;
+  color: #9ca3af;
+  margin-top: 8rpx;
+}
+
+.profile-content {
+  padding: 0;
+}
+
+.avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48rpx 0;
+}
+
+.avatar-wrapper {
+  position: relative;
+  width: 180rpx;
+  height: 180rpx;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4rpx solid rgba(59, 130, 246, 0.5);
+  box-shadow: 0 8rpx 16rpx rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s;
+}
+
+.avatar-wrapper:active {
+  transform: scale(0.98);
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+}
+
+.avatar-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+  backdrop-filter: blur(2px);
+}
+
+.avatar-wrapper:active .avatar-overlay {
+  opacity: 1;
+}
+
+.camera-icon {
+  width: 48rpx;
+  height: 48rpx;
+  border: 2rpx solid #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8rpx;
+}
+
+.icon-circle {
+  width: 24rpx;
+  height: 24rpx;
+  border: 2rpx solid #fff;
+  border-radius: 50%;
+}
+
+.overlay-text {
+  color: #fff;
+  font-size: 24rpx;
+  margin-top: 8rpx;
+}
+
+.username-display {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #f3f4f6;
+  margin-top: 24rpx;
+}
+
+.divider {
+  height: 1px;
+  background-color: rgba(63, 63, 70, 0.7);
+  width: 100%;
+}
+
+.info-section {
+  padding: 40rpx;
+}
+
+.info-item {
+  margin-bottom: 32rpx;
+}
+
+.info-label {
+  display: block;
+  font-size: 28rpx;
+  color: #9ca3af;
+  margin-bottom: 8rpx;
+}
+
+.info-value {
+  font-size: 32rpx;
+  color: #f3f4f6;
+  display: block;
+  padding: 8rpx 0;
+}
+
+.info-input {
+  width: 100%;
+  height: 80rpx;
+  padding: 0 20rpx;
+  background-color: rgba(63, 63, 70, 0.6);
+  border: 2rpx solid rgba(82, 82, 91, 0.5);
+  border-radius: 12rpx;
+  font-size: 32rpx;
+  color: #f3f4f6;
+  box-sizing: border-box;
+}
+
+.button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+  margin-top: 48rpx;
+}
+
+.edit-btn {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  background: linear-gradient(to right, #3b82f6, #06b6d4);
+  color: #fff;
+  border-radius: 12rpx;
+  font-size: 32rpx;
+  font-weight: 500;
+  box-shadow: 0 4rpx 12rpx rgba(59, 130, 246, 0.3);
+  border: none;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.edit-btn.save {
+  background: linear-gradient(to right, #059669, #10b981);
+  box-shadow: 0 4rpx 12rpx rgba(5, 150, 105, 0.3);
+}
+
+.logout-btn {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  background-color: transparent;
+  color: #ef4444;
+  border: 2rpx solid rgba(239, 68, 68, 0.5);
+  border-radius: 12rpx;
+  font-size: 32rpx;
+  font-weight: 500;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+/* 动画 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 暗色模式适配 */
+@media (prefers-color-scheme: dark) {
+  .profile-card,
+  .login-card {
+    background-color: rgba(24, 24, 27, 0.9);
+    border-color: #27272a;
+  }
+
+  .header-title,
+  .title,
+  .username-display {
+    color: #e5e7eb;
+  }
+
+  .header-subtitle,
+  .subtitle,
+  .info-label {
+    color: #9ca3af;
+  }
+
+  .info-value {
+    color: #e5e7eb;
+  }
+
+  .input,
+  .info-input {
+    background-color: #27272a;
+    border-color: #374151;
+    color: #e5e7eb;
+  }
+
+  .divider {
+    background-color: #27272a;
+  }
+}

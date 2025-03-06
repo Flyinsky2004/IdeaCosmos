@@ -1,15 +1,51 @@
 {
   "pages": [
     "pages/index/index",
+    "pages/notification/index",
+    "pages/message/index",
+    "pages/profile/index",
     "pages/logs/index",
     "pages/project-detail/index",
     "pages/chapter-detail/index"
   ],
   "window": {
     "backgroundTextStyle": "light",
-    "navigationBarBackgroundColor": "#fff",
+    "navigationBarBackgroundColor": "#18181b",
     "navigationBarTitleText": "IdeaCosmos",
-    "navigationBarTextStyle": "black"
+    "navigationBarTextStyle": "white"
+  },
+  "tabBar": {
+    "custom": false,
+    "color": "#9ca3af",
+    "selectedColor": "#3b82f6",
+    "backgroundColor": "#18181b",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "浏览",
+        "iconPath": "assets/images/home.png",
+        "selectedIconPath": "assets/images/home-active.png"
+      },
+      {
+        "pagePath": "pages/notification/index",
+        "text": "通知",
+        "iconPath": "assets/images/notification.png",
+        "selectedIconPath": "assets/images/notification-active.png"
+      },
+      {
+        "pagePath": "pages/message/index",
+        "text": "私信",
+        "iconPath": "assets/images/message.png",
+        "selectedIconPath": "assets/images/message-active.png"
+      },
+      {
+        "pagePath": "pages/profile/index",
+        "text": "我的",
+        "iconPath": "assets/images/user.png",
+        "selectedIconPath": "assets/images/user-active.png"
+      }
+    ]
   },
   "style": "v2",
   "componentFramework": "glass-easel",

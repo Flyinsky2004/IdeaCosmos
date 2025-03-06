@@ -19,9 +19,10 @@ import (
  * @date 2024/12/24 09:10
  */
 func main() {
+	config.ReadConfig()
 	//printBanner()
 	config.InitMysqlDataBase()
-	//config.InitRedis("localhost:6379", "131598", 0)
+	config.InitRedis()
 
 	// 禁用外键检查
 	//config.MysqlDataBase.Exec("SET FOREIGN_KEY_CHECKS = 0")
@@ -43,6 +44,11 @@ func main() {
 		&pojo.Watch{},
 		&pojo.Feeling{},
 		&pojo.CreatorComment{},
+		&pojo.Notification{},
+		&pojo.ChatGroup{},
+		&pojo.Message{},
+		&pojo.GroupMember{},
+		&pojo.NotificationSetting{},
 	)
 
 	// 重新启用外键检查
@@ -50,7 +56,7 @@ func main() {
 
 	app := gin.Default()
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173"}, // 允许的前端来源
+		AllowOrigins:     config.Config.Gin.CorsAllowOrigins, // 允许的前端来源
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "x-requested-with"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -60,7 +66,7 @@ func main() {
 	app.Static("/api/uploads", "./uploads")
 	app.Static("/api/audio", "./audio")
 	route.RegisterRoutes(app)
-	app.Run(":8080")
+	app.Run(config.Config.Gin.Port)
 }
 
 func printBanner() {

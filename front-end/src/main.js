@@ -15,8 +15,8 @@ import App from './App.vue'
 import router from './router'
 import axios from "axios";
 
-//axios.defaults.baseURL="http://localhost:8080"
-axios.defaults.baseURL= window.location.protocol + '//' + window.location.host
+axios.defaults.baseURL="http://localhost:8080"
+//axios.defaults.baseURL= window.location.protocol + '//' + window.location.host
 const app = createApp(App)
 app.use(createPinia())
 app.use(router).use(ElementPlus).use(VueKinesis).use(Antd)

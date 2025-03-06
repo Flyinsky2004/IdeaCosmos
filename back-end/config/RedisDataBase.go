@@ -1,7 +1,14 @@
+/*
+ * @Author: Flyinsky w2084151024@gmail.com
+ * @Description: None
+ */
 package config
 
 import (
 	"context"
+	"fmt"
+	"strconv"
+
 	"github.com/go-redis/redis/v8"
 )
 
@@ -17,10 +24,11 @@ var ctx = context.Background()
 var RedisClient *redis.Client
 
 // InitRedis 初始化 Redis 连接
-func InitRedis(addr, password string, db int) {
+func InitRedis() {
+	db, _ := strconv.Atoi(fmt.Sprintf("%v", Config.Redis.Database))
 	RedisClient = redis.NewClient(&redis.Options{
-		Addr:     addr,
-		Password: password,
+		Addr:     fmt.Sprintf("%s:%s", Config.Redis.Host, Config.Redis.Port),
+		Password: Config.Redis.Password,
 		DB:       db,
 	})
 
