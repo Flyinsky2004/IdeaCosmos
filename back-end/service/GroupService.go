@@ -258,11 +258,18 @@ func AddGroupMember(c *gin.Context) {
 	groupId, _ := strconv.ParseUint(c.Param("id"), 10, 64)
 
 	var req struct {
-		UserIDs []uint `json:"userIds" binding:"required"`
+		UserIDs []uint `json:"userIds" binding:"omitempty"`
+		Email   string `json:"email" binding:"omitempty,email,max=50"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "请求参数错误"))
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "请求参数错误"+err.Error()))
+		return
+	}
+
+	// 检查是否同时提供了UserIDs和Email
+	if len(req.UserIDs) == 0 && req.Email == "" {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "请提供要邀请的用户ID列表或邮箱"))
 		return
 	}
 
@@ -289,10 +296,20 @@ func AddGroupMember(c *gin.Context) {
 	now := time.Now()
 	addedCount := 0
 
-	for _, userID := range req.UserIDs {
-		// 检查用户是否已是群成员
+	// 处理Email邀请
+	if req.Email != "" {
+		// 查找用户
+		var user pojo.User
+		result := tx.Where("email = ?", req.Email).First(&user)
+		if result.Error != nil {
+			tx.Rollback()
+			c.JSON(http.StatusOK, dto.ErrorResponse[string](404, "未找到该邮箱对应的用户"))
+			return
+		}
+
+		// 检查用户是否已在群组中
 		var existingMember pojo.GroupMember
-		result := tx.Where("group_id = ? AND user_id = ?", groupId, userID).First(&existingMember)
+		result = tx.Where("group_id = ? AND user_id = ?", groupId, user.ID).First(&existingMember)
 
 		if result.Error == nil {
 			// 用户已存在，如果是已退出状态则重新激活
@@ -300,39 +317,93 @@ func AddGroupMember(c *gin.Context) {
 				existingMember.Status = 1
 				existingMember.JoinTime = now
 				if err := tx.Save(&existingMember).Error; err != nil {
-					continue
+					tx.Rollback()
+					c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "添加群成员失败"))
+					return
 				}
 				addedCount++
+			} else {
+				tx.Rollback()
+				c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "该用户已是群成员"))
+				return
 			}
-			continue
-		}
+		} else {
+			// 创建新成员
+			newMember := pojo.GroupMember{
+				GroupID:  uint(groupId),
+				UserID:   user.ID,
+				JoinTime: now,
+				IsAdmin:  false,
+				Status:   1,
+			}
 
-		// 创建新成员
-		newMember := pojo.GroupMember{
-			GroupID:  uint(groupId),
-			UserID:   userID,
-			JoinTime: now,
-			IsAdmin:  false,
-			Status:   1,
-		}
+			if err := tx.Create(&newMember).Error; err != nil {
+				tx.Rollback()
+				c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "添加群成员失败"))
+				return
+			}
 
-		if err := tx.Create(&newMember).Error; err != nil {
-			continue
-		}
+			// 发送通知给新成员
+			notification := pojo.Notification{
+				Type:        pojo.SystemNotification,
+				Title:       "群组邀请",
+				Content:     "您已被邀请加入群组: " + group.Name,
+				SenderID:    uint(userId.(int)),
+				ReceiverID:  user.ID,
+				RelatedID:   uint(groupId),
+				RelatedType: "chat_group",
+			}
 
-		// 发送通知给新成员
-		notification := pojo.Notification{
-			Type:        pojo.SystemNotification,
-			Title:       "群组邀请",
-			Content:     "您已被邀请加入群组: " + group.Name,
-			SenderID:    uint(userId.(int)),
-			ReceiverID:  userID,
-			RelatedID:   uint(groupId),
-			RelatedType: "chat_group",
+			tx.Create(&notification)
+			addedCount++
 		}
+	} else {
+		// 处理UserIDs邀请
+		for _, userID := range req.UserIDs {
+			// 检查用户是否已是群成员
+			var existingMember pojo.GroupMember
+			result := tx.Where("group_id = ? AND user_id = ?", groupId, userID).First(&existingMember)
 
-		tx.Create(&notification)
-		addedCount++
+			if result.Error == nil {
+				// 用户已存在，如果是已退出状态则重新激活
+				if existingMember.Status == 3 {
+					existingMember.Status = 1
+					existingMember.JoinTime = now
+					if err := tx.Save(&existingMember).Error; err != nil {
+						continue
+					}
+					addedCount++
+				}
+				continue
+			}
+
+			// 创建新成员
+			newMember := pojo.GroupMember{
+				GroupID:  uint(groupId),
+				UserID:   userID,
+				JoinTime: now,
+				IsAdmin:  false,
+				Status:   1,
+			}
+
+			if err := tx.Create(&newMember).Error; err != nil {
+				continue
+			}
+
+			// 发送通知给新成员
+			notification := pojo.Notification{
+				Type:        pojo.SystemNotification,
+				Title:       "群组邀请",
+				Content:     "您已被邀请加入群组: " + group.Name,
+				SenderID:    uint(userId.(int)),
+				ReceiverID:  userID,
+				RelatedID:   uint(groupId),
+				RelatedType: "chat_group",
+			}
+
+			tx.Create(&notification)
+			addedCount++
+		}
 	}
 
 	// 更新群组成员数量
@@ -743,4 +814,51 @@ func SetGroupAdmin(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto.SuccessResponse(message))
+}
+
+// GetGroupMessages 获取群组消息
+func GetGroupMessages(c *gin.Context) {
+	userID, _ := c.Get("userId")
+	groupID, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+
+	// 分页参数
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
+	offset := (page - 1) * pageSize
+
+	// 验证用户是否为群组成员
+	var member pojo.GroupMember
+	err := config.MysqlDataBase.Where("group_id = ? AND user_id = ? AND status != 3", groupID, userID).First(&member).Error
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](403, "您不是该群成员或该群不存在"))
+		return
+	}
+
+	// 查询消息
+	var messages []struct {
+		pojo.Message
+		SenderName   string `json:"senderName"`
+		SenderAvatar string `json:"senderAvatar"`
+	}
+
+	err = config.MysqlDataBase.Table("messages").
+		Select("messages.*, users.username as sender_name, users.avatar as sender_avatar").
+		Joins("LEFT JOIN users ON messages.sender_id = users.id").
+		Where("messages.group_id = ? AND messages.deleted_at IS NULL", groupID).
+		Order("messages.created_at DESC").
+		Limit(pageSize).
+		Offset(offset).
+		Find(&messages).Error
+
+	if err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取消息失败"))
+		return
+	}
+
+	// 将结果反转，使最新消息在底部
+	for i, j := 0, len(messages)-1; i < j; i, j = i+1, j-1 {
+		messages[i], messages[j] = messages[j], messages[i]
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(messages))
 }

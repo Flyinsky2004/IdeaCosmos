@@ -1,3 +1,7 @@
+/*
+ * @Author: Flyinsky w2084151024@gmail.com
+ * @Description: None
+ */
 package service
 
 import (
@@ -9,12 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-/**
- * @author Flyinsky
- * @email w2084151024@gmail.com
- * @date 2024/12/24 14:40
- */
-
 func GetMyInfo(c *gin.Context) {
 	var user pojo.User
 	userId, _ := c.Get("userId")
@@ -24,6 +22,29 @@ func GetMyInfo(c *gin.Context) {
 	}
 	user.Password = ""
 	c.JSON(http.StatusOK, dto.SuccessResponse(user))
+}
+
+// GetAllUsers 获取所有用户列表（仅ID、用户名、头像）
+func GetAllUsers(c *gin.Context) {
+	type SimpleUser struct {
+		ID       uint   `json:"id"`
+		Username string `json:"username"`
+		Avatar   string `json:"avatar"`
+	}
+
+	var users []SimpleUser
+
+	// 查询所有用户，只获取ID、用户名和头像字段
+	if err := config.MysqlDataBase.Model(&pojo.User{}).
+		Select("id, username, avatar").
+		Find(&users).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取用户列表失败:"+err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse(gin.H{
+		"users": users,
+	}))
 }
 
 type UpdateUserRequest struct {

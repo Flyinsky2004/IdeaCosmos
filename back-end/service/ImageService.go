@@ -11,7 +11,6 @@ import (
 	"image"
 	"image/jpeg"
 	"image/png"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -193,7 +192,7 @@ func GetImageBase64(c *gin.Context) {
 	}
 
 	// 读取文件内容
-	fileContent, err := ioutil.ReadFile("./uploads/" + fileName)
+	fileContent, err := os.ReadFile("./uploads/" + fileName)
 	if err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "无法读取文件内容"))
 		return

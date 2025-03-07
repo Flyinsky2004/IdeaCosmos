@@ -36,6 +36,7 @@ func RegisterRoutes(r *gin.Engine) {
 	{
 		userGroup.GET("me", service.GetMyInfo)
 		userGroup.POST("updateInfo", service.UpdateUserInfo)
+		userGroup.GET("all", service.GetAllUsers)
 		userGroup.POST("uploadImage", service.UploadImage)
 		userGroup.GET("getWebpImageBase64", service.GetImageBase64)
 		userGroup.POST("addProjectComment", service.AddProjectComment)
@@ -135,6 +136,9 @@ func RegisterRoutes(r *gin.Engine) {
 		chatGroup.PUT("/groups/:id/members/:userId", service.UpdateGroupMemberInfo)
 		chatGroup.POST("/groups/:id/members/:userId/mute", service.MuteGroupMember)
 		chatGroup.POST("/groups/:id/members/:userId/admin", service.SetGroupAdmin)
+
+		// 消息管理
+		chatGroup.GET("/groups/:id/messages", service.GetGroupMessages)
 	}
 
 	// 新增管理员路由组
@@ -176,6 +180,7 @@ func RegisterRoutes(r *gin.Engine) {
 		websocketGroup.GET("generateNewChapterVersionStream", service.GenerateNewChapterVersionStream)
 		websocketGroup.GET("modifyChapterVersionStream", service.ModifyChapterVersionStream)
 		websocketGroup.GET("newProjectAnalysis", service.NewProjectAnalysis)
+		websocketGroup.GET("groupChat/:id", service.HandleGroupChat)
 	}
 	// WebSocket路由
 	//r.GET("/ws/chat", service.HandleStreamChat)

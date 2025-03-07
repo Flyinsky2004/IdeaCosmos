@@ -45,6 +45,15 @@ const (
 	GroupMessage                          // 群聊消息
 )
 
+// 媒体消息类型
+const (
+	MessageTypeText  = "text"  // 文本消息
+	MessageTypeImage = "image" // 图片消息
+	MessageTypeAudio = "audio" // 音频消息
+	MessageTypeVideo = "video" // 视频消息
+	MessageTypeFile  = "file"  // 文件消息
+)
+
 // Message 私信模型
 type Message struct {
 	gorm.Model
