@@ -42,9 +42,9 @@ const {
 <template>
   <div class="chat-messages-container h-full flex flex-col animate__animated animate__fadeIn">
     <!-- 消息列表 -->
-    <div class="messages-container flex-1 overflow-y-auto p-6 space-y-4 bg-white dark:bg-zinc-900">
+    <div class="messages-container flex-1 overflow-y-auto p-6 space-y-4 bg-white dark:bg-zinc-900 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
       <div v-if="loading" class="flex justify-center py-12">
-        <SpinLoaderLarge />
+        <div class="animate-spin h-8 w-8 border-2 border-blue-500 dark:border-blue-400 rounded-full border-t-transparent"></div>
       </div>
       
       <div v-else-if="messages.length === 0" class="flex flex-col items-center justify-center py-12 animate__animated animate__fadeIn animate__delay-1s">
@@ -53,14 +53,14 @@ const {
             <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
         </div>
-        <div class="border p-4 w-fit rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 dark:border-gray-700 animate__animated animate__fadeIn animate__delay-3s">
-          <p class="text-lg text-gray-700 dark:text-gray-300 font-medium">开始聊天吧</p>
-          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">发送消息开始与群组成员交流</p>
+        <div class="border border-gray-200 dark:border-gray-700 p-6 w-fit max-w-md rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 animate__animated animate__fadeIn animate__delay-3s">
+          <p class="text-lg text-gray-800 dark:text-gray-200 font-medium">开始聊天吧</p>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">发送消息开始与群组成员交流</p>
         </div>
       </div>
       
       <template v-else>
-        <!-- 系统消息（加入/离开提示）- Instagram风格居中显示 -->
+        <!-- 系统消息（加入/离开提示） -->
         <div 
           v-for="message in messages" 
           :key="message.ID"
@@ -69,7 +69,7 @@ const {
           <!-- 系统消息（加入/离开提示） -->
           <div v-if="message.type === 'join' || message.type === 'leave'" 
                class="my-8 flex justify-center animate__animated animate__fadeIn">
-            <div class="px-5 py-2 rounded-full bg-gradient-to-r from-gray-100 to-gray-50 dark:from-zinc-800/80 dark:to-zinc-800/40 text-xs text-gray-500 dark:text-gray-400 inline-flex items-center gap-2 shadow-sm border theme-border backdrop-blur-sm">
+            <div class="px-5 py-2 rounded-full bg-gradient-to-r from-gray-100 to-gray-50 dark:from-zinc-800/80 dark:to-zinc-800/40 text-xs text-gray-500 dark:text-gray-400 inline-flex items-center gap-2 shadow-sm border border-gray-200 dark:border-gray-700 backdrop-blur-sm">
               <div v-if="message.type === 'join'" class="w-4 h-4 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-blue-500 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -92,97 +92,100 @@ const {
             :class="message.SenderID === userStore.user.id ? 'flex-row-reverse' : ''"
           >
             <!-- 发送者头像 -->
-            <div class="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 flex-shrink-0 border theme-border shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-md group-hover:shadow-blue-500/10">
+            <div class="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 flex-shrink-0 border border-gray-200 dark:border-gray-700 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-md group-hover:shadow-blue-500/10">
               <img 
-                v-if="message.SenderAvatar" 
-                :src="BACKEND_DOMAIN + message.SenderAvatar" 
+                v-if="message.senderAvatar" 
+                :src="BACKEND_DOMAIN + message.senderAvatar" 
                 class="w-full h-full object-cover"
                 alt="用户头像"
                 onerror="this.style.display='none'"
               >
               <div v-else class="w-full h-full flex items-center justify-center text-blue-500 dark:text-blue-400 text-sm font-bold">
-                {{ message.SenderName?.charAt(0) || '?' }}
+                {{ message.senderName?.charAt(0) || '?' }}
               </div>
+              <div>{{ message.senderName }}</div>
             </div>
             
             <!-- 消息内容 -->
             <div 
-              class="max-w-[70%] p-3.5 group-hover:shadow-md transition-all duration-300"
+              class="max-w-[70%] group-hover:shadow-md transition-all duration-300"
               :class="[
                 message.SenderID === userStore.user.id 
-                  ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-blue-500/20 shadow-sm hover:-translate-y-0.5 rounded-2xl rounded-tr-sm' 
-                  : 'bg-gray-50 dark:bg-zinc-800/50 dark:text-gray-200 border theme-border hover:-translate-y-0.5 rounded-2xl rounded-tl-sm'
+                  ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-2xl rounded-tr-sm hover:-translate-y-0.5' 
+                  : 'bg-gray-50 dark:bg-zinc-800/50 dark:text-gray-200 border border-gray-200 dark:border-gray-700 hover:-translate-y-0.5 rounded-2xl rounded-tl-sm'
               ]"
             >
               <!-- 发送者名称 -->
               <div 
                 v-if="message.SenderID !== userStore.user.id"
-                class="text-xs mb-1.5 font-medium flex items-center gap-1.5"
+                class="px-3.5 pt-2.5 text-xs font-medium flex items-center gap-1.5"
                 :class="message.SenderID === userStore.user.id 
                   ? 'text-blue-200' 
                   : 'text-blue-500 dark:text-blue-400'"
               >
-                {{ message.SenderName }}
+                {{ message.senderName }}
                 <div class="w-1 h-1 rounded-full bg-current opacity-50"></div>
                 <span class="text-[10px] text-gray-400 dark:text-gray-500 opacity-70">{{ parseDateTime(message.CreatedAt).split(' ')[1] }}</span>
               </div>
-              
+            
               <!-- 文本消息 -->
-              <p v-if="message.MediaType === 'text'" class="break-words text-sm leading-relaxed">
-                {{ message.Content }}
-              </p>
+              <div class="p-3.5" :class="{'pt-2': message.SenderID !== userStore.user.id}">
+                <p v-if="message.MediaType === 'text'" class="break-words text-sm leading-relaxed">
+                  {{ message.Content }}
+                </p>
               
-              <!-- 图片消息 -->
-              <div v-else-if="message.MediaType === 'image'" class="relative group/image overflow-hidden rounded-lg">
-                <img 
-                  :src="message.MediaURL"
-                  class="max-w-full rounded-lg shadow-sm group-hover/image:shadow-lg transition-all duration-500 cursor-pointer transform group-hover/image:scale-[1.02]"
-                  alt="图片消息"
-                  @click="$emit('previewImage', message.MediaURL)"
-                >
-                <div class="absolute inset-0 bg-black/0 group-hover/image:bg-black/10 rounded-lg transition-all duration-300 flex items-center justify-center opacity-0 group-hover/image:opacity-100">
-                  <div class="bg-black/50 p-1.5 rounded-full transform scale-90 group-hover/image:scale-100 transition-transform">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
+                <!-- 图片消息 -->
+                <div v-else-if="message.MediaType === 'image'" class="relative group/image overflow-hidden rounded-lg">
+                  <img 
+                    :src="message.MediaURL"
+                    class="max-w-full rounded-lg shadow-sm group-hover/image:shadow-lg transition-all duration-500 cursor-pointer transform group-hover/image:scale-[1.02]"
+                    alt="图片消息"
+                    @click="$emit('previewImage', message.MediaURL)"
+                  >
+                  <div class="absolute inset-0 bg-black/0 group-hover/image:bg-black/10 rounded-lg transition-all duration-300 flex items-center justify-center opacity-0 group-hover/image:opacity-100">
+                    <div class="bg-black/50 p-1.5 rounded-full transform scale-90 group-hover/image:scale-100 transition-transform">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
-              </div>
               
-              <!-- 音频消息 -->
-              <div v-else-if="message.MediaType === 'audio'" class="bg-white/20 dark:bg-black/20 rounded-lg p-2 shadow-sm backdrop-blur-sm">
-                <div class="flex items-center gap-2 mb-1 text-xs opacity-70">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                  </svg>
-                  <span>语音消息</span>
+                <!-- 音频消息 -->
+                <div v-else-if="message.MediaType === 'audio'" class="bg-white/20 dark:bg-black/20 rounded-lg p-2 shadow-sm backdrop-blur-sm">
+                  <div class="flex items-center gap-2 mb-1 text-xs opacity-70">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                    </svg>
+                    <span>语音消息</span>
+                  </div>
+                  <audio 
+                    :src="message.MediaURL"
+                    controls
+                    class="max-w-full rounded-md w-full"
+                  ></audio>
                 </div>
-                <audio 
-                  :src="message.MediaURL"
-                  controls
-                  class="max-w-full rounded-md w-full"
-                ></audio>
-              </div>
               
-              <!-- 视频消息 -->
-              <div v-else-if="message.MediaType === 'video'" class="rounded-lg overflow-hidden shadow-sm">
-                <div class="bg-white/20 dark:bg-black/20 p-2 flex items-center gap-2 text-xs opacity-70 backdrop-blur-sm">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                  <span>视频消息</span>
+                <!-- 视频消息 -->
+                <div v-else-if="message.MediaType === 'video'" class="rounded-lg overflow-hidden shadow-sm">
+                  <div class="bg-white/20 dark:bg-black/20 p-2 flex items-center gap-2 text-xs opacity-70 backdrop-blur-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <span>视频消息</span>
+                  </div>
+                  <video 
+                    :src="message.MediaURL"
+                    controls
+                    class="max-w-full rounded-b-lg"
+                  ></video>
                 </div>
-                <video 
-                  :src="message.MediaURL"
-                  controls
-                  class="max-w-full rounded-b-lg"
-                ></video>
               </div>
               
               <!-- 发送时间 (仅自己的消息) -->
               <div 
                 v-if="message.SenderID === userStore.user.id"
-                class="text-[10px] mt-1 opacity-70 text-right"
+                class="text-[10px] px-3.5 pb-2.5 opacity-70 text-right"
                 :class="message.SenderID === userStore.user.id 
                   ? 'text-blue-200' 
                   : 'text-gray-400 dark:text-gray-500'"
@@ -196,7 +199,7 @@ const {
     </div>
 
     <!-- 输入区域 -->
-    <div class="p-4 border-t theme-border bg-white dark:bg-zinc-900 shadow-lg shadow-black/5">
+    <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-zinc-900 shadow-lg shadow-black/5">
       <!-- 连接状态指示器 -->
       <div v-if="!isConnected" class="mb-2 flex items-center justify-center">
         <span class="text-xs px-3 py-1 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 flex items-center gap-1.5 shadow-sm animate-pulse">
@@ -207,7 +210,7 @@ const {
 
       <!-- 媒体预览 -->
       <div v-if="mediaPreview" class="mb-4 relative animate__animated animate__fadeIn">
-        <div class="rounded-xl overflow-hidden border theme-border shadow-sm hover:shadow-md transition-all duration-300">
+        <div class="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-300">
           <img 
             v-if="mediaType === 'image'"
             :src="mediaPreview"
@@ -276,7 +279,7 @@ const {
           @keyup.enter="sendMessage"
           type="text"
           placeholder="输入消息..."
-          class="flex-1 px-5 py-3 bg-gray-50 dark:bg-zinc-800/50 border theme-border rounded-full focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-gray-300 dark:placeholder-gray-500 transition-all shadow-sm hover:shadow-md text-sm"
+          class="flex-1 px-5 py-3 bg-gray-50 dark:bg-zinc-800/50 border border-gray-200 dark:border-gray-700 rounded-full focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-gray-300 dark:placeholder-gray-500 transition-all shadow-sm hover:shadow-md text-sm"
         >
         
         <!-- 发送按钮 -->
@@ -296,29 +299,22 @@ const {
 </template>
 
 <style scoped>
-.messages-container {
-  scroll-behavior: smooth;
-}
-
-.messages-container::-webkit-scrollbar {
+/* 自定义滚动条样式 */
+.scrollbar-thin::-webkit-scrollbar {
   width: 6px;
 }
 
-.messages-container::-webkit-scrollbar-track {
+.scrollbar-thin::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.messages-container::-webkit-scrollbar-thumb {
+.scrollbar-thin::-webkit-scrollbar-thumb {
   background-color: rgba(156, 163, 175, 0.5);
   border-radius: 3px;
 }
 
-.messages-container::-webkit-scrollbar-thumb:hover {
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background-color: rgba(156, 163, 175, 0.7);
-}
-
-.theme-border {
-  border-color: var(--border-color);
 }
 
 /* 动画相关样式 */
@@ -370,20 +366,26 @@ const {
   animation-name: fadeIn;
 }
 
-/* 添加一些气泡动画效果 */
-@keyframes pulse-subtle {
-  0% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.1);
-  }
-  70% {
-    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
-  }
+/* 音频播放器样式 */
+audio::-webkit-media-controls-timeline {
+  @apply bg-gray-200 dark:bg-zinc-700 rounded-full overflow-hidden;
 }
 
-.pulse-animation {
-  animation: pulse-subtle 2s infinite;
+audio::-webkit-media-controls-current-time-display,
+audio::-webkit-media-controls-time-remaining-display {
+  @apply text-gray-700 dark:text-gray-300;
+}
+
+audio::-webkit-media-controls-volume-slider {
+  @apply bg-gray-200 dark:bg-zinc-700 rounded-full;
+}
+
+/* Firefox 样式 */
+audio::-moz-range-track {
+  @apply bg-gray-200 dark:bg-zinc-700 rounded-full;
+}
+
+audio::-moz-range-thumb {
+  @apply bg-blue-500;
 }
 </style> 

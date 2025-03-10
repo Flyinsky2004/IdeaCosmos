@@ -55,12 +55,12 @@ const {
 </script>
 
 <template>
-  <div class="flex flex-col h-[calc(100vh-5rem)] animate__animated animate__fadeIn">
+  <div class="flex flex-col h-[calc(100vh-5rem)] animate__animated animate__fadeIn bg-[#f8fafc] dark:bg-[#030616]">
     <!-- 聊天主区域 -->
-    <div class="flex-1 mx-4 mb-4 rounded-2xl border theme-border shadow-sm overflow-hidden animate__animated animate__fadeIn animate__delay-2s">
+    <div class="flex-1 mx-4 mb-4 rounded-2xl shadow-lg overflow-hidden animate__animated animate__fadeIn animate__delay-2s">
       <div class="h-full flex">
         <!-- 左侧群组列表 -->
-        <div class="w-80 flex-shrink-0 border-r theme-border bg-white dark:bg-zinc-900">
+        <div class="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-zinc-900">
           <GroupChatList 
             :active-group-id="activeGroup?.ID"
             @select-group="handleSelectGroup"
@@ -71,9 +71,9 @@ const {
         <!-- 右侧聊天区域 -->
         <div class="flex-1 flex flex-col bg-white dark:bg-zinc-900">
           <!-- 群组信息栏 -->
-          <div v-if="activeGroup" class="flex items-center justify-between px-6 py-4 border-b theme-border">
+          <div v-if="activeGroup" class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <div class="flex items-center gap-3">
-              <div class="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 flex-shrink-0 border theme-border shadow-sm">
+              <div class="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 flex-shrink-0 border border-gray-200 dark:border-gray-700 shadow-sm">
                 <img 
                   v-if="activeGroup.AvatarURL" 
                   :src="activeGroup.AvatarURL" 
@@ -145,7 +145,7 @@ const {
                   </svg>
                 </button>
                 <template #overlay>
-                  <Menu class="bg-white dark:bg-zinc-800 border theme-border shadow-xl rounded-xl overflow-hidden">
+                  <Menu class="bg-white dark:bg-zinc-800 border border-gray-200 dark:border-gray-700 shadow-xl rounded-xl overflow-hidden">
                     <Menu.Item v-if="isAdmin" @click="openInviteModal">
                       <div class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 dark:hover:bg-zinc-700">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -183,7 +183,7 @@ const {
                 <!-- 成员较少时显示邀请提示 -->
                 <div 
                   v-if="(isAdmin || isCreator) && activeGroup.MemberCount < 3"
-                  class="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/10 border-b theme-border flex items-center justify-between"
+                  class="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/10 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between"
                 >
                   <div class="flex items-center gap-2 text-blue-700 dark:text-blue-300">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -236,8 +236,8 @@ const {
             </div>
             
             <!-- 成员列表侧边栏 -->
-            <div v-if="showMembers && activeGroup" class="w-full md:w-80 border-l theme-border bg-white dark:bg-zinc-900 animate__animated animate__fadeIn">
-              <div class="p-4 border-b theme-border flex items-center justify-between">
+            <div v-if="showMembers && activeGroup" class="w-full md:w-80 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-zinc-900 animate__animated animate__fadeIn">
+              <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                 <h3 class="font-bold text-gray-800 dark:text-gray-200">群组成员</h3>
                 <button 
                   @click="showMembers = false"
@@ -417,10 +417,6 @@ const {
 </template>
 
 <style scoped>
-.theme-border {
-  border-color: var(--border-color);
-}
-
 /* 动画相关样式 */
 .animate__animated {
   animation-duration: 0.5s;
@@ -459,54 +455,44 @@ const {
 
 /* 自定义模态框样式 */
 :deep(.custom-modal .ant-modal-content) {
-  border-radius: 1rem;
-  overflow: hidden;
-  border: 1px solid var(--border-color);
+  @apply rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700;
 }
 
 :deep(.custom-modal .ant-modal-header) {
-  background-color: var(--bg-color);
-  border-bottom: 1px solid var(--border-color);
+  @apply bg-white dark:bg-zinc-900 border-b border-gray-200 dark:border-gray-700;
 }
 
 :deep(.custom-modal .ant-modal-footer) {
-  background-color: var(--bg-color);
-  border-top: 1px solid var(--border-color);
+  @apply bg-white dark:bg-zinc-900 border-t border-gray-200 dark:border-gray-700;
 }
 
 :deep(.custom-modal .ant-btn-primary) {
-  background: linear-gradient(to right, #3b82f6, #06b6d4);
-  border: none;
+  @apply bg-gradient-to-r from-blue-500 to-cyan-500 border-0;
 }
 
 :deep(.custom-modal .ant-btn-primary:hover) {
-  opacity: 0.9;
-  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);
+  @apply opacity-90 shadow-md shadow-blue-500/20;
 }
 
 /* 自定义表格样式 */
 :deep(.custom-table .ant-table) {
-  background-color: var(--bg-color);
-  border-radius: 0.75rem;
-  overflow: hidden;
+  @apply bg-white dark:bg-zinc-900 rounded-xl overflow-hidden;
 }
 
 :deep(.custom-table .ant-table-thead > tr > th) {
-  background-color: rgba(59, 130, 246, 0.05);
-  color: var(--text-color);
+  @apply bg-blue-50/50 dark:bg-blue-900/30 text-gray-900 dark:text-gray-100;
 }
 
 :deep(.custom-tabs .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn) {
-  color: #3b82f6;
+  @apply text-blue-500;
 }
 
 :deep(.custom-tabs .ant-tabs-ink-bar) {
-  background: linear-gradient(to right, #3b82f6, #06b6d4);
+  @apply bg-gradient-to-r from-blue-500 to-cyan-500;
 }
 
 /* 自定义复选框样式 */
 :deep(.custom-checkbox .ant-checkbox-checked .ant-checkbox-inner) {
-  background-color: #3b82f6;
-  border-color: #3b82f6;
+  @apply bg-blue-500 border-blue-500;
 }
 </style> 
