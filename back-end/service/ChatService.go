@@ -104,9 +104,10 @@ type GroupChatInitMessage struct {
 
 // HandleGroupChat 处理群组聊天的WebSocket连接
 func HandleGroupChat(c *gin.Context) {
-	// 升级HTTP连接为WebSocket - 无条件接受连接
+	// 升级HTTP连接为WebSocket
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
+		// fmt.Printf("WebSocket升级失败: %v\n", err)
 		return
 	}
 
@@ -114,15 +115,18 @@ func HandleGroupChat(c *gin.Context) {
 	groupIDStr := c.Param("id")
 	groupID, err := strconv.ParseUint(groupIDStr, 10, 64)
 	if err != nil {
+		// fmt.Printf("无效的群组ID: %v\n", err)
 		conn.WriteJSON(dto.ErrorResponse[string](400, "无效的群组ID"))
 		conn.Close()
 		return
 	}
 
+	// fmt.Printf("新的WebSocket连接请求: 群组ID=%d\n", groupID)
+
 	// 创建未认证的客户端
 	client := &Client{
 		socket:       conn,
-		send:         make(chan []byte, 256),
+		send:         make(chan []byte, 256), // 增加缓冲区大小
 		groups:       make(map[uint]struct{}),
 		isAuthorized: false,
 	}
@@ -130,12 +134,16 @@ func HandleGroupChat(c *gin.Context) {
 	// 等待认证消息
 	_, message, err := conn.ReadMessage()
 	if err != nil {
+		// fmt.Printf("读取认证消息失败: %v\n", err)
 		conn.Close()
 		return
 	}
 
+	// fmt.Printf("收到认证消息: %s\n", string(message))
+
 	var initMsg GroupChatInitMessage
 	if err := json.Unmarshal(message, &initMsg); err != nil {
+		// fmt.Printf("解析认证消息失败: %v\n", err)
 		conn.WriteJSON(dto.ErrorResponse[string](500, "无法解析认证消息"))
 		conn.Close()
 		return
@@ -144,16 +152,20 @@ func HandleGroupChat(c *gin.Context) {
 	// 验证token并获取用户ID
 	claims, err := util.ParseToken(initMsg.Token)
 	if err != nil {
+		// fmt.Printf("Token验证失败: %v\n", err)
 		conn.WriteJSON(dto.ErrorResponse[string](500, "token验证失败"))
 		conn.Close()
 		return
 	}
 	userID := claims.UserID
 
+	// fmt.Printf("用户 %d 认证成功\n", userID)
+
 	// 验证用户是否为群组成员
 	var member pojo.GroupMember
 	err = config.MysqlDataBase.Where("group_id = ? AND user_id = ? AND status != 3", groupID, userID).First(&member).Error
 	if err != nil {
+		// fmt.Printf("群组成员验证失败: %v\n", err)
 		conn.WriteJSON(dto.ErrorResponse[string](403, "您不是该群组成员或群组不存在"))
 		conn.Close()
 		return
@@ -175,17 +187,21 @@ func HandleGroupChat(c *gin.Context) {
 	Manager.groups[uint(groupID)][client] = true
 	Manager.mutex.Unlock()
 
+	// fmt.Printf("用户 %d 已加入群组 %d\n", userID, groupID)
+
 	// 发送认证成功消息
 	err = conn.WriteJSON(dto.SuccessResponse("认证成功"))
 	if err != nil {
+		// fmt.Printf("发送认证成功消息失败: %v\n", err)
 		conn.Close()
 		return
 	}
 
-	// 发送用户加入的系统消息
+	// 查询用户信息
 	var user pojo.User
 	config.MysqlDataBase.Select("id, username, avatar").Where("id = ?", userID).First(&user)
 
+	// 发送用户加入的系统消息
 	joinMessage := WebSocketMessage{
 		Type:      "join",
 		SenderID:  uint(userID),
@@ -199,37 +215,32 @@ func HandleGroupChat(c *gin.Context) {
 	// 广播加入消息
 	broadcastToGroup(joinMessage, uint(groupID))
 
-	// 启动读取和写入的goroutine
-	go client.readPump(uint(groupID))
-	go client.writePump()
+	// 创建一个 WaitGroup 来等待 goroutines 完成
+	var wg sync.WaitGroup
+	wg.Add(2)
 
-	// 使用通道阻塞，直到连接断开
-	done := make(chan struct{})
-
-	// 当连接断开时关闭通道
+	// 启动读取 goroutine
 	go func() {
-		for {
-			// 尝试读取消息，如果连接断开，ReadMessage 会返回错误
-			_, _, err := conn.ReadMessage()
-			if err != nil {
-				// 连接断开，关闭通道
-				close(done)
-				return
-			}
-			// 不做任何处理，因为 readPump 已经在处理消息
-		}
+		defer wg.Done()
+		client.readPump(uint(groupID))
 	}()
 
-	// 等待连接断开
-	<-done
+	// 启动写入 goroutine
+	go func() {
+		defer wg.Done()
+		client.writePump()
+	}()
 
-	// conn会在 Client.readPump 或 Client.writePump 结束时关闭
-	fmt.Printf("WebSocket连接已关闭: 用户 %d, 群组 %d\n", userID, groupID)
+	// 等待 goroutines 完成
+	wg.Wait()
+
+	// fmt.Printf("用户 %d 的WebSocket连接已关闭\n", userID)
 }
 
 // readPump 从WebSocket读取消息
 func (c *Client) readPump(groupID uint) {
 	defer func() {
+		// fmt.Printf("用户 %d 的readPump正在退出\n", c.id)
 		Manager.unregister <- c
 		c.socket.Close()
 	}()
@@ -237,21 +248,29 @@ func (c *Client) readPump(groupID uint) {
 	c.socket.SetReadLimit(512000)
 	c.socket.SetReadDeadline(time.Now().Add(60 * time.Second))
 	c.socket.SetPongHandler(func(string) error {
+		// fmt.Printf("用户 %d 收到pong消息\n", c.id)
 		c.socket.SetReadDeadline(time.Now().Add(60 * time.Second))
 		return nil
 	})
 
+	// fmt.Printf("用户 %d 的readPump开始运行\n", c.id)
+
 	for {
-		_, message, err := c.socket.ReadMessage()
+		messageType, message, err := c.socket.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				fmt.Printf("WebSocket错误: %v\n", err)
+				fmt.Printf("用户 %d WebSocket读取错误: %v\n", c.id, err)
+			} else {
+				fmt.Printf("用户 %d WebSocket连接关闭: %v\n", c.id, err)
 			}
 			break
 		}
 
+		fmt.Printf("用户 %d 收到消息类型: %d, 内容: %s\n", c.id, messageType, string(message))
+
 		// 检查认证状态
 		if !c.isAuthorized {
+			// fmt.Printf("用户 %d 未认证\n", c.id)
 			c.socket.WriteJSON(dto.ErrorResponse[string](401, "未认证的连接"))
 			continue
 		}
@@ -259,11 +278,15 @@ func (c *Client) readPump(groupID uint) {
 		// 解析消息
 		var wsMessage WebSocketMessage
 		if err := json.Unmarshal(message, &wsMessage); err != nil {
+			// fmt.Printf("用户 %d 消息解析失败: %v\n", c.id, err)
 			continue
 		}
 
+		// fmt.Printf("用户 %d 消息解析成功: 类型=%s, 内容=%s\n", c.id, wsMessage.Type, wsMessage.Content)
+
 		// 处理ping消息
 		if wsMessage.Type == "ping" {
+			// fmt.Printf("用户 %d 收到ping消息\n", c.id)
 			// 回复pong消息
 			pongMessage := WebSocketMessage{
 				Type:      "pong",
@@ -271,7 +294,12 @@ func (c *Client) readPump(groupID uint) {
 			}
 
 			if data, err := json.Marshal(pongMessage); err == nil {
-				c.send <- data
+				select {
+				case c.send <- data:
+					// fmt.Printf("用户 %d pong消息已发送\n", c.id)
+				default:
+					// fmt.Printf("用户 %d pong消息发送失败: 通道已满\n", c.id)
+				}
 			}
 
 			// 更新读取截止时间
@@ -289,11 +317,15 @@ func (c *Client) readPump(groupID uint) {
 		if err := config.MysqlDataBase.Select("username, avatar").Where("id = ?", c.id).First(&user).Error; err == nil {
 			wsMessage.Nickname = user.Username
 			wsMessage.AvatarURL = user.Avatar
+			// fmt.Printf("用户 %d 发送者信息: 用户名=%s, 头像=%s\n", c.id, user.Username, user.Avatar)
+		} else {
+			// fmt.Printf("用户 %d 获取用户信息失败: %v\n", c.id, err)
 		}
 
 		// 保存消息到数据库
 		saveMessage(wsMessage)
 
+		// fmt.Printf("用户 %d 准备广播消息到群组 %d\n", c.id, groupID)
 		// 广播消息到群组
 		broadcastToGroup(wsMessage, groupID)
 	}
@@ -347,6 +379,7 @@ func (c *Client) writePump() {
 func broadcastToGroup(message WebSocketMessage, groupID uint) {
 	data, err := json.Marshal(message)
 	if err != nil {
+		// fmt.Printf("消息序列化失败: %v\n", err)
 		return
 	}
 
@@ -355,17 +388,20 @@ func broadcastToGroup(message WebSocketMessage, groupID uint) {
 
 	if clients, exists := Manager.groups[groupID]; exists {
 		for client := range clients {
-			// 只向已认证的客户端发送消息
 			if client.isAuthorized {
 				select {
 				case client.send <- data:
+					// fmt.Printf("消息已发送到客户端 %d\n", client.id)
 				default:
+					// fmt.Printf("客户端 %d 的消息队列已满，正在关闭连接\n", client.id)
 					close(client.send)
 					delete(Manager.groups[groupID], client)
 					delete(Manager.clients, client)
 				}
 			}
 		}
+	} else {
+		// fmt.Printf("群组 %d 不存在或没有活跃客户端\n", groupID)
 	}
 }
 

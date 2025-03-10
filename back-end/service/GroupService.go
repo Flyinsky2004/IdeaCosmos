@@ -256,7 +256,6 @@ func DeleteChatGroup(c *gin.Context) {
 func AddGroupMember(c *gin.Context) {
 	userId, _ := c.Get("userId")
 	groupId, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-
 	var req struct {
 		UserIDs []uint `json:"userIds" binding:"omitempty"`
 		Email   string `json:"email" binding:"omitempty,email,max=50"`

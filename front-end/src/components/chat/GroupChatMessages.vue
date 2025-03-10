@@ -3,14 +3,8 @@
  * @Description: 群组聊天消息组件
 -->
 <script setup>
-import { ref, onMounted, watch, onBeforeUnmount } from 'vue'
-import { useUserStore } from '@/stores/user'
-import { get, post, postJSON } from '@/util/request'
-import { message } from 'ant-design-vue'
 import SpinLoaderLarge from '@/components/spinLoaderLarge.vue'
-import { BACKEND_DOMAIN } from '@/util/VARRIBLES'
-import { parseDate } from 'element-plus'
-import { parseDateTime } from '@/util/common'
+import { useGroupChatMessages } from './groupChatMessagesLogic'
 
 const props = defineProps({
   groupId: {
@@ -19,500 +13,182 @@ const props = defineProps({
   }
 })
 
-const userStore = useUserStore()
-const messages = ref([])
-const loading = ref(false)
-const messageInput = ref('')
-const mediaType = ref('text')
-const mediaFile = ref(null)
-const mediaPreview = ref('')
-const isEmojiPickerVisible = ref(false)
-const ws = ref(null) // WebSocket连接
-const retryCount = ref(0)
-const isClosing = ref(false)
-const isConnected = ref(false)
-const heartbeatInterval = ref(null) // 心跳定时器
+const emits = defineEmits(['previewImage'])
 
-// 处理WebSocket消息
-const handleWebSocketMessage = (data) => {
-  // 处理不同类型的消息
-  switch (data.type) {
-    case 'chat':
-      // 添加新消息到消息列表
-      messages.value.push(data)
-      // 滚动到底部
-      setTimeout(scrollToBottom, 100)
-      break
-      
-    case 'join':
-    case 'leave':
-      // 处理系统消息（加入/离开）
-      messages.value.push({
-        ...data,
-        MediaType: 'text',
-        SenderID: data.senderId,
-        Content: data.content,
-        CreatedAt: data.timestamp
-      })
-      setTimeout(scrollToBottom, 100)
-      break
-      
-    default:
-      console.warn('未知的消息类型:', data.type)
-  }
-}
+// 导入并使用封装的群组聊天消息逻辑
+const {
+  // 状态
+  userStore,
+  messages,
+  loading,
+  messageInput,
+  mediaType,
+  mediaFile,
+  mediaPreview,
+  isEmojiPickerVisible,
+  isConnected,
+  BACKEND_DOMAIN,
 
-// 发送心跳消息，保持连接活跃
-const startHeartbeat = () => {
-  // 清除现有的心跳定时器
-  stopHeartbeat()
-  
-  // 每30秒发送一次心跳
-  heartbeatInterval.value = setInterval(() => {
-    if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-      try {
-        // 发送一个简单的ping消息
-        ws.value.send(JSON.stringify({ type: 'ping' }))
-        console.log('发送心跳消息')
-      } catch (error) {
-        console.error('发送心跳消息失败:', error)
-        connectWebSocket() // 尝试重连
-      }
-    } else if (ws.value && ws.value.readyState !== WebSocket.CONNECTING) {
-      connectWebSocket() // 如果连接已断开且不在连接中，尝试重连
-    }
-  }, 30000)
-}
-
-// 停止心跳
-const stopHeartbeat = () => {
-  if (heartbeatInterval.value) {
-    clearInterval(heartbeatInterval.value)
-    heartbeatInterval.value = null
-  }
-}
-
-// 建立WebSocket连接
-const connectWebSocket = () => {
-  if (!props.groupId) return
-  
-  // 如果已经连接或正在连接，不要重复连接
-  if (ws.value && (ws.value.readyState === WebSocket.OPEN || ws.value.readyState === WebSocket.CONNECTING)) {
-    console.log('WebSocket已连接或正在连接中')
-    return
-  }
-  
-  try {
-    // 将 http:// 替换为 ws://，并移除末尾的斜杠
-    const baseUrl = BACKEND_DOMAIN.replace(/^http/, 'ws').replace(/\/$/, '')
-    const wsUrl = `${baseUrl}/ws/groupChat/${props.groupId}`
-    
-    console.log('正在连接WebSocket:', wsUrl)
-    
-    // 获取认证token
-    const token = localStorage.getItem('authToken')
-    if (!token) {
-      message.error('未登录或登录已过期')
-      return
-    }
-
-    // 如果已经有连接，先关闭
-    if (ws.value) {
-      stopHeartbeat()
-      isClosing.value = true
-      ws.value.close()
-      isClosing.value = false
-    }
-
-    ws.value = new WebSocket(wsUrl)
-    
-    // 设置连接超时
-    const connectionTimeout = setTimeout(() => {
-      if (ws.value && ws.value.readyState === WebSocket.CONNECTING) {
-        ws.value.close()
-        message.error('WebSocket连接超时，请检查网络状态')
-      }
-    }, 5000)
-    
-    ws.value.onopen = () => {
-      clearTimeout(connectionTimeout)
-      console.log('WebSocket连接已建立，发送认证消息')
-      
-      // 发送认证消息
-      const authMessage = {
-        token: token
-      }
-      ws.value.send(JSON.stringify(authMessage))
-    }
-    
-    ws.value.onclose = (event) => {
-      clearTimeout(connectionTimeout)
-      console.log('WebSocket连接已关闭:', event)
-      isConnected.value = false
-      stopHeartbeat()
-      
-      // 如果不是主动关闭，尝试重连
-      if (!isClosing.value) {
-        const delay = Math.min(1000 * Math.pow(2, retryCount.value), 30000)
-        retryCount.value++
-        
-        setTimeout(() => {
-          if (!isClosing.value) {
-            console.log(`尝试第 ${retryCount.value} 次重连...`)
-            connectWebSocket()
-          }
-        }, delay)
-      }
-    }
-    
-    ws.value.onerror = (error) => {
-      clearTimeout(connectionTimeout)
-      console.error('WebSocket错误:', error)
-      isConnected.value = false
-      message.error('WebSocket连接错误，正在尝试重连...')
-    }
-    
-    ws.value.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        
-        // 处理认证成功消息
-        if (data.code === 200 && (data.message === '认证成功' || data.data === '认证成功' || data.data === '连接成功')) {
-          console.log('WebSocket认证成功')
-          isConnected.value = true
-          retryCount.value = 0
-          startHeartbeat() // 启动心跳
-          return
-        }
-        
-        // 处理pong响应，不做特殊处理
-        if (data.type === 'pong') {
-          console.log('收到pong响应')
-          return
-        }
-        
-        // 处理错误消息
-        if (data.code !== undefined && data.code !== 200) {
-          message.error(data.message || '连接错误')
-          if (data.code === 401) {
-            // 认证失败，重新连接
-            ws.value.close()
-          }
-          return
-        }
-        
-        // 处理正常的聊天消息
-        if (data.type) {
-          handleWebSocketMessage(data)
-        }
-      } catch (error) {
-        console.error('解析WebSocket消息失败:', error)
-      }
-    }
-  } catch (error) {
-    console.error('创建WebSocket连接失败:', error)
-    message.error('创建WebSocket连接失败，请稍后重试')
-  }
-}
-
-// 关闭WebSocket连接
-const closeWebSocket = () => {
-  stopHeartbeat()
-  if (ws.value) {
-    isClosing.value = true
-    if (ws.value.readyState === WebSocket.OPEN || ws.value.readyState === WebSocket.CONNECTING) {
-      ws.value.close()
-    }
-    ws.value = null
-    isConnected.value = false
-  }
-}
-
-// 获取历史消息列表
-const fetchMessages = () => {
-  if (!props.groupId) return
-  
-  loading.value = true
-  get(`/api/chat/groups/${props.groupId}/messages`, {}, (_, data) => {
-    messages.value = data
-    loading.value = false
-    scrollToBottom()
-  }, (msg) => {
-    loading.value = false
-    message.error('获取消息失败' + msg)
-  })
-}
-
-// 发送消息 - 使用WebSocket
-const sendMessage = async () => {
-  if (!messageInput.value.trim() && !mediaFile.value) return
-  
-  // 如果连接正在建立中，等待一段时间
-  if (ws.value && ws.value.readyState === WebSocket.CONNECTING) {
-    try {
-      await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          reject(new Error('连接超时'))
-        }, 5000)
-
-        const checkConnection = () => {
-          if (isConnected.value) {
-            clearTimeout(timeout)
-            resolve()
-          } else if (ws.value.readyState === WebSocket.CLOSED) {
-            clearTimeout(timeout)
-            reject(new Error('连接已关闭'))
-          } else {
-            setTimeout(checkConnection, 100)
-          }
-        }
-        checkConnection()
-      })
-    } catch (error) {
-      message.error('聊天连接失败，正在重新连接...')
-      connectWebSocket()
-      return
-    }
-  }
-
-  // 检查连接状态
-  if (!isConnected.value || !ws.value || ws.value.readyState !== WebSocket.OPEN) {
-    message.error('聊天连接已断开，正在重新连接...')
-    connectWebSocket()
-    return
-  }
-  
-  // 如果有媒体文件，先上传
-  if (mediaFile.value) {
-    uploadMedia(() => {
-      sendTextMessage()
-    })
-    return
-  }
-  
-  sendTextMessage()
-}
-
-// 发送文本消息
-const sendTextMessage = () => {
-  if (!isConnected.value) {
-    message.error('等待连接建立...')
-    return
-  }
-
-  const messageData = {
-    type: 'chat',
-    content: messageInput.value,
-    mediaType: mediaType.value,
-    mediaURL: mediaPreview.value
-  }
-  
-  try {
-    ws.value.send(JSON.stringify(messageData))
-    messageInput.value = ''
-    mediaFile.value = null
-    mediaPreview.value = ''
-    mediaType.value = 'text'
-  } catch (error) {
-    console.error('发送消息失败:', error)
-    message.error('发送消息失败，正在重新连接...')
-    connectWebSocket()
-  }
-}
-
-// 上传媒体文件
-const uploadMedia = (callback) => {
-  if (!mediaFile.value) {
-    callback()
-    return
-  }
-  
-  const formData = new FormData()
-  formData.append('media', mediaFile.value)
-  formData.append('type', mediaType.value)
-  
-  post('/api/upload/chat-media', formData, (_, data) => {
-    mediaPreview.value = data.url
-    callback()
-  }, () => {
-    message.error('媒体上传失败')
-  })
-}
-
-// 处理媒体文件选择
-const handleMediaSelect = (event) => {
-  const file = event.target.files[0]
-  if (!file) return
-  
-  mediaFile.value = file
-  mediaType.value = file.type.startsWith('image/') ? 'image' : 
-                    file.type.startsWith('video/') ? 'video' : 
-                    file.type.startsWith('audio/') ? 'audio' : 'file'
-  
-  if (mediaType.value === 'image') {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      mediaPreview.value = e.target.result
-    }
-    reader.readAsDataURL(file)
-  }
-}
-
-// 取消媒体文件选择
-const cancelMediaSelect = () => {
-  mediaFile.value = null
-  mediaPreview.value = ''
-  mediaType.value = 'text'
-}
-
-// 滚动到底部
-const scrollToBottom = () => {
-  const container = document.querySelector('.messages-container')
-  if (container) {
-    container.scrollTop = container.scrollHeight
-  }
-}
-
-// 格式化时间
-const formatTime = (timestamp) => {
-  const date = new Date(timestamp)
-  const now = new Date()
-  
-  if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-  }
-  
-  return date.toLocaleString('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-// 组件挂载时初始化
-onMounted(() => {
-  fetchMessages() // 首先获取历史消息
-  connectWebSocket() // 然后建立WebSocket连接
-})
-
-// 监听groupId变化
-watch(() => props.groupId, (newVal, oldVal) => {
-  if (newVal !== oldVal) {
-    closeWebSocket() // 关闭旧连接
-    messages.value = [] // 清空消息列表
-    fetchMessages() // 获取新群组的历史消息
-    connectWebSocket() // 建立新连接
-  }
-})
-
-// 组件卸载时清理
-onBeforeUnmount(() => {
-  stopHeartbeat()
-  if (ws.value) {
-    isClosing.value = true
-    try {
-      ws.value.close(1000, 'Component unmounted')
-    } catch (error) {
-      console.error('关闭WebSocket连接失败:', error)
-    }
-    ws.value = null
-  }
-})
+  // 方法
+  handleWebSocketMessage,
+  sendMessage,
+  handleMediaSelect,
+  cancelMediaSelect,
+  scrollToBottom,
+  parseDateTime
+} = useGroupChatMessages(props, emits)
 </script>
 
 <template>
   <div class="chat-messages-container h-full flex flex-col animate__animated animate__fadeIn">
     <!-- 消息列表 -->
-    <div class="messages-container flex-1 overflow-y-auto p-4 space-y-4">
-      <div v-if="loading" class="flex justify-center py-8">
+    <div class="messages-container flex-1 overflow-y-auto p-6 space-y-4 bg-white dark:bg-zinc-900">
+      <div v-if="loading" class="flex justify-center py-12">
         <SpinLoaderLarge />
       </div>
       
-      <div v-else-if="messages.length === 0" class="flex flex-col items-center justify-center py-12">
-        <div class="text-6xl text-gray-300 dark:text-gray-600 mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div v-else-if="messages.length === 0" class="flex flex-col items-center justify-center py-12 animate__animated animate__fadeIn animate__delay-1s">
+        <div class="text-6xl text-gray-300 dark:text-gray-600 mb-4 animate__animated animate__fadeIn animate__delay-2s">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
         </div>
-        <p class="text-lg text-gray-500 dark:text-gray-400">开始聊天吧</p>
+        <div class="border p-4 w-fit rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 dark:border-gray-700 animate__animated animate__fadeIn animate__delay-3s">
+          <p class="text-lg text-gray-700 dark:text-gray-300 font-medium">开始聊天吧</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">发送消息开始与群组成员交流</p>
+        </div>
       </div>
       
       <template v-else>
+        <!-- 系统消息（加入/离开提示）- Instagram风格居中显示 -->
         <div 
           v-for="message in messages" 
           :key="message.ID"
-          class="flex items-start gap-3 group animate__animated animate__fadeInUp animate__faster"
-          :class="message.SenderID === userStore.user.id ? 'flex-row-reverse' : ''"
+          class="animate__animated animate__fadeInUp animate__faster"
         >
-          <!-- 发送者头像 -->
-          <div class="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 flex-shrink-0 border theme-border">
-            <img 
-              v-if="message.SenderAvatar" 
-              :src="BACKEND_DOMAIN + message.senderAvatar" 
-              class="w-full h-full object-cover"
-              alt="用户头像"
-            >
-            <div v-else class="w-full h-full flex items-center justify-center text-blue-500 dark:text-blue-400 text-sm font-bold">
-              {{ message.senderName?.charAt(0) }}
+          <!-- 系统消息（加入/离开提示） -->
+          <div v-if="message.type === 'join' || message.type === 'leave'" 
+               class="my-8 flex justify-center animate__animated animate__fadeIn">
+            <div class="px-5 py-2 rounded-full bg-gradient-to-r from-gray-100 to-gray-50 dark:from-zinc-800/80 dark:to-zinc-800/40 text-xs text-gray-500 dark:text-gray-400 inline-flex items-center gap-2 shadow-sm border theme-border backdrop-blur-sm">
+              <div v-if="message.type === 'join'" class="w-4 h-4 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-blue-500 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+              </div>
+              <div v-else class="w-4 h-4 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-orange-500 dark:text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15" />
+                </svg>
+              </div>
+              <span class="font-medium">{{ message.Content }}</span>
+              <span class="text-[10px] text-gray-400 dark:text-gray-500 ml-1 opacity-70">{{ parseDateTime(message.CreatedAt) }}</span>
             </div>
           </div>
           
-          <!-- 消息内容 -->
+          <!-- 普通聊天消息 -->
           <div 
-            class="max-w-[70%] rounded-lg p-3 group-hover:shadow-md transition-all"
-            :class="message.SenderID === userStore.user.id 
-              ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white' 
-              : 'bg-gray-50 dark:bg-zinc-800/50 dark:text-gray-200 border theme-border'"
+            v-else
+            class="flex items-start gap-3 group mb-8 transition-all duration-300"
+            :class="message.SenderID === userStore.user.id ? 'flex-row-reverse' : ''"
           >
-            <!-- 发送者名称 -->
-            <div 
-              v-if="message.SenderID !== userStore.user.id"
-              class="text-xs mb-1"
-              :class="message.SenderID === userStore.user.id 
-                ? 'text-blue-200' 
-                : 'text-blue-500 dark:text-blue-400'"
-            >
-              {{ message.SenderName }}
+            <!-- 发送者头像 -->
+            <div class="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 flex-shrink-0 border theme-border shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-md group-hover:shadow-blue-500/10">
+              <img 
+                v-if="message.SenderAvatar" 
+                :src="BACKEND_DOMAIN + message.SenderAvatar" 
+                class="w-full h-full object-cover"
+                alt="用户头像"
+                onerror="this.style.display='none'"
+              >
+              <div v-else class="w-full h-full flex items-center justify-center text-blue-500 dark:text-blue-400 text-sm font-bold">
+                {{ message.SenderName?.charAt(0) || '?' }}
+              </div>
             </div>
             
-            <!-- 文本消息 -->
-            <p v-if="message.MediaType === 'text'" class="break-words">
-              {{ message.Content }}
-            </p>
-            
-            <!-- 图片消息 -->
-            <img 
-              v-else-if="message.MediaType === 'image'" 
-              :src="message.MediaURL"
-              class="max-w-full rounded-lg shadow-sm hover:shadow-lg transition-shadow cursor-pointer"
-              alt="图片消息"
-            >
-            
-            <!-- 音频消息 -->
-            <audio 
-              v-else-if="message.MediaType === 'audio'" 
-              :src="message.MediaURL"
-              controls
-              class="max-w-full"
-            ></audio>
-            
-            <!-- 视频消息 -->
-            <video 
-              v-else-if="message.MediaType === 'video'" 
-              :src="message.MediaURL"
-              controls
-              class="max-w-full rounded-lg shadow-sm"
-            ></video>
-            
-            <!-- 发送时间 -->
+            <!-- 消息内容 -->
             <div 
-              class="text-xs mt-1 opacity-0 group-hover:opacity-100 transition-opacity"
-              :class="message.SenderID === userStore.user.id 
-                ? 'text-blue-200' 
-                : 'text-gray-400 dark:text-gray-500'"
+              class="max-w-[70%] p-3.5 group-hover:shadow-md transition-all duration-300"
+              :class="[
+                message.SenderID === userStore.user.id 
+                  ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-blue-500/20 shadow-sm hover:-translate-y-0.5 rounded-2xl rounded-tr-sm' 
+                  : 'bg-gray-50 dark:bg-zinc-800/50 dark:text-gray-200 border theme-border hover:-translate-y-0.5 rounded-2xl rounded-tl-sm'
+              ]"
             >
-              {{ parseDateTime(message.CreatedAt) }}
+              <!-- 发送者名称 -->
+              <div 
+                v-if="message.SenderID !== userStore.user.id"
+                class="text-xs mb-1.5 font-medium flex items-center gap-1.5"
+                :class="message.SenderID === userStore.user.id 
+                  ? 'text-blue-200' 
+                  : 'text-blue-500 dark:text-blue-400'"
+              >
+                {{ message.SenderName }}
+                <div class="w-1 h-1 rounded-full bg-current opacity-50"></div>
+                <span class="text-[10px] text-gray-400 dark:text-gray-500 opacity-70">{{ parseDateTime(message.CreatedAt).split(' ')[1] }}</span>
+              </div>
+              
+              <!-- 文本消息 -->
+              <p v-if="message.MediaType === 'text'" class="break-words text-sm leading-relaxed">
+                {{ message.Content }}
+              </p>
+              
+              <!-- 图片消息 -->
+              <div v-else-if="message.MediaType === 'image'" class="relative group/image overflow-hidden rounded-lg">
+                <img 
+                  :src="message.MediaURL"
+                  class="max-w-full rounded-lg shadow-sm group-hover/image:shadow-lg transition-all duration-500 cursor-pointer transform group-hover/image:scale-[1.02]"
+                  alt="图片消息"
+                  @click="$emit('previewImage', message.MediaURL)"
+                >
+                <div class="absolute inset-0 bg-black/0 group-hover/image:bg-black/10 rounded-lg transition-all duration-300 flex items-center justify-center opacity-0 group-hover/image:opacity-100">
+                  <div class="bg-black/50 p-1.5 rounded-full transform scale-90 group-hover/image:scale-100 transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 音频消息 -->
+              <div v-else-if="message.MediaType === 'audio'" class="bg-white/20 dark:bg-black/20 rounded-lg p-2 shadow-sm backdrop-blur-sm">
+                <div class="flex items-center gap-2 mb-1 text-xs opacity-70">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                  </svg>
+                  <span>语音消息</span>
+                </div>
+                <audio 
+                  :src="message.MediaURL"
+                  controls
+                  class="max-w-full rounded-md w-full"
+                ></audio>
+              </div>
+              
+              <!-- 视频消息 -->
+              <div v-else-if="message.MediaType === 'video'" class="rounded-lg overflow-hidden shadow-sm">
+                <div class="bg-white/20 dark:bg-black/20 p-2 flex items-center gap-2 text-xs opacity-70 backdrop-blur-sm">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  <span>视频消息</span>
+                </div>
+                <video 
+                  :src="message.MediaURL"
+                  controls
+                  class="max-w-full rounded-b-lg"
+                ></video>
+              </div>
+              
+              <!-- 发送时间 (仅自己的消息) -->
+              <div 
+                v-if="message.SenderID === userStore.user.id"
+                class="text-[10px] mt-1 opacity-70 text-right"
+                :class="message.SenderID === userStore.user.id 
+                  ? 'text-blue-200' 
+                  : 'text-gray-400 dark:text-gray-500'"
+              >
+                {{ parseDateTime(message.CreatedAt).split(' ')[1] }}
+              </div>
             </div>
           </div>
         </div>
@@ -520,23 +196,38 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- 输入区域 -->
-    <div class="p-4 border-t theme-border bg-white dark:bg-zinc-900">
+    <div class="p-4 border-t theme-border bg-white dark:bg-zinc-900 shadow-lg shadow-black/5">
+      <!-- 连接状态指示器 -->
+      <div v-if="!isConnected" class="mb-2 flex items-center justify-center">
+        <span class="text-xs px-3 py-1 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 flex items-center gap-1.5 shadow-sm animate-pulse">
+          <span class="h-1.5 w-1.5 rounded-full bg-orange-500"></span>
+          正在连接...
+        </span>
+      </div>
+
       <!-- 媒体预览 -->
       <div v-if="mediaPreview" class="mb-4 relative animate__animated animate__fadeIn">
-        <img 
-          v-if="mediaType === 'image'"
-          :src="mediaPreview"
-          class="max-h-32 rounded-lg shadow-sm"
-          alt="媒体预览"
-        >
-        <div v-else class="p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-lg border theme-border">
-          <span class="text-gray-500 dark:text-gray-400">
-            {{ mediaFile?.name }}
-          </span>
+        <div class="rounded-xl overflow-hidden border theme-border shadow-sm hover:shadow-md transition-all duration-300">
+          <img 
+            v-if="mediaType === 'image'"
+            :src="mediaPreview"
+            class="max-h-40 w-full object-contain bg-gray-50 dark:bg-zinc-800/50"
+            alt="媒体预览"
+          >
+          <div v-else class="p-4 bg-gray-50 dark:bg-zinc-800/50 flex items-center gap-3">
+            <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <span class="text-gray-700 dark:text-gray-300 font-medium">
+              {{ mediaFile?.name }}
+            </span>
+          </div>
         </div>
         <button 
           @click="cancelMediaSelect"
-          class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
+          class="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg hover:shadow-red-500/30 transition-all duration-300 transform hover:scale-110"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -544,36 +235,40 @@ onBeforeUnmount(() => {
         </button>
       </div>
       
-      <div class="flex items-center gap-2">
-        <!-- 媒体上传按钮 -->
-        <div class="relative">
-          <input 
-            type="file" 
-            accept="image/*,audio/*,video/*"
-            class="hidden"
-            @change="handleMediaSelect"
-            ref="fileInput"
-          >
+      <div class="flex items-center gap-3">
+        <!-- 左侧按钮区 -->
+        <div class="flex items-center space-x-1">
+          <!-- 媒体上传按钮 -->
+          <div class="relative">
+            <input 
+              type="file" 
+              accept="image/*,audio/*,video/*"
+              class="hidden"
+              @change="handleMediaSelect"
+              ref="fileInput"
+            >
+            <button 
+              @click="$refs.fileInput.click()"
+              class="p-2.5 text-gray-500 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 hover:shadow-sm transform hover:scale-105"
+              title="上传媒体文件"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- 表情按钮 -->
           <button 
-            @click="$refs.fileInput.click()"
-            class="p-2 text-gray-500 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-            title="上传媒体文件"
+            class="p-2.5 text-gray-500 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 hover:shadow-sm transform hover:scale-105"
+            title="选择表情"
+            @click="isEmojiPickerVisible = !isEmojiPickerVisible"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </button>
         </div>
-
-        <!-- 表情按钮 -->
-        <button 
-          class="p-2 text-gray-500 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-          title="选择表情"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </button>
         
         <!-- 消息输入框 -->
         <input 
@@ -581,16 +276,16 @@ onBeforeUnmount(() => {
           @keyup.enter="sendMessage"
           type="text"
           placeholder="输入消息..."
-          class="flex-1 px-4 py-2 bg-gray-50 dark:bg-zinc-800/50 border theme-border rounded-full focus:ring-2 focus:ring-blue-500/20 dark:text-gray-300 dark:placeholder-gray-500"
+          class="flex-1 px-5 py-3 bg-gray-50 dark:bg-zinc-800/50 border theme-border rounded-full focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-gray-300 dark:placeholder-gray-500 transition-all shadow-sm hover:shadow-md text-sm"
         >
         
         <!-- 发送按钮 -->
         <button 
           @click="sendMessage"
-          class="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          class="px-4 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full hover:opacity-90 hover:shadow-md hover:shadow-blue-500/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transform hover:scale-105"
           :disabled="!messageInput.trim() && !mediaFile"
         >
-          <span class="hidden sm:inline">发送</span>
+          <span class="hidden sm:inline font-medium">发送</span>
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
           </svg>
@@ -628,11 +323,23 @@ onBeforeUnmount(() => {
 
 /* 动画相关样式 */
 .animate__animated {
-  animation-duration: 0.5s;
+  animation-duration: 0.4s;
 }
 
 .animate__faster {
-  animation-duration: 0.3s;
+  animation-duration: 0.25s;
+}
+
+.animate__delay-1s {
+  animation-delay: 0.1s;
+}
+
+.animate__delay-2s {
+  animation-delay: 0.2s;
+}
+
+.animate__delay-3s {
+  animation-delay: 0.3s;
 }
 
 @keyframes fadeInUp {
@@ -646,7 +353,37 @@ onBeforeUnmount(() => {
   }
 }
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .animate__fadeInUp {
   animation-name: fadeInUp;
+}
+
+.animate__fadeIn {
+  animation-name: fadeIn;
+}
+
+/* 添加一些气泡动画效果 */
+@keyframes pulse-subtle {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.1);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+.pulse-animation {
+  animation: pulse-subtle 2s infinite;
 }
 </style> 
