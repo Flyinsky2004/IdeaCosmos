@@ -187,7 +187,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col h-[calc(100vh-5rem)] animate__animated animate__fadeIn bg-[#f8fafc] dark:bg-[#030616]">
+  <div class="flex flex-col h-[calc(100vh-5rem)] animate__animated animate__fadeIn">
     <div class="flex-1 mx-4 mb-4 rounded-2xl shadow-lg overflow-hidden animate__animated animate__fadeIn animate__delay-2s">
       <div class="h-full flex flex-col bg-white dark:bg-zinc-900">
         <!-- 顶部标题栏 -->
@@ -219,7 +219,7 @@ onMounted(() => {
         </div>
 
         <!-- 通知设置面板 -->
-        <div v-if="showSettings" class="mx-6 my-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm animate__animated animate__fadeIn">
+        <div v-if="showSettings" class="mx-6 my-4 p-4 bg-white dark:bg-[#18181b] rounded-lg shadow-sm animate__animated animate__fadeIn">
           <h2 class="text-lg font-semibold mb-4 dark:text-white">通知设置</h2>
           <div v-if="settingsLoading" class="flex justify-center py-4">
             <SpinLoaderLarge />

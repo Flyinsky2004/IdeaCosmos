@@ -55,7 +55,7 @@ const {
 </script>
 
 <template>
-  <div class="flex flex-col h-[calc(100vh-5rem)] animate__animated animate__fadeIn bg-[#f8fafc] dark:bg-[#030616]">
+  <div class="flex flex-col h-[calc(100vh-5rem)] animate__animated animate__fadeIn ">
     <!-- 聊天主区域 -->
     <div class="flex-1 mx-4 mb-4 rounded-2xl shadow-lg overflow-hidden animate__animated animate__fadeIn animate__delay-2s">
       <div class="h-full flex">
