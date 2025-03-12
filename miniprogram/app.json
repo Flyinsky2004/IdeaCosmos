@@ -6,7 +6,8 @@
     "pages/profile/index",
     "pages/logs/index",
     "pages/project-detail/index",
-    "pages/chapter-detail/index"
+    "pages/chapter-detail/index",
+    "pages/group-chat/index"
   ],
   "window": {
     "backgroundTextStyle": "light",
