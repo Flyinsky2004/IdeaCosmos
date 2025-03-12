@@ -1,13 +1,89 @@
 <!--pages/notification/index.wxml-->
 <view class="container">
+  <!-- 顶部标题栏 -->
+  <view class="header">
+    <view class="title">通知中心</view>
+    <view class="actions">
+      <view class="action-btn read-all-btn" bindtap="markAllAsRead">
+        <text class="iconfont icon-check"></text>
+        <text>全部已读</text>
+      </view>
+      <view class="action-btn delete-all-btn" bindtap="deleteAllNotifications">
+        <text class="iconfont icon-delete"></text>
+        <text>清空通知</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 通知类型标签 -->
+  <scroll-view scroll-x class="tabs-container">
+    <view class="tabs">
+      <view 
+        wx:for="{{tabs}}" 
+        wx:key="type" 
+        class="tab {{selectedTab === item.type ? 'active' : ''}}" 
+        bindtap="changeTab" 
+        data-type="{{item.type}}"
+      >
+        {{item.name}}
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 通知列表 -->
   <view class="notification-list">
-    <block wx:if="{{notifications.length > 0}}">
-      <view wx:for="{{notifications}}" wx:key="index" class="notification-item">
-        <!-- 通知内容将在这里显示 -->
+    <!-- 加载中 -->
+    <view class="loading" wx:if="{{loading}}">
+      <view class="loading-spinner"></view>
+    </view>
+    
+    <!-- 空状态 -->
+    <view class="empty-state" wx:elif="{{notifications.length === 0}}">
+      <view class="empty-icon">
+        <text class="iconfont icon-notification"></text>
+      </view>
+      <text class="empty-text">暂无通知</text>
+    </view>
+    
+    <!-- 通知列表 -->
+    <block wx:else>
+      <view 
+        wx:for="{{notifications}}" 
+        wx:key="ID" 
+        class="notification-item {{!item.IsRead ? 'unread' : ''}}"
+      >
+        <view class="notification-icon">
+          <text class="iconfont icon-{{getNotificationIcon(item.Type)}}"></text>
+        </view>
+        <view class="notification-content">
+          <view class="notification-header">
+            <text class="notification-title">{{item.Title || getNotificationTypeName(item.Type)}}</text>
+            <text class="notification-time">{{item.CreatedAt}}</text>
+          </view>
+          <text class="notification-text">{{item.Content}}</text>
+          <view class="notification-footer">
+            <text class="notification-type">{{getNotificationTypeName(item.Type)}}</text>
+            <view class="notification-actions">
+              <text 
+                wx:if="{{!item.IsRead}}" 
+                class="action-read" 
+                bindtap="markAsRead" 
+                data-id="{{item.ID}}"
+              >标为已读</text>
+              <text 
+                class="action-delete" 
+                bindtap="deleteNotification" 
+                data-id="{{item.ID}}"
+              >删除</text>
+            </view>
+          </view>
+        </view>
       </view>
     </block>
-    <view wx:else class="empty-state">
-      <text>暂无通知</text>
-    </view>
+  </view>
+
+  <!-- 回到顶部按钮 -->
+  <view class="back-to-top" wx:if="{{showBackToTop}}" bindtap="scrollToTop">
+    <text class="iconfont icon-arrow-up"></text>
   </view>
 </view>

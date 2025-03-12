@@ -1,21 +1,399 @@
+/* 全局容器 */
 .container {
   padding: 20rpx;
+  background-color: #18181b; /* 暗色背景 */
+  min-height: 100vh;
+  color: #f3f4f6;
+  box-sizing: border-box;
 }
 
+/* 顶部标题栏 */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30rpx;
+  padding: 20rpx 0;
+  border-bottom: 1px solid rgba(63, 63, 70, 0.5);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: rgba(24, 24, 27, 0.98);
+  backdrop-filter: blur(10rpx);
+}
+
+.title {
+  font-size: 42rpx;
+  font-weight: bold;
+  color: #f3f4f6;
+  display: flex;
+  align-items: center;
+}
+
+.title::before {
+  content: '';
+  display: block;
+  height: 36rpx;
+  width: 8rpx;
+  background: linear-gradient(to bottom, #3b82f6, #06b6d4);
+  border-radius: 4rpx;
+  margin-right: 16rpx;
+  box-shadow: 0 0 12rpx rgba(59, 130, 246, 0.5);
+}
+
+.actions {
+  display: flex;
+  gap: 16rpx;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  padding: 12rpx 24rpx;
+  border-radius: 30rpx;
+  font-size: 26rpx;
+  transition: all 0.3s;
+}
+
+.action-btn text {
+  margin-left: 8rpx;
+}
+
+.read-all-btn {
+  background-color: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.read-all-btn:active {
+  background-color: rgba(59, 130, 246, 0.3);
+  transform: translateY(2rpx);
+}
+
+.delete-all-btn {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.delete-all-btn:active {
+  background-color: rgba(239, 68, 68, 0.3);
+  transform: translateY(2rpx);
+}
+
+/* 加载状态 */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60rpx 0;
+}
+
+.loading-spinner {
+  width: 60rpx;
+  height: 60rpx;
+  border: 4rpx solid rgba(63, 63, 70, 0.5);
+  border-top: 4rpx solid #3b82f6;
+  border-right: 4rpx solid #06b6d4;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  box-shadow: 0 0 20rpx rgba(59, 130, 246, 0.2);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 标签容器 */
+.tabs-container {
+  margin-bottom: 30rpx;
+  overflow-x: auto;
+  position: sticky;
+  top: 90rpx;
+  z-index: 99;
+  background-color: rgba(24, 24, 27, 0.95);
+  backdrop-filter: blur(10rpx);
+  padding: 10rpx 0;
+}
+
+/* 隐藏滚动条但保留功能 */
+.tabs-container::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.tabs {
+  display: flex;
+  padding: 10rpx 0;
+  flex-wrap: nowrap;
+}
+
+.tab {
+  display: inline-block;
+  padding: 16rpx 30rpx;
+  margin-right: 20rpx;
+  background-color: rgba(63, 63, 70, 0.6);
+  color: #9ca3af;
+  border-radius: 30rpx;
+  font-size: 28rpx;
+  transition: all 0.3s;
+  border: 1px solid rgba(63, 63, 70, 0.7);
+  white-space: nowrap;
+}
+
+.tab.active {
+  background: linear-gradient(to right, #3b82f6, #06b6d4);
+  color: white;
+  box-shadow: 0 4rpx 12rpx rgba(59, 130, 246, 0.3);
+  border-color: transparent;
+  transform: translateY(-2rpx);
+}
+
+.tab:active {
+  transform: translateY(-2rpx);
+}
+
+/* 通知列表 */
 .notification-list {
-  width: 100%;
+  padding-bottom: 120rpx; /* 增加底部间距，防止被返回顶部按钮遮挡 */
 }
 
 .notification-item {
-  background: #fff;
-  padding: 20rpx;
-  margin-bottom: 20rpx;
-  border-radius: 10rpx;
-  box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
+  display: flex;
+  background-color: rgba(39, 39, 42, 0.8);
+  padding: 30rpx;
+  margin-bottom: 24rpx;
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.15);
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(63, 63, 70, 0.7);
+  animation: fadeIn 0.6s ease-out;
 }
 
+.notification-item:nth-child(2n) {
+  animation-delay: 0.1s;
+}
+
+.notification-item:nth-child(3n) {
+  animation-delay: 0.2s;
+}
+
+.notification-item.unread {
+  border-left: 8rpx solid #3b82f6;
+}
+
+.notification-item:active {
+  background-color: rgba(39, 39, 42, 0.6);
+  border-color: rgba(59, 130, 246, 0.5);
+  transform: translateY(-2rpx);
+}
+
+.notification-icon {
+  margin-right: 24rpx;
+  color: #3b82f6;
+  font-size: 40rpx;
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 6rpx;
+}
+
+.notification-content {
+  flex: 1;
+  min-width: 0; /* 修复溢出问题 */
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+  flex-wrap: wrap;
+}
+
+.notification-title {
+  font-weight: bold;
+  color: #f3f4f6;
+  font-size: 30rpx;
+  margin-right: 20rpx;
+  flex: 1;
+  word-break: break-all;
+}
+
+.notification-time {
+  font-size: 24rpx;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.notification-text {
+  margin-bottom: 24rpx;
+  font-size: 28rpx;
+  color: #9ca3af;
+  line-height: 1.5;
+  word-wrap: break-word;
+  word-break: break-all;
+}
+
+.notification-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.notification-type {
+  font-size: 22rpx;
+  padding: 6rpx 16rpx;
+  background-color: rgba(63, 63, 70, 0.6);
+  color: #9ca3af;
+  border-radius: 30rpx;
+  flex-shrink: 0;
+}
+
+.notification-actions {
+  display: flex;
+  gap: 16rpx;
+  flex-wrap: wrap;
+}
+
+.action-read, .action-delete {
+  font-size: 24rpx;
+  padding: 8rpx 20rpx;
+  border-radius: 30rpx;
+}
+
+.action-read {
+  background-color: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+}
+
+.action-delete {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.action-read:active, .action-delete:active {
+  opacity: 0.8;
+  transform: translateY(2rpx);
+}
+
+/* 空状态 */
 .empty-state {
-  text-align: center;
-  padding: 100rpx 0;
-  color: #999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 150rpx 0;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.empty-icon {
+  font-size: 120rpx;
+  color: #4b5563;
+  margin-bottom: 24rpx;
+}
+
+.empty-text {
+  color: #9ca3af;
+  font-size: 30rpx;
+}
+
+/* 回到顶部按钮 */
+.back-to-top {
+  position: fixed;
+  right: 40rpx;
+  bottom: 80rpx;
+  width: 90rpx;
+  height: 90rpx;
+  border-radius: 50%;
+  background: linear-gradient(to right, #3b82f6, #06b6d4);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6rpx 16rpx rgba(59, 130, 246, 0.3);
+  animation: fadeIn 0.3s ease;
+  z-index: 100;
+  font-size: 30rpx;
+}
+
+.back-to-top:active {
+  transform: scale(0.95);
+  opacity: 0.9;
+}
+
+/* 动画 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(30rpx); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-30rpx); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* 图标字体 */
+@font-face {
+  font-family: "iconfont";
+  src: url('data:font/woff2;charset=utf-8;base64,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') format('woff2');
+}
+
+.iconfont {
+  font-family: "iconfont" !important;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.icon-check:before {
+  content: "\e645";
+}
+
+.icon-delete:before {
+  content: "\e609";
+}
+
+.icon-notification:before {
+  content: "\e635";
+}
+
+.icon-like:before {
+  content: "\e669";
+}
+
+.icon-comment:before {
+  content: "\e667";
+}
+
+.icon-user-follow:before {
+  content: "\e63d";
+}
+
+.icon-collaborate:before {
+  content: "\e654";
+}
+
+.icon-document-update:before {
+  content: "\e665";
+}
+
+.icon-arrow-up:before {
+  content: "\e619";
 } 
