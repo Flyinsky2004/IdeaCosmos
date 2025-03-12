@@ -12,6 +12,7 @@ import { ref, onMounted, onUnmounted, watch } from "vue";
 import titleDark from "@/assets/img/title-dark.png";
 import { MdPreview } from "md-editor-v3";
 import "md-editor-v3/lib/preview.css";
+import webs from "@/assets/img/webs.webp";
 
 const { currentSection } = useFullPageScroll();
 // 将渐变色数组提取为公共变量
@@ -688,12 +689,24 @@ onMounted(() => {
           <div class="space-y-4">
             <div class="flex items-start gap-4">
               <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg mt-1">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-6 w-6 text-blue-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"
+                  />
                 </svg>
               </div>
               <div>
-                <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                <h4
+                  class="text-lg font-semibold text-gray-900 dark:text-gray-100"
+                >
                   智能续写
                 </h4>
                 <p class="text-gray-600 dark:text-gray-400">
@@ -701,15 +714,29 @@ onMounted(() => {
                 </p>
               </div>
             </div>
-            
+
             <div class="flex items-start gap-4">
-              <div class="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg mt-1">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zM12 2.25V4.5m5.834.166l-1.591 1.591M20.25 10.5H18M7.757 14.743l-1.59 1.59M6 10.5H3.75m4.007-4.243l-1.59-1.59" />
+              <div
+                class="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg mt-1"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-6 w-6 text-purple-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zM12 2.25V4.5m5.834.166l-1.591 1.591M20.25 10.5H18M7.757 14.743l-1.59 1.59M6 10.5H3.75m4.007-4.243l-1.59-1.59"
+                  />
                 </svg>
               </div>
               <div>
-                <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                <h4
+                  class="text-lg font-semibold text-gray-900 dark:text-gray-100"
+                >
                   情节优化
                 </h4>
                 <p class="text-gray-600 dark:text-gray-400">
@@ -717,15 +744,29 @@ onMounted(() => {
                 </p>
               </div>
             </div>
-            
+
             <div class="flex items-start gap-4">
-              <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg mt-1">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+              <div
+                class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg mt-1"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-6 w-6 text-green-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
+                  />
                 </svg>
               </div>
               <div>
-                <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                <h4
+                  class="text-lg font-semibold text-gray-900 dark:text-gray-100"
+                >
                   角色塑造
                 </h4>
                 <p class="text-gray-600 dark:text-gray-400">
@@ -733,15 +774,27 @@ onMounted(() => {
                 </p>
               </div>
             </div>
-            
+
             <div class="flex items-start gap-4">
               <div class="p-2 bg-rose-100 dark:bg-rose-900/30 rounded-lg mt-1">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-6 w-6 text-rose-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
+                  />
                 </svg>
               </div>
               <div>
-                <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                <h4
+                  class="text-lg font-semibold text-gray-900 dark:text-gray-100"
+                >
                   角色画像生成
                 </h4>
                 <p class="text-gray-600 dark:text-gray-400">
@@ -749,15 +802,29 @@ onMounted(() => {
                 </p>
               </div>
             </div>
-            
+
             <div class="flex items-start gap-4">
-              <div class="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg mt-1">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L21.75 12l-4.179 2.25m0 0l4.179 2.25L12 21.75 2.25 16.5l4.179-2.25m11.142 0l-5.571 3-5.571-3" />
+              <div
+                class="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg mt-1"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-6 w-6 text-amber-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L21.75 12l-4.179 2.25m0 0l4.179 2.25L12 21.75 2.25 16.5l4.179-2.25m11.142 0l-5.571 3-5.571-3"
+                  />
                 </svg>
               </div>
               <div>
-                <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                <h4
+                  class="text-lg font-semibold text-gray-900 dark:text-gray-100"
+                >
                   作品海报设计
                 </h4>
                 <p class="text-gray-600 dark:text-gray-400">
@@ -770,20 +837,26 @@ onMounted(() => {
 
         <!-- 右侧演示窗口 -->
         <div class="lg:w-1/2">
-          <div class="bg-white dark:bg-zinc-900 rounded-xl shadow-xl border theme-border p-6">
+          <div
+            class="bg-white dark:bg-zinc-900 rounded-xl shadow-xl border theme-border p-6"
+          >
             <div class="flex items-center gap-3 mb-4">
               <div class="flex space-x-2">
                 <div class="w-3 h-3 rounded-full bg-red-500"></div>
                 <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
                 <div class="w-3 h-3 rounded-full bg-green-500"></div>
               </div>
-              <div class="flex-1 text-center text-sm text-gray-600 dark:text-gray-400">
+              <div
+                class="flex-1 text-center text-sm text-gray-600 dark:text-gray-400"
+              >
                 AI 智能创作示例
               </div>
             </div>
-            
-            <div class="h-[400px] overflow-hidden rounded-lg bg-gray-50 dark:bg-zinc-800 p-4">
-              <MdPreview 
+
+            <div
+              class="h-[400px] overflow-hidden rounded-lg bg-gray-50 dark:bg-zinc-800 p-4"
+            >
+              <MdPreview
                 :modelValue="demoText"
                 :theme="themeStore.currentTheme"
                 previewTheme="github"
@@ -1282,6 +1355,59 @@ onMounted(() => {
               情感语气调节
             </li>
           </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="h-screen bg-[#f8fafc] dark:bg-[#030616] flex flex-col">
+    <!-- 介绍多端板块 -->
+    <div class="flex-1 container mx-auto px-4 flex flex-col">
+      <div class="text-center mt-12 mb-8">
+        <h2
+          class="text-5xl font-bold font-serif text-gray-900 dark:text-white mb-4"
+        >
+          跨平台支持
+        </h2>
+        <h2
+          class="text-3xl font-bold font-serif text-gray-900 dark:text-white mb-4"
+        >
+          随时随地，畅享创作
+        </h2>
+      </div>
+
+      <div class="flex-1 flex flex-row items-start justify-center gap-12 px-8">
+        <!-- 左侧文字介绍 -->
+        <div class="w-5/12 h-full">
+          <div class="text-left">
+            <h3
+              class="text-2xl font-semibold text-gray-900 dark:text-white mb-4"
+            >
+              移动端
+            </h3>
+            <p class="text-gray-600 dark:text-gray-400 mb-8">
+              便携随行的创作助手，为您提供剧集项目查看、实时通知接收以及团队聊天功能。简约而不简单，让您随时与创作保持连接，捕捉转瞬即逝的灵感。
+            </p>
+
+            <h3
+              class="text-2xl font-semibold text-gray-900 dark:text-white mb-4"
+            >
+              桌面端
+            </h3>
+            <p class="text-gray-600 dark:text-gray-400">
+              创作者的专业工作站，集剧集创作、编辑、管理于一体的完整平台。在这里，您可以从构思到成品，全程掌控创作过程，打造属于您的精彩剧集作品。
+            </p>
+          </div>
+        </div>
+
+        <!-- 右侧展示图 -->
+        <div class="w-7/12 flex flex-col justify-center items-center gap-4">
+          <div class="flex-1 transition-all duration-500 hover:scale-105">
+            <img
+              :src="webs"
+              alt="界面"
+              class="h-[70vh] object-contain rounded-lg my-auto"
+            />
+          </div>
         </div>
       </div>
     </div>

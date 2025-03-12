@@ -1,3 +1,11 @@
+/*
+ * @Author: Flyinsky w2084151024@gmail.com
+ * @Description: None
+ */
+/*
+ * @Author: Flyinsky w2084151024@gmail.com
+ * @Description: None
+ */
 import {fileURLToPath, URL} from 'node:url'
 
 import {defineConfig} from 'vite'
