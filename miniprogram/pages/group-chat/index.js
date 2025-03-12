@@ -417,8 +417,7 @@ Page({
       type: 'chat',
       content: this.data.messageInput,
       mediaType: 'text',
-      groupId: this.data.groupId,
-      timestamp: new Date().toISOString()
+      mediaURL: ''
     }
     
     // 发送消息
@@ -446,9 +445,7 @@ Page({
         type: 'chat',
         content: this.data.messageInput || '发送了一个媒体文件',
         mediaType: this.data.mediaType,
-        mediaUrl: mediaURL,
-        groupId: this.data.groupId,
-        timestamp: new Date().toISOString()
+        mediaURL: mediaURL
       }
       
       // 发送消息
@@ -766,7 +763,7 @@ Page({
           senderAvatar: this.getImageUrl(data.avatarUrl),
           Content: data.content,
           MediaType: data.mediaType,
-          MediaURL: data.mediaUrl,
+          MediaURL: data.mediaURL || data.mediaUrl, // 兼容两种字段名
           CreatedAt: data.timestamp,
           type: data.type
         }
