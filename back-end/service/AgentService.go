@@ -1,9 +1,14 @@
+/*
+ * @Author: Flyinsky w2084151024@gmail.com
+ * @Description: None
+ */
 package service
 
 import (
 	"back-end/config"
 	"back-end/entity/dto"
 	"back-end/entity/pojo"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -11,7 +16,9 @@ import (
 
 // GetUserChats 获取用户对话列表
 func GetUserChats(c *gin.Context) {
-	userId := c.GetUint("userId")
+	userIdOrigin, _ := c.Get("userId")
+	userId := uint(userIdOrigin.(int))
+	fmt.Println(userId)
 
 	var chats []pojo.Chat
 	if err := config.MysqlDataBase.Where("user_id = ?", userId).Find(&chats).Error; err != nil {

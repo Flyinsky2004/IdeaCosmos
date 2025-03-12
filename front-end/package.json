@@ -11,6 +11,7 @@
   "dependencies": {
     "@antv/g6": "^4.8.24",
     "@flaticon/flaticon-uicons": "^3.3.1",
+    "@vueuse/motion": "^3.0.3",
     "animate.css": "^4.1.1",
     "ant-design-vue": "^4.2.6",
     "axios": "^1.7.9",

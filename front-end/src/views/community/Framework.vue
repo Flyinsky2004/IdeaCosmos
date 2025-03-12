@@ -117,13 +117,13 @@ window.addEventListener('resize', () => {
         <div class="flex items-center gap-4">
           <!-- 搜索框 -->
           <div class="relative">
-            <input
+            <a-input
               v-model="searchKeyword"
               @keyup.enter="handleSearch"
               type="text"
               placeholder="搜索项目..."
               class="w-64 px-4 py-2 pr-10 bg-gray-100 dark:bg-zinc-800 border-0 rounded-lg focus:ring-2 focus:ring-blue-500/20 dark:text-gray-300 dark:placeholder-gray-500"
-            >
+            />
             <button 
               @click="handleSearch"
               class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 dark:text-gray-500 dark:hover:text-blue-400"
@@ -162,6 +162,17 @@ window.addEventListener('resize', () => {
             >
               {{ unreadNotifications > 99 ? '99+' : unreadNotifications }}
             </span>
+          </button>
+
+          <!-- AI对话按钮 -->
+          <button 
+            @click="router.push('/community/chatS')"
+            class="relative p-2 text-gray-600 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+            title="AI对话"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 3.104c-.767.217-1.5.5-2.17.87m0 0a10.07 10.07 0 0 1 2.17-.87M3 13h8m0 0v7m0-7c-3.866 0-7-3.134-7-7m7 7c3.866 0 7-3.134 7-7m-7 7v7m7-7h8m-8-7V3m0 0c3.866 0 7 3.134 7 7m-7-7V3M3 13c0 3.866 3.134 7 7 7m0 0c3.866 0 7-3.134 7-7" />
+            </svg>
           </button>
           
           <ThemeSwitcher />

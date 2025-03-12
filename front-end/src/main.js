@@ -1,3 +1,7 @@
+/*
+ * @Author: Flyinsky w2084151024@gmail.com
+ * @Description: None
+ */
 import './assets/css/main.css'
 import 'animate.css';
 import "@flaticon/flaticon-uicons/css/all/all.css";
@@ -14,11 +18,12 @@ import 'element-plus/dist/index.css'
 import App from './App.vue'
 import router from './router'
 import axios from "axios";
+import { MotionPlugin } from '@vueuse/motion';
 
 axios.defaults.baseURL="http://localhost:8080"
 //axios.defaults.baseURL= window.location.protocol + '//' + window.location.host
 const app = createApp(App)
-app.use(createPinia())
+app.use(createPinia()).use(MotionPlugin)
 app.use(router).use(ElementPlus).use(VueKinesis).use(Antd)
 
 app.mount('#app')

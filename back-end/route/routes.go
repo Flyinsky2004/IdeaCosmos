@@ -179,7 +179,7 @@ func RegisterRoutes(r *gin.Engine) {
 	{
 		agentGroup.GET("/chats", service.GetUserChats)
 		agentGroup.GET("/chats/:chat_id", service.GetChatHistory)
-		agentGroup.DELETE("/chats/:chat_id", service.DeleteChat)
+		agentGroup.GET("/chats/:chat_id/delete", service.DeleteChat)
 	}
 
 	websocketGroup := r.Group("/api/ws")
@@ -188,7 +188,7 @@ func RegisterRoutes(r *gin.Engine) {
 		websocketGroup.GET("modifyChapterVersionStream", service.ModifyChapterVersionStream)
 		websocketGroup.GET("newProjectAnalysis", service.NewProjectAnalysis)
 		websocketGroup.GET("groupChat/:id", service.HandleGroupChat)
-		websocketGroup.GET("projectSuggest", service.ProjectContentSuggest)
+		websocketGroup.GET("projectSuggest", service.IdeaCosmosChat)
 	}
 	// WebSocket路由
 	//r.GET("/ws/chat", service.HandleStreamChat)

@@ -40,8 +40,8 @@ type ProjectInfo struct {
 	CreatedAt   string `json:"created_at"`
 }
 
-// ProjectContentSuggest 项目内容建议
-func ProjectContentSuggest(c *gin.Context) {
+// IdeaCosmosChat 创剧星球原住民
+func IdeaCosmosChat(c *gin.Context) {
 	upgrader := websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
 			return true
@@ -90,13 +90,19 @@ func ProjectContentSuggest(c *gin.Context) {
 			ws.WriteJSON(dto.ErrorResponse[string](500, "无权访问该会话"))
 			return
 		}
+
+		// 加载历史消息
+		if err := config.MysqlDataBase.Model(&chat).Association("Messages").Find(&chat.Messages); err != nil {
+			ws.WriteJSON(dto.ErrorResponse[string](500, "获取历史消息失败"))
+			return
+		}
 	} else {
 		// 创建新会话
 		chat = pojo.Chat{
 			UserID: userId,
-			Type:   "project_suggest",
+			Type:   "idea_cosmos_chat",
 			Status: "active",
-			Title:  "项目内容建议",
+			Title:  "创剧星球助手对话",
 		}
 		if err := config.MysqlDataBase.Create(&chat).Error; err != nil {
 			ws.WriteJSON(dto.ErrorResponse[string](500, "创建聊天会话失败"))
@@ -145,7 +151,14 @@ func ProjectContentSuggest(c *gin.Context) {
 	}
 
 	// 构建提示词
-	prompt := `作为一个专业的影视内容分析师和创作顾问，请基于平台最新的50个项目数据，从创作者和观众双重视角进行分析。以下是平台上最新的项目数据（按创建时间排序）：
+	prompt := `我是创剧星球的智能助手，作为这个专业的剧集内容创作平台的原住民，我可以：
+
+- 为创作者提供创意启发和市场洞察
+- 为观众推荐优质内容和个性化建议
+- 解答平台使用相关的各类问题
+- 提供行业动态和趋势分析
+
+以下是平台上最新的优质项目数据（按创建时间排序）：
 `
 	for i, info := range projectInfos {
 		prompt += fmt.Sprintf("%d. 项目名称：%s\n   类型：%s\n   风格：%s\n   社会故事：%s\n   观看次数：%d\n   收藏次数：%d\n   创建时间：%s\n\n",
@@ -153,25 +166,48 @@ func ProjectContentSuggest(c *gin.Context) {
 	}
 
 	prompt += `
-请从以下两个视角进行分析：
+基于这些数据和我的专业知识，我可以为您提供以下服务：
 
-观众视角：
-1. 总结当前最受欢迎的作品特点（类型、风格、题材等）
-2. 分析观众的观看和收藏偏好
-3. 推荐3-5个最值得关注的优质项目，并说明推荐理由
-4. 预测未来可能会受欢迎的内容方向
+创作者服务：
+1. 剧本创意与故事构建建议
+2. 市场趋势与受众分析
+3. 项目优化和差异化建议
+4. 创作技巧与经验分享
 
-创作者视角：
-1. 分析当前市场热点和创作趋势
-2. 总结成功作品的共同特征（叙事手法、角色塑造等）
-3. 提供3-5个具体的创作建议
-4. 指出市场空白点和创新机会
+观众服务：
+1. 个性化内容推荐
+2. 热门作品解析
+3. 类似作品推荐
+4. 观看建议与导航
 
-请用专业但通俗易懂的语言回答，注重实用性，同时兼顾观众的观看体验和创作者的创作需求。回答中应该平衡艺术性与商业性，帮助创作者打造既有艺术价值又受欢迎的作品。`
+平台服务：
+1. 功能介绍与使用指南
+2. 创作工具使用建议
+3. 社区互动与反馈
+4. 平台活动与资源推荐
+
+行业洞察：
+1. 剧集市场趋势分析
+2. 用户行为与偏好研究
+3. 新兴题材与机会点
+4. 行业动态与发展方向
+
+请告诉我您的需求，我会以专业、友好的方式为您提供帮助。无论您是创作者还是观众，或者对平台有任何疑问，我都很乐意为您服务。`
 
 	// 构建消息列表
 	var messages []util.Message
-	// 添加历史消息
+
+	// 如果是继续对话，添加历史消息到messages
+	if request.ChatID != nil {
+		for _, msg := range chat.Messages {
+			messages = append(messages, util.Message{
+				Role:    msg.Role,
+				Content: msg.Content,
+			})
+		}
+	}
+
+	// 添加新的消息
 	for _, msg := range request.Messages {
 		messages = append(messages, util.Message{
 			Role:    msg.Role,
@@ -183,8 +219,8 @@ func ProjectContentSuggest(c *gin.Context) {
 	userMessage := pojo.ChatMessage{
 		ChatID:  chat.ID,
 		Role:    "user",
-		Content: prompt,
-		Status:  "success",
+		Content: request.Messages[len(request.Messages)-1].Content, // 使用用户的实际问题
+		Status:  "processing",                                      // 初始状态为处理中
 	}
 	if err := config.MysqlDataBase.Create(&userMessage).Error; err != nil {
 		ws.WriteJSON(dto.ErrorResponse[string](500, "保存用户消息失败"))
@@ -195,14 +231,24 @@ func ProjectContentSuggest(c *gin.Context) {
 	streamChan, err := util.StreamChatCompletion(context.Background(), util.ChatRequest{
 		Model:       util.ThinkModelName,
 		Messages:    messages,
-		Prompt:      "你是一个专业的剧本创作顾问，擅长分析项目数据并提供专业的创作建议。",
-		Question:    prompt,
+		Prompt:      prompt,
+		Question:    request.Messages[len(request.Messages)-1].Content, // 使用用户的实际问题
 		Temperature: util.GlobalTemperature,
 		MaxTokens:   8192,
 	})
 
 	if err != nil {
+		// 更新用户消息状态为失败
+		userMessage.Status = "failed"
+		config.MysqlDataBase.Save(&userMessage)
 		ws.WriteJSON(dto.ErrorResponse[string](500, "启动流式生成失败"+err.Error()))
+		return
+	}
+
+	// 更新用户消息状态为成功
+	userMessage.Status = "success"
+	if err := config.MysqlDataBase.Save(&userMessage).Error; err != nil {
+		ws.WriteJSON(dto.ErrorResponse[string](500, "更新用户消息状态失败"))
 		return
 	}
 
@@ -222,6 +268,9 @@ func ProjectContentSuggest(c *gin.Context) {
 	var fullResponse string
 	for response := range streamChan {
 		if err := ws.WriteJSON(response); err != nil {
+			// 更新AI消息状态为失败
+			aiMessage.Status = "failed"
+			config.MysqlDataBase.Save(&aiMessage)
 			return
 		}
 		if !response.Done {
@@ -230,11 +279,61 @@ func ProjectContentSuggest(c *gin.Context) {
 			// 更新AI消息内容和状态
 			aiMessage.Content = fullResponse
 			aiMessage.Status = "success"
+
+			// 如果是新对话，更新对话标题
+			if request.ChatID == nil {
+				// 从用户问题和AI回答中提取标题
+				title := generateChatTitle(request.Messages[len(request.Messages)-1].Content, fullResponse)
+				chat.Title = title
+			}
+
 			if err := config.MysqlDataBase.Save(&aiMessage).Error; err != nil {
 				ws.WriteJSON(dto.ErrorResponse[string](500, "更新AI消息失败"))
+				return
+			}
+
+			// 更新对话状态和标题
+			chat.Status = "active"
+			if err := config.MysqlDataBase.Save(&chat).Error; err != nil {
+				ws.WriteJSON(dto.ErrorResponse[string](500, "更新对话状态失败"))
 				return
 			}
 			break
 		}
 	}
+}
+
+// generateChatTitle 生成对话标题
+func generateChatTitle(question, answer string) string {
+	// 获取问题的前15个字符
+	questionPart := ""
+	if len([]rune(question)) > 15 {
+		questionPart = string([]rune(question)[:15])
+	} else {
+		questionPart = question
+	}
+
+	// 获取答案的前15个字符
+	answerPart := ""
+	if len([]rune(answer)) > 15 {
+		answerPart = string([]rune(answer)[:15])
+	} else {
+		answerPart = answer
+	}
+
+	// 组合标题，确保总长度不超过30个字符
+	title := questionPart
+	remainingLength := 30 - len([]rune(questionPart))
+	if remainingLength > 0 && len(answerPart) > 0 {
+		title += "..."
+		if remainingLength > 3 {
+			if len([]rune(answerPart)) > remainingLength-3 {
+				title += string([]rune(answerPart)[:remainingLength-3])
+			} else {
+				title += answerPart
+			}
+		}
+	}
+
+	return title
 }

@@ -13,6 +13,7 @@ import titleDark from "@/assets/img/title-dark.png";
 import { MdPreview } from "md-editor-v3";
 import "md-editor-v3/lib/preview.css";
 import webs from "@/assets/img/webs.webp";
+import { useMotion } from "@vueuse/motion";
 
 const { currentSection } = useFullPageScroll();
 // 将渐变色数组提取为公共变量
@@ -625,49 +626,105 @@ onMounted(() => {
 
     <!-- 内容层 -->
     <div
-      class="relative animate__animated animate__backInDown z-10 flex flex-col items-center justify-center h-full font-sans"
+      class="relative z-10 flex flex-col items-center justify-center h-full font-sans"
+      v-motion
+      :initial="{ opacity: 0, y: -50, scale: 0.9 }"
+      :enter="{ 
+        opacity: 1, 
+        y: 0, 
+        scale: 1,
+        transition: {
+          type: 'spring',
+          damping: 12,
+          stiffness: 100,
+          duration: 800
+        }
+      }"
     >
-      <!--      <div class="mx-auto p-2 border rounded-3xl border-blue-500 dark:border-purple-900 text-theme-switch flex flex-nowrap">-->
-      <!--        <img :src="logo" class="w-4 h-4 rounded-full my-auto"/>-->
-      <!--        <span class="my-auto ml-2">现在就创作引人入胜的作品！</span>-->
-      <!--      </div>-->
-      <div class="mx-auto font-serif">
-        <!-- <span
-            class="text-7xl font-bold bg-gradient-to-b from-gray-700 via-gray-900 to-black dark:from-gray-100 dark:via-gray-300 dark:to-gray-400 text-transparent bg-clip-text">
-          内容创作者的
-        </span> -->
+      <div class="mx-auto font-serif"
+           v-motion
+           :initial="{ opacity: 0, y: 20 }"
+           :enter="{ 
+             opacity: 1, 
+             y: 0,
+             transition: { 
+               delay: 200,
+               duration: 500
+             }
+           }">
         <img :src="titleDark" class="invert dark:invert-0" />
       </div>
 
-      <div class="mx-auto font-serif">
-        <!-- <span
-            class="text-6xl font-bold bg-gradient-to-b from-gray-600 via-gray-700 to-gray-800 dark:from-gray-400 dark:via-gray-500 dark:to-gray-600 text-transparent bg-clip-text">
-          得力助手
-        </span> -->
-      </div>
+      <div class="mx-auto font-serif"></div>
+      
       <div
         class="mx-auto font-serif text-gray-600 dark:text-[#8B8B8B] mt-8 text-2xl"
+        v-motion
+        :initial="{ opacity: 0, y: 20 }"
+        :enter="{ 
+          opacity: 1, 
+          y: 0,
+          transition: { 
+            delay: 400,
+            duration: 500
+          }
+        }"
       >
         让创意化为精彩剧集
       </div>
-      <div class="mx-auto text-gray-600 dark:text-[#737373] mt-8 text-xl">
+      
+      <div class="mx-auto text-gray-600 dark:text-[#737373] mt-8 text-xl"
+           v-motion
+           :initial="{ opacity: 0, y: 20 }"
+           :enter="{ 
+             opacity: 1, 
+             y: 0,
+             transition: { 
+               delay: 600,
+               duration: 500
+             }
+           }">
         一款集AI智能创作、角色塑造、剧情构建、团队协同于一体的专业创作平台，
       </div>
 
-      <div class="mx-auto text-gray-500 dark:text-[#666666] mt-2">
+      <div class="mx-auto text-gray-500 dark:text-[#666666] mt-2"
+           v-motion
+           :initial="{ opacity: 0, y: 20 }"
+           :enter="{ 
+             opacity: 1, 
+             y: 0,
+             transition: { 
+               delay: 800,
+               duration: 500
+             }
+           }">
         为您提供从灵感激发到作品完成的全流程支持，让创作更轻松，让故事更精彩。
       </div>
 
-      <div class="mx-auto mt-4 flex flex-wrap gap-2">
+      <div class="mx-auto mt-4 flex flex-wrap gap-2"
+           v-motion
+           :initial="{ opacity: 0, y: 20 }"
+           :enter="{ 
+             opacity: 1, 
+             y: 0,
+             transition: { 
+               delay: 1000,
+               duration: 500
+             }
+           }">
         <button
           @click="quickStartClickHandler"
           class="px-6 py-2 rounded-2xl font-light bg-gradient-to-r from-blue-500 to-violet-500 text-white hover:-translate-y-0.5 transition-all"
+          v-motion
+          :hover="{ scale: 1.05, transition: { duration: 200 } }"
         >
           创剧工坊
         </button>
         <button
           @click="router.push('/community')"
           class="px-6 py-2 rounded-2xl font-light border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white hover:-translate-y-0.5 transition-all"
+          v-motion
+          :hover="{ scale: 1.05, transition: { duration: 200 } }"
         >
           星球社区
         </button>

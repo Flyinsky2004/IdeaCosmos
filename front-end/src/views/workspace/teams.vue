@@ -343,8 +343,23 @@ const copyInviteCode = () => {
     </div>
   </a-modal>
   
-  <div class="flex flex-col gap-2 animate__animated animate__fadeIn">
-    <div class="border p-4 workspace-box w-fit rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 dark:border-gray-700">
+  <div class="flex flex-col gap-2"
+       v-motion
+       :initial="{ opacity: 0, y: 20 }"
+       :enter="{ opacity: 1, y: 0, transition: { duration: 500 } }">
+    <div class="border p-4 workspace-box w-fit rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 dark:border-gray-700"
+         v-motion
+         :initial="{ opacity: 0, scale: 0.9 }"
+         :enter="{ 
+           opacity: 1, 
+           scale: 1,
+           transition: {
+             type: 'spring',
+             damping: 12,
+             stiffness: 100
+           }
+         }"
+         :hover="{ scale: 1.02, transition: { duration: 200 } }">
       <h1 class="text-2xl font-serif mb-2 text-blue-700 dark:text-blue-400">团队工作</h1>
       <span class="text-sm dark:text-gray-300">我们的团队功能支持您将创剧空间中的项目与您的团队绑定，使您的团队成员一同加入您的精彩内容创作！</span>
       <div class="mt-2 flex flex-wrap gap-3">
@@ -355,7 +370,17 @@ const copyInviteCode = () => {
     </div>
     
     <!-- 我管理的团队 -->
-    <div class="border p-4 workspace-box dark:border-gray-700">
+    <div class="border p-4 workspace-box dark:border-gray-700"
+         v-motion
+         :initial="{ opacity: 0, y: 20 }"
+         :enter="{ 
+           opacity: 1, 
+           y: 0,
+           transition: { 
+             delay: 200,
+             duration: 500
+           }
+         }">
       <div class="flex justify-between items-center mb-4 border-b pb-3 dark:border-gray-700">
         <h1 class="text-2xl font-medium text-blue-700 dark:text-blue-400">我管理的团队</h1>
         <div class="flex gap-2">
@@ -369,10 +394,21 @@ const copyInviteCode = () => {
       </div>
       <Spin :spinning="options.loading.myTeams">
         <div class="w-full grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          <div v-for="team in options.myTeams" :key="team.ID" 
+          <div v-for="(team, index) in options.myTeams" :key="team.ID" 
                class="border rounded-lg shadow-sm outline-[1px] min-h-56 text-theme-switch p-4
                hover:shadow-md hover:-translate-y-1 transition-all cursor-pointer
                dark:border-gray-700 dark:bg-gray-800/50 dark:shadow-gray-900/30"
+               v-motion
+               :initial="{ opacity: 0, y: 20 }"
+               :enter="{ 
+                 opacity: 1, 
+                 y: 0,
+                 transition: { 
+                   delay: 300 + (index * 100),
+                   duration: 500
+                 }
+               }"
+               :hover="{ scale: 1.02, transition: { duration: 200 } }"
                @click="viewTeamDetail(team.ID)">
             <div class="flex justify-between mb-1">
               <h1 class="text-lg font-bold text-blue-500 truncate dark:text-blue-400">{{ team.username }}</h1>
@@ -401,6 +437,19 @@ const copyInviteCode = () => {
           <div class="border border-dashed rounded-lg outline-[1px] min-h-56 flex flex-col items-center justify-center text-gray-400
                hover:bg-gray-50 active:bg-gray-100 cursor-pointer
                dark:border-gray-700 dark:hover:bg-gray-800 dark:active:bg-gray-700"
+               v-motion
+               :initial="{ opacity: 0, scale: 0.9 }"
+               :enter="{ 
+                 opacity: 1, 
+                 scale: 1,
+                 transition: { 
+                   delay: 500,
+                   type: 'spring',
+                   damping: 12,
+                   stiffness: 100
+                 }
+               }"
+               :hover="{ scale: 1.05, transition: { duration: 200 } }"
                @click="options.isAddWindowOpen = true">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                  stroke="currentColor" class="size-12 mb-2">
@@ -413,10 +462,33 @@ const copyInviteCode = () => {
     </div>
     
     <!-- 我加入的团队 -->
-    <div class="border p-4 workspace-box dark:border-gray-700">
+    <div class="border p-4 workspace-box dark:border-gray-700"
+         v-motion
+         :initial="{ opacity: 0, y: 20 }"
+         :enter="{ 
+           opacity: 1, 
+           y: 0,
+           transition: { 
+             delay: 400,
+             duration: 500
+           }
+         }">
       <h1 class="text-2xl font-medium text-blue-700 mb-4 border-b pb-3 dark:text-blue-400 dark:border-gray-700">我加入的团队</h1>
       <Spin :spinning="options.loading.joinedTeams">
-        <div v-if="!options.myJoinedTeams || options.myJoinedTeams.length === 0" class="text-center py-8 text-gray-500 border border-dashed rounded-lg dark:text-gray-400 dark:border-gray-700">
+        <div v-if="!options.myJoinedTeams || options.myJoinedTeams.length === 0" 
+             class="text-center py-8 text-gray-500 border border-dashed rounded-lg dark:text-gray-400 dark:border-gray-700"
+             v-motion
+             :initial="{ opacity: 0, scale: 0.9 }"
+             :enter="{ 
+               opacity: 1, 
+               scale: 1,
+               transition: { 
+                 delay: 600,
+                 type: 'spring',
+                 damping: 12,
+                 stiffness: 100
+               }
+             }">
           <i class="fas fa-users text-3xl mb-2 opacity-30"></i>
           <p>您还没有加入任何团队</p>
           <a-button class="mt-4" @click="options.isJoinWindowOpen = true">
@@ -424,10 +496,21 @@ const copyInviteCode = () => {
           </a-button>
         </div>
         <div v-else class="w-full grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          <div v-for="team in options.myJoinedTeams" :key="team.ID" 
+          <div v-for="(team, index) in options.myJoinedTeams" :key="team.ID" 
                class="border rounded-lg shadow-sm outline-[1px] min-h-56 text-theme-switch p-4
                hover:shadow-md hover:-translate-y-1 transition-all cursor-pointer
                dark:border-gray-700 dark:bg-gray-800/50 dark:shadow-gray-900/30"
+               v-motion
+               :initial="{ opacity: 0, y: 20 }"
+               :enter="{ 
+                 opacity: 1, 
+                 y: 0,
+                 transition: { 
+                   delay: 600 + (index * 100),
+                   duration: 500
+                 }
+               }"
+               :hover="{ scale: 1.02, transition: { duration: 200 } }"
                @click="viewTeamDetail(team.ID)">
             <div class="flex justify-between mb-1">
               <h1 class="text-lg font-bold text-blue-500 truncate dark:text-blue-400">{{ team.username }}</h1>
