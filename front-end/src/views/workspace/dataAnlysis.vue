@@ -1134,8 +1134,9 @@ const generateAnalysis = () => {
 
   // 创建 WebSocket 连接
   const token = localStorage.getItem("authToken")
+  const baseUrl = BACKEND_DOMAIN.replace(/^http/, 'ws').replace(/\/$/, '')
   const ws = new WebSocket(
-    `ws://${BACKEND_DOMAIN.replace("http://", "")}ws/newProjectAnalysis`
+    `${baseUrl}/ws/newProjectAnalysis`
   )
 
   ws.onopen = () => {

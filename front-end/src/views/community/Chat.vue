@@ -4,19 +4,13 @@
 -->
 
 <template>
-  <div class="flex h-[calc(100vh-5rem)] rounded-xl bg-white dark:bg-black font-song"
-       v-motion
-       :initial="{ opacity: 0, y: 50 }"
-       :enter="{ opacity: 1, y: 0, transition: { duration: 500 } }">
+  <div class="flex h-[calc(100vh-5rem)] rounded-xl bg-white dark:bg-black font-song animate__animated animate__fadeInUp">
     <!-- 左侧历史记录栏 -->
     <div 
       class="transition-all rounded-xl duration-300 ease-in-out border-r theme-border bg-gray-50 dark:bg-zinc-900 flex flex-col"
       :class="[isExpanded ? 'w-64' : 'w-16']"
       @mouseenter="isExpanded = true"
-      @mouseleave="isExpanded = false"
-      v-motion
-      :initial="{ opacity: 0, x: -50 }"
-      :enter="{ opacity: 1, x: 0, transition: { duration: 300 } }">
+      @mouseleave="isExpanded = false">
       <!-- 新建对话按钮 -->
       <div class="p-4">
         <button 
@@ -34,12 +28,10 @@
       <!-- 历史记录列表 -->
       <div class="flex-1 overflow-y-auto overflow-x-hidden">
         <div v-for="(chat, index) in chatHistory" :key="chat.id" 
-             class="px-4 py-3 hover:bg-gray-100 dark:hover:bg-zinc-800 cursor-pointer transition-colors relative group"
+             class="px-4 py-3 hover:bg-gray-100 dark:hover:bg-zinc-800 cursor-pointer transition-colors relative group animate__animated animate__fadeInLeft"
              :class="{'bg-gray-100 dark:bg-zinc-800': currentChatId === chat.id}"
-             @click="loadChatHistory(chat.ID)"
-             v-motion
-             :initial="{ opacity: 0, x: -20 }"
-             :enter="{ opacity: 1, x: 0, transition: { duration: 300, delay: index * 100 } }">
+             :style="{'animation-delay': index * 0.1 + 's'}"
+             @click="loadChatHistory(chat.ID)">
           <div class="text-sm text-gray-900 dark:text-gray-200 truncate">
             <div class="flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -50,11 +42,7 @@
               <button 
                 v-if="isExpanded"
                 @click.stop="deleteChat(chat.ID)"
-                class="opacity-0 group-hover:opacity-100 transition-all duration-300 p-1 hover:text-red-500 transform hover:scale-110"
-                v-motion
-                :initial="{ scale: 0.8 }"
-                :enter="{ scale: 1 }"
-                :hover="{ scale: 1.1 }">
+                class="opacity-0 group-hover:opacity-100 transition-all duration-300 p-1 hover:text-red-500 transform hover:scale-110">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
@@ -71,11 +59,9 @@
       <!-- 对话内容区 -->
       <div class="flex-1 overflow-y-auto p-4 space-y-6" ref="messageContainer">
         <div v-for="(message, index) in messages" :key="index" 
-             class="flex gap-4" 
+             class="flex gap-4 animate__animated animate__fadeInUp" 
              :class="{'justify-end': message.role === 'user'}"
-             v-motion
-             :initial="{ opacity: 0, y: 20 }"
-             :enter="{ opacity: 1, y: 0, transition: { duration: 300, delay: index * 150 } }">
+             :style="{'animation-delay': index * 0.15 + 's'}">
           <!-- 头像 -->
           <div v-if="message.role !== 'user'" class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
             <img :src="logo" class="w-full h-full rounded-full" />
@@ -97,9 +83,7 @@
                 :modelValue="message.content"
                 previewTheme="github"
                 class="prose dark:prose-invert max-w-none p-4"
-                v-motion
-                :initial="{ opacity: 0 }"
-                :enter="{ opacity: 1, transition: { duration: 800, ease: 'linear' } }"
+
               />
             </template>
           </div>
@@ -112,10 +96,8 @@
       </div>
 
       <!-- 输入区域 -->
-      <div class="border-t theme-border p-4 bg-white dark:bg-black"
-           v-motion
-           :initial="{ opacity: 0, y: 20 }"
-           :enter="{ opacity: 1, y: 0, transition: { duration: 500, delay: 400 } }">
+      <div class="border-t theme-border p-4 bg-white dark:bg-black animate__animated animate__fadeInUp"
+           style="animation-delay: 0.4s">
         <div class="flex gap-4 justify-center items-end">
           <a-textarea
             v-model:value="newMessage"
@@ -155,17 +137,7 @@ import 'md-editor-v3/lib/preview.css'
 import { parseDateTime } from '@/util/common'
 import { useUserStore } from '@/stores/user'
 import logo from '@/assets/img/logo.webp'
-import { 
-  useMotions,
-  useMotion
-} from '@vueuse/motion'
-
-// 定义动画预设
-const motionOptions = {
-  initial: { opacity: 0, y: 50 },
-  enter: { opacity: 1, y: 0 },
-  transition: { duration: 500 }
-}
+import 'animate.css'
 
 // 主题store
 const themeStore = useThemeStore()
@@ -185,8 +157,9 @@ const newMessage = ref('')
 // 初始化WebSocket连接
 const initWebSocket = () => {
   const token = localStorage.getItem("authToken")
+  const baseUrl = BACKEND_DOMAIN.replace(/^http/, 'ws').replace(/\/$/, '')
   ws = new WebSocket(
-    `ws://${BACKEND_DOMAIN.replace("http://", "")}ws/projectSuggest`
+    `${baseUrl}/ws/projectSuggest`
   )
 
   ws.onopen = () => {
@@ -227,13 +200,13 @@ const initWebSocket = () => {
       // 如果是第一条回复，创建新消息
       if (!messages.value.find(m => m.role === 'assistant' && m.isGenerating)) {
         messages.value.push({
-            role: 'assistant',
+          role: 'assistant',
           content: response.content,
           isGenerating: true
         })
       } else {
         // 否则追加到现有消息
-        const lastMessage = messages.value.find(m => m.type === 'assistant' && m.isGenerating)
+        const lastMessage = messages.value.find(m => m.role === 'assistant' && m.isGenerating)
         if (lastMessage) {
           lastMessage.content += response.content
         }
@@ -422,7 +395,7 @@ watch(messages, () => {
 
 /* 添加宋体字体 */
 @font-face {
-  font-family: 'Song';
+  font-family: 'SongT';
   src: local('SimSun'), local('宋体');
 }
 

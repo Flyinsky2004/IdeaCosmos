@@ -7,7 +7,8 @@
     "pages/logs/index",
     "pages/project-detail/index",
     "pages/chapter-detail/index",
-    "pages/group-chat/index"
+    "pages/group-chat/index",
+    "pages/chat/chat"
   ],
   "window": {
     "backgroundTextStyle": "light",
@@ -33,6 +34,11 @@
         "text": "通知",
         "iconPath": "assets/images/notification.png",
         "selectedIconPath": "assets/images/notification-active.png"
+      },{
+        "pagePath": "pages/chat/chat",
+        "text": "AI助手",
+        "iconPath": "assets/images/ai.png",
+        "selectedIconPath": "assets/images/ai-active.png"
       },
       {
         "pagePath": "pages/message/index",
