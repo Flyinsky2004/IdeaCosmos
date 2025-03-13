@@ -5,6 +5,7 @@ import (
 	"back-end/entity/dto"
 	"back-end/entity/pojo"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -311,6 +312,24 @@ func AddProjectComment(c *gin.Context) {
 		return
 	}
 
+	// 向团队Leader发送通知
+	userName := getUserName(uint(userId.(int)))
+	notificationTitle := "新的项目评论"
+	notificationContent := fmt.Sprintf("用户 %s 对您团队的项目添加了评论", userName)
+	sendErr := sendNotificationToTeamLeader(
+		pojo.CommentNotification,
+		uint(userId.(int)),
+		projectIdUint,
+		notificationTitle,
+		notificationContent,
+		comment.ID,
+		"project_comment",
+	)
+	if sendErr != nil {
+		// 仅记录错误，不影响主流程
+		log.Printf("发送通知失败: %v", sendErr)
+	}
+
 	// 返回新创建的评论（包含用户信息）
 	config.MysqlDataBase.Preload("User").First(&comment, comment.ID)
 	c.JSON(http.StatusOK, dto.SuccessResponse(comment))
@@ -388,6 +407,29 @@ func AddFavorite(c *gin.Context) {
 	config.MysqlDataBase.Model(&pojo.Project{}).
 		Where("id = ?", id).
 		UpdateColumn("favorites", gorm.Expr("favorites + ?", 1))
+
+	// 向团队Leader发送通知
+	userName := getUserName(uint(userId.(int)))
+	notificationTitle := "新的项目收藏"
+	notificationContent := fmt.Sprintf("用户 %s 收藏了您团队的项目", userName)
+
+	// 获取项目信息用于通知
+	var project pojo.Project
+	if err := config.MysqlDataBase.First(&project, id).Error; err == nil {
+		sendErr := sendNotificationToTeamLeader(
+			pojo.LikeNotification,
+			uint(userId.(int)),
+			uint(id),
+			notificationTitle,
+			notificationContent,
+			favourite.ID,
+			"project_favorite",
+		)
+		if sendErr != nil {
+			// 仅记录错误，不影响主流程
+			log.Printf("发送通知失败: %v", sendErr)
+		}
+	}
 
 	c.JSON(http.StatusOK, dto.SuccessResponse("收藏成功"))
 }
@@ -808,6 +850,24 @@ func AddVersionFeeling(c *gin.Context) {
 		return
 	}
 
+	// 向团队Leader发送通知
+	userName := getUserName(uint(userId.(int)))
+	notificationTitle := "新的情绪评价"
+	notificationContent := fmt.Sprintf("用户 %s 对您团队的项目章节版本添加了情绪评价", userName)
+	sendErr := sendNotificationToTeamLeader(
+		pojo.ContentUpdateNotification,
+		uint(userId.(int)),
+		project.ID,
+		notificationTitle,
+		notificationContent,
+		feeling.ID,
+		"version_feeling",
+	)
+	if sendErr != nil {
+		// 仅记录错误，不影响主流程
+		log.Printf("发送通知失败: %v", sendErr)
+	}
+
 	c.JSON(http.StatusOK, dto.SuccessResponse("评价成功"))
 }
 
@@ -1058,6 +1118,24 @@ func AddVersionComment(c *gin.Context) {
 			return
 		}
 
+		// 向团队Leader发送通知
+		userName := getUserName(uint(userId.(int)))
+		notificationTitle := "新的作者评论"
+		notificationContent := fmt.Sprintf("用户 %s 在您团队的项目章节版本中添加了作者评论", userName)
+		sendErr := sendNotificationToTeamLeader(
+			pojo.CommentNotification,
+			uint(userId.(int)),
+			project.ID,
+			notificationTitle,
+			notificationContent,
+			authorComment.ID,
+			"author_comment",
+		)
+		if sendErr != nil {
+			// 仅记录错误，不影响主流程
+			log.Printf("发送通知失败: %v", sendErr)
+		}
+
 	} else if requestBody.Type == "reader" {
 		// 创建读者评论
 		readerComment := pojo.ReaderComment{
@@ -1069,6 +1147,24 @@ func AddVersionComment(c *gin.Context) {
 		if err := config.MysqlDataBase.Create(&readerComment).Error; err != nil {
 			c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "添加评论失败"))
 			return
+		}
+
+		// 向团队Leader发送通知
+		userName := getUserName(uint(userId.(int)))
+		notificationTitle := "新的读者评论"
+		notificationContent := fmt.Sprintf("用户 %s 在您团队的项目章节版本中添加了读者评论", userName)
+		sendErr := sendNotificationToTeamLeader(
+			pojo.CommentNotification,
+			uint(userId.(int)),
+			project.ID,
+			notificationTitle,
+			notificationContent,
+			readerComment.ID,
+			"reader_comment",
+		)
+		if sendErr != nil {
+			// 仅记录错误，不影响主流程
+			log.Printf("发送通知失败: %v", sendErr)
 		}
 	} else {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](400, "无效的评论类型"))
@@ -1148,4 +1244,49 @@ func GetProjectCharacterRelationships(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto.SuccessResponse(relationships))
+}
+
+// 辅助函数：发送通知给团队Leader
+func sendNotificationToTeamLeader(notificationType pojo.NotificationType, senderID uint, projectID uint, title string, content string, relatedID uint, relatedType string) error {
+	// 获取项目信息
+	var project pojo.Project
+	if err := config.MysqlDataBase.First(&project, projectID).Error; err != nil {
+		return err
+	}
+
+	// 获取团队信息
+	var team pojo.Team
+	if err := config.MysqlDataBase.First(&team, project.TeamID).Error; err != nil {
+		return err
+	}
+
+	// 创建通知
+	notification := pojo.Notification{
+		Type:        notificationType,
+		Title:       title,
+		Content:     content,
+		SenderID:    senderID,
+		ReceiverID:  team.LeaderId,
+		IsRead:      false,
+		ReadTime:    nil,
+		RelatedID:   relatedID,
+		RelatedType: relatedType,
+		ExtraData:   "",
+	}
+
+	// 保存通知
+	if err := config.MysqlDataBase.Create(&notification).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// 辅助函数：获取用户名称
+func getUserName(userID uint) string {
+	var user pojo.User
+	if err := config.MysqlDataBase.Select("username").First(&user, userID).Error; err != nil {
+		return "未知用户"
+	}
+	return user.Username
 }

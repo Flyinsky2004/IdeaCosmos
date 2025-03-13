@@ -14,7 +14,7 @@ import { MdPreview } from "md-editor-v3";
 import "md-editor-v3/lib/preview.css";
 import webs from "@/assets/img/webs.webp";
 import { useMotion } from "@vueuse/motion";
-
+import ai from '@/assets/img/ai-active.png'
 const { currentSection } = useFullPageScroll();
 // 将渐变色数组提取为公共变量
 const gradientColors = [
@@ -1423,36 +1423,101 @@ onMounted(() => {
         <h2
           class="text-5xl font-bold font-serif text-gray-900 dark:text-white mb-4"
         >
-          跨平台支持
+          跨平台无缝体验
         </h2>
         <h2
           class="text-3xl font-bold font-serif text-gray-900 dark:text-white mb-4"
         >
-          随时随地，畅享创作
+          一次创作，多端同步
         </h2>
       </div>
 
       <div class="flex-1 flex flex-row items-start justify-center gap-12 px-8">
         <!-- 左侧文字介绍 -->
         <div class="w-5/12 h-full">
-          <div class="text-left">
-            <h3
-              class="text-2xl font-semibold text-gray-900 dark:text-white mb-4"
-            >
-              移动端
-            </h3>
-            <p class="text-gray-600 dark:text-gray-400 mb-8">
-              便携随行的创作助手，为您提供剧集项目查看、实时通知接收以及团队聊天功能。简约而不简单，让您随时与创作保持连接，捕捉转瞬即逝的灵感。
-            </p>
+          <div class="text-left space-y-8">
+            <!-- 小程序部分 -->
+            <div class="space-y-4">
+              <div class="flex items-center gap-4">
+                <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+                  </svg>
+                </div>
+                <h3 class="text-2xl font-semibold text-gray-900 dark:text-white">微信小程序</h3>
+              </div>
+              <p class="text-gray-600 dark:text-gray-400 mb-4">
+                无需下载安装，扫码即用。随时浏览精彩剧集，接收创作动态，参与团队讨论。支持与"星知"AI助手实时对话，让灵感激发与交流不受场景限制。
+              </p>
+              <div class="grid grid-cols-2 gap-4">
+                <div class="flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span class="text-gray-600 dark:text-gray-400">作品浏览</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                  </svg>
+                  <span class="text-gray-600 dark:text-gray-400">消息通知</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                  </svg>
+                  <span class="text-gray-600 dark:text-gray-400">团队群聊</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+                  </svg>
+                  <span class="text-gray-600 dark:text-gray-400">星知助手</span>
+                </div>
+              </div>
+            </div>
 
-            <h3
-              class="text-2xl font-semibold text-gray-900 dark:text-white mb-4"
-            >
-              桌面端
-            </h3>
-            <p class="text-gray-600 dark:text-gray-400">
-              创作者的专业工作站，集剧集创作、编辑、管理于一体的完整平台。在这里，您可以从构思到成品，全程掌控创作过程，打造属于您的精彩剧集作品。
-            </p>
+            <!-- Web端部分 -->
+            <div class="space-y-4">
+              <div class="flex items-center gap-4">
+                <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25" />
+                  </svg>
+                </div>
+                <h3 class="text-2xl font-semibold text-gray-900 dark:text-white">Web 端</h3>
+              </div>
+              <p class="text-gray-600 dark:text-gray-400">
+                跨平台网页应用，告别环境限制。支持所有主流浏览器，无论 Windows、Mac 还是 Linux，都能享受到完整的创作体验。专业的创作工具集成、云端数据实时同步，让您的创意无处不在。
+              </p>
+              <div class="grid grid-cols-2 gap-4">
+                <div class="flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                  </svg>
+                  <span class="text-gray-600 dark:text-gray-400">专业创作</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                  </svg>
+                  <span class="text-gray-600 dark:text-gray-400">数据分析</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                  </svg>
+                  <span class="text-gray-600 dark:text-gray-400">团队协作</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span class="text-gray-600 dark:text-gray-400">实时同步</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1462,8 +1527,191 @@ onMounted(() => {
             <img
               :src="webs"
               alt="界面"
-              class="h-[70vh] object-contain rounded-lg my-auto"
+              class="h-[70vh] object-contain rounded-lg my-auto shadow-xl"
             />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="h-screen bg-[#f8fafc] dark:bg-[#030616] flex flex-col">
+    <!-- 介绍巨星全知板块 -->
+    <div class="container mx-auto px-4 py-16">
+      <div class="text-center mb-12">
+        <h2 class="text-5xl font-bold font-serif text-gray-900 dark:text-white mb-4">
+          遇见"星知"
+        </h2>
+        <h3 class="text-3xl font-bold font-serif text-gray-900 dark:text-white mb-4">
+          创作者的智能伙伴，观众的贴心向导
+        </h3>
+        <p class="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
+          基于海量剧集数据与先进AI技术，为创作全程提供专业支持，让每个故事都绽放光彩
+        </p>
+      </div>
+
+      <div class="flex gap-12">
+        <!-- 左侧介绍 -->
+        <div class="w-1/2 space-y-8">
+          <div class="space-y-4">
+            <!-- 创作者服务 -->
+            <div class="flex items-start gap-4">
+              <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
+                </svg>
+              </div>
+              <div>
+                <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  创作者服务
+                </h4>
+                <p class="text-gray-600 dark:text-gray-400">
+                  提供剧本创意构建、市场趋势分析、项目优化建议和创作技巧分享
+                </p>
+              </div>
+            </div>
+
+            <!-- 观众服务 -->
+            <div class="flex items-start gap-4">
+              <div class="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                </svg>
+              </div>
+              <div>
+                <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  观众服务
+                </h4>
+                <p class="text-gray-600 dark:text-gray-400">
+                  提供个性化内容推荐、热门作品解析、类似作品推荐和观看建议
+                </p>
+              </div>
+            </div>
+
+            <!-- 平台服务 -->
+            <div class="flex items-start gap-4">
+              <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+                </svg>
+              </div>
+              <div>
+                <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  平台服务
+                </h4>
+                <p class="text-gray-600 dark:text-gray-400">
+                  提供功能指南、创作工具使用建议、社区互动和平台资源推荐
+                </p>
+              </div>
+            </div>
+
+            <!-- 行业洞察 -->
+            <div class="flex items-start gap-4">
+              <div class="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
+                </svg>
+              </div>
+              <div>
+                <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  行业洞察
+                </h4>
+                <p class="text-gray-600 dark:text-gray-400">
+                  提供剧集市场趋势、用户偏好研究、新兴题材机会和行业动态分析
+                </p>
+              </div>
+            </div>
+
+            <!-- 数据支持 -->
+            <div class="flex items-start gap-4">
+              <div class="p-2 bg-rose-100 dark:bg-rose-900/30 rounded-lg mt-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                </svg>
+              </div>
+              <div>
+                <h4 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  数据支持
+                </h4>
+                <p class="text-gray-600 dark:text-gray-400">
+                  基于平台实时数据，提供作品表现分析、受众反馈和市场定位建议
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右侧对话示例 -->
+        <div class="w-1/2">
+          <div class="bg-white dark:bg-zinc-900 rounded-xl shadow-xl border theme-border p-6">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="flex space-x-2">
+                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+              </div>
+              <div class="flex-1 text-center text-sm text-gray-600 dark:text-gray-400">
+                与星知对话
+              </div>
+            </div>
+
+            <div class="space-y-4 h-[400px] overflow-y-auto p-4 bg-gray-50 dark:bg-zinc-800 rounded-lg">
+              <!-- 用户消息 -->
+              <div class="flex gap-3 justify-end">
+                <div class="bg-blue-500 text-white rounded-lg p-3 max-w-[80%]">
+                  我想写一个科幻悬疑剧，但不知道如何构建吸引人的开场。
+                </div>
+                <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+              </div>
+
+              <!-- AI回复 -->
+              <div class="flex gap-3">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0">
+                  <img :src="ai" class="p-1"/>
+                </div>
+                <div class="bg-gray-100 text-white dark:bg-zinc-700 rounded-lg p-3 max-w-[80%]">
+                  根据平台数据分析，成功的科幻悬疑剧通常以一个令人费解的事件开场，比如：
+                  
+                  1. 一个看似普通的科技产品突然表现出超出设计的行为
+                  2. 一位重要人物离奇失踪，留下一串神秘数字
+                  3. 未来城市中出现不符合时代的古老物件
+                  
+                  建议你可以从这些方向入手，让观众在第一时间产生好奇心。要注意的是，开场悬念要与后续剧情有紧密联系，避免成为无意义的噱头。
+                </div>
+              </div>
+
+              <!-- 用户消息 -->
+              <div class="flex gap-3 justify-end">
+                <div class="bg-blue-500 text-white rounded-lg p-3 max-w-[80%]">
+                  这些建议很棒！能否帮我分析一下最近热门的科幻悬疑剧都有哪些共同特点？
+                </div>
+                <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+              </div>
+
+              <!-- AI回复 -->
+              <div class="flex gap-3">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0">
+                  <img :src="ai" class="p-1"/>
+                </div>
+                <div class="bg-gray-100 text-white dark:bg-zinc-700 rounded-lg p-3 max-w-[80%]">
+                  通过分析平台近期热门作品，我发现以下特点最受观众欢迎：
+
+                  1. 多维叙事：在未来科技背景下展开多条时间线或平行宇宙的故事
+                  2. 伦理思考：将人工智能、生物科技等前沿话题与道德困境相结合
+                  3. 情感共鸣：即使在科幻背景下，也要注重人物的情感发展
+                  4. 悬疑节奏：善用信息差和伏笔，让观众保持探索欲
+                  
+                  我建议你可以从这些角度出发，结合自己的创意，打造独特的作品。
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -794,8 +794,8 @@ func GenerateProjectCover(c *gin.Context) {
 		return
 	}
 	prompt := "生成" + project.ProjectName + "的宣传海报，其风格为" + project.Style.String() + "社会背景：" + project.SocialStory + "剧情初始：" + project.Start + "剧情高潮以及核心：" + project.HighPoint + "最后结局：" + project.Resolved
-	baseURL := "https://api.gpt.ge"
-	apiKey := "sk-hySadfvZfjMxfWx12b302e8c832c4aEeBf7e44C5138bE860"
+	baseURL := "https://api1.zhtec.xyz"
+	apiKey := "sk-SwmvMY9looEOO7KcEd1a18D8Ad8b413c8c019809586cB842"
 	imageURL, err := util.GenerateImage(prompt, baseURL, apiKey)
 	if err != nil {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "生成封面时发生错误，请稍后重试"+"错误信息:"+err.Error()))
