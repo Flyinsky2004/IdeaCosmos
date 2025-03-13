@@ -36,7 +36,7 @@
         "selectedIconPath": "assets/images/notification-active.png"
       },{
         "pagePath": "pages/chat/chat",
-        "text": "AI助手",
+        "text": "创星全知",
         "iconPath": "assets/images/ai.png",
         "selectedIconPath": "assets/images/ai-active.png"
       },
