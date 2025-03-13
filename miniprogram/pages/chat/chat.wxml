@@ -52,6 +52,16 @@
       scroll-anchoring="true"
     >
       <view class="messages-container">
+        <!-- 欢迎区域 -->
+        <view wx:if="{{!messages || messages.length === 0}}" class="welcome-area">
+          <image 
+            class="welcome-avatar"
+            src="/assets/images/ai-active.png"
+            mode="aspectFill"
+          />
+          <text class="welcome-text">让我们开始探索创剧星球</text>
+        </view>
+
         <view 
           wx:for="{{messages}}" 
           wx:key="index" 

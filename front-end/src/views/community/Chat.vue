@@ -58,12 +58,25 @@
     <div class="flex-1 flex flex-col">
       <!-- 对话内容区 -->
       <div class="flex-1 overflow-y-auto p-4 space-y-6" ref="messageContainer">
+        <!-- 欢迎区域 -->
+        <div v-if="!messages.length" 
+             class="flex flex-col items-center justify-center py-32 animate__animated animate__fadeInUp">
+          <div class="w-48 h-48 rounded-full mb-8 relative overflow-hidden
+                      shadow-lg shadow-blue-500/20 border-4 border-blue-500/10
+                      bg-gradient-to-br from-blue-500/5 to-purple-500/5">
+            <img :src="logo" class="w-full h-full object-cover p-6 transform hover:scale-110 transition-transform duration-500" />
+          </div>
+          <div class="text-xl text-gray-500 dark:text-gray-400 tracking-wider font-light">
+            让我们开始探索创剧星球
+          </div>
+        </div>
+
         <div v-for="(message, index) in messages" :key="index" 
              class="flex gap-4 animate__animated animate__fadeInUp" 
              :class="{'justify-end': message.role === 'user'}"
              :style="{'animation-delay': index * 0.15 + 's'}">
           <!-- 头像 -->
-          <div v-if="message.role !== 'user'" class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+          <div v-if="message.role !== 'user'" class="w-8 h-8 rounded-full p-1 flex items-center justify-center flex-shrink-0">
             <img :src="logo" class="w-full h-full rounded-full" />
           </div>
           
@@ -136,7 +149,7 @@ import { MdPreview } from 'md-editor-v3'
 import 'md-editor-v3/lib/preview.css'
 import { parseDateTime } from '@/util/common'
 import { useUserStore } from '@/stores/user'
-import logo from '@/assets/img/logo.webp'
+import logo from '@/assets/img/ai-active.png'
 import 'animate.css'
 
 // 主题store
