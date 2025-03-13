@@ -132,7 +132,7 @@ Page({
       }
       
       // 将 http:// 替换为 ws://
-      const wsUrl = `${BASE_URL.replace(/^http/, 'ws')}/ws/projectSuggest`
+      const wsUrl = `${BASE_URL.replace(/^http/, 'ws')}/api/ws/projectSuggest`
       
       console.log('正在连接WebSocket:', wsUrl)
       
@@ -320,9 +320,9 @@ Page({
       (messager, data) => {
         try {
           // 确保 data 是数组
-          const chatList = Array.isArray(data) ? data : []
-          if (!Array.isArray(data)) {
-            console.warn('聊天历史数据格式不正确:', data)
+          const chatList = Array.isArray(data.data) ? data.data : []
+          if (!Array.isArray(data.data)) {
+            console.warn('聊天历史数据格式不正确:', data.data)
           }
           
           // 格式化时间
@@ -368,9 +368,9 @@ Page({
       (messager, data) => {
         try {
           // 确保 data 是数组
-          const messageList = Array.isArray(data) ? data : []
-          if (!Array.isArray(data)) {
-            console.warn('聊天记录数据格式不正确:', data)
+          const messageList = Array.isArray(data.data) ? data.data : []
+          if (!Array.isArray(data.data)) {
+            console.warn('聊天记录数据格式不正确:', data.data)
           }
           
           // 格式化消息内容
@@ -420,15 +420,36 @@ Page({
   
   // 处理输入变化
   onInputChange(e) {
+    console.log('输入事件触发:', e.detail);
+    const value = e.detail.value;
+    console.log('当前输入值:', value);
     this.setData({
-      newMessage: e.detail.value
-    })
+      newMessage: value
+    }, () => {
+      console.log('更新后的newMessage:', this.data.newMessage);
+    });
   },
   
   // 发送消息
   sendMessage() {
-    if (!this.data.newMessage.trim() || this.data.isGenerating) {
-      return
+    // 检查消息是否为空
+    if (!this.data.newMessage.trim()) {
+      wx.showToast({
+        title: '请输入消息内容',
+        icon: 'none',
+        duration: 2000
+      });
+      return;
+    }
+
+    // 检查是否正在生成回复
+    if (this.data.isGenerating) {
+      wx.showToast({
+        title: '正在生成回复，请稍候',
+        icon: 'none',
+        duration: 2000
+      });
+      return;
     }
     
     const messageContent = this.data.newMessage.trim()

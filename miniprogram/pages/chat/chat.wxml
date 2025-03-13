@@ -21,8 +21,8 @@
       >
         <text class="iconfont icon-message"></text>
         <view wx:if="{{isExpanded}}" class="chat-item-content">
-          <text class="chat-title">{{item.title}}</text>
-          <text class="chat-time">{{item.formattedTime}}</text>
+          <text class="chat-title">{{item.title || '新对话'}}</text>
+          <text class="chat-time">{{item.CreatedAt}}</text>
           <view class="delete-btn" catchtap="showDeleteConfirm" data-id="{{item.ID}}">
             <text class="iconfont icon-delete"></text>
           </view>
@@ -60,7 +60,7 @@
         >
           <view class="avatar">
             <image 
-              src="{{item.role === 'user' ? userInfo.avatarUrl || '/assets/images/default-avatar.png' : '/assets/images/logo.png'}}" 
+              src="{{item.role === 'user' ? 'https://idea.1024110.xyz/api/' + userInfo.avatar || '/assets/images/default-avatar.png' : '/assets/images/ai-active.png'}}" 
               mode="aspectFill"
             />
           </view>
@@ -95,11 +95,11 @@
           adjust-position="{{false}}"
         />
         <button 
-          class="send-button {{newMessage.trim() ? 'active' : ''}}"
+          class="send-button"
           bindtap="sendMessage"
-          disabled="{{!newMessage.trim() || isGenerating}}"
         >
-          <text class="iconfont icon-send"></text>
+          <view class="send-button-ripple"></view>
+          <text class="send-button-text">发送</text>
         </button>
       </view>
     </view>
