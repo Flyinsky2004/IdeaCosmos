@@ -133,3 +133,26 @@ func ChaptersToString(chapters []pojo.Chapter) string {
 	}
 	return result
 }
+
+func CleanJSONResponse(response string) string {
+	// 处理开头的代码块标记（大小写不敏感）
+	response = strings.TrimSpace(response)
+	lcResponse := strings.ToLower(response)
+
+	// 处理各种可能的开头标记
+	prefixes := []string{"```json", "```javascript", "```js", "```"}
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(lcResponse, strings.ToLower(prefix)) {
+			response = response[len(prefix):]
+			break
+		}
+	}
+
+	// 处理结尾的代码块标记
+	response = strings.TrimSuffix(response, "```")
+
+	// 确保去除所有多余的空白字符
+	response = strings.TrimSpace(response)
+
+	return response
+}

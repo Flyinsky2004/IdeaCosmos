@@ -51,6 +51,7 @@ func main() {
 		&pojo.NotificationSetting{},
 		&pojo.Chat{},
 		&pojo.ChatMessage{},
+		&pojo.Scene{},
 	)
 
 	// 重新启用外键检查

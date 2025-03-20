@@ -190,6 +190,11 @@ func RegisterRoutes(r *gin.Engine) {
 		websocketGroup.GET("groupChat/:id", service.HandleGroupChat)
 		websocketGroup.GET("projectSuggest", service.IdeaCosmosChat)
 	}
+
+	videoGroup := r.Group("/api/video", preHandler())
+	{
+		videoGroup.POST("generateScene", service.GenerateScene)
+	}
 	// WebSocket路由
 	//r.GET("/ws/chat", service.HandleStreamChat)
 }

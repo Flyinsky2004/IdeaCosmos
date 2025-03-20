@@ -63,6 +63,7 @@ type ChapterVersion struct {
 	Content          string `json:"content" gorm:"type:text"`
 	OptimizedContent string `json:"optimized_content" gorm:"type:varchar(1000)"`
 	AudioPath        string `json:"audio_path" gorm:"type:varchar(20)"`
+	VideoPath        string `json:"video_path" gorm:"type:varchar(20)"`
 	Score            int    `json:"score" gorm:"type:int(11)"`
 	Status           string `json:"status" gorm:"type:varchar(20)"`
 }
