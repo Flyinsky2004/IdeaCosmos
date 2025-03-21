@@ -31,9 +31,9 @@ const options = reactive({
 })
 const currentFontSize = ref("medium");
 const fetchPics = () => {
-  console.log(chapter);
+  console.log(chapter.value);
   get('/api/video/getSceneByChapterVersionID',{
-   chapter_verison_id: 26
+   chapter_verison_id: chapter.value.version_id
   },(msg,data) => {
     options.pics = data;
   },(msg,data) => {
@@ -54,6 +54,7 @@ const fetchChapterDetail = async () => {
       (messager, data) => {
         chapter.value = data.chapter;
         project.value = data.project;
+        fetchPics();
         resolve();
       },
       (messager, data) => {
@@ -98,7 +99,7 @@ onMounted(() => {
   scrollToTop();
   // 然后获取章节详情
   fetchChapterDetail();
-  fetchPics();
+  
 });
 
 // 监听路由变化，每次进入页面都滚动到顶部
@@ -446,7 +447,7 @@ onMounted(() => {
               </div>
               
               <div class="flex items-center justify-end gap-2 mb-3">
-                <a-button type="primary" @click="options.isShowPic = !options.isShowPic">切换模式</a-button>
+                <a-button v-if="options.pics.length > 0" type="primary" @click="options.isShowPic = !options.isShowPic">{{ options.isShowPic ? '纯净模式' : '插画模式' }}</a-button>
                 <span class="text-sm text-gray-500 dark:text-gray-400">字体大小</span>
                 <div class="flex items-center gap-1 bg-gray-100 dark:bg-zinc-900 rounded-lg p-1">
                   <button

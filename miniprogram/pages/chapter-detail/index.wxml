@@ -125,13 +125,58 @@
               {{item.label}}
             </view>
           </view>
+          
+          <!-- 插画模式切换按钮 -->
+          <view class="pic-mode-control" wx:if="{{chapterScenes && chapterScenes.length > 0}}">
+            <button 
+              class="pic-mode-btn {{isShowPic ? 'active' : ''}}" 
+              bindtap="togglePicMode">
+              {{isShowPic ? '纯净模式' : '插画模式'}}
+            </button>
+          </view>
         </view>
 
-        <!-- 使用富文本组件显示内容 -->
-        <rich-text 
-          nodes="{{chapter.current_version.content}}" 
-          class="chapter-content {{currentFontSize}}"
-        ></rich-text>
+        <!-- 根据模式显示不同内容 -->
+        <block wx:if="{{!isShowPic}}">
+          <!-- 纯净模式：普通文本内容 -->
+          <rich-text 
+            nodes="{{chapter.current_version.content}}" 
+            class="chapter-content {{currentFontSize}}"
+          ></rich-text>
+        </block>
+        
+        <block wx:else>
+          <!-- 插画模式：带有图片的内容 -->
+          <view class="illustration-mode">
+            <block wx:if="{{chapterScenes && chapterScenes.length > 0}}">
+              <view 
+                wx:for="{{chapterScenes}}" 
+                wx:key="ID" 
+                class="scene-item"
+              >
+                <!-- 场景文本 -->
+                <rich-text 
+                  nodes="{{item.text}}" 
+                  class="scene-text {{currentFontSize}}"
+                ></rich-text>
+                
+                <!-- 场景插图 -->
+                <view class="scene-image-container" wx:if="{{item.image_path}}">
+                  <image 
+                    src="https://idea.1024110.xyz/api/uploads/{{item.image_path}}" 
+                    mode="widthFix"
+                    class="scene-image"
+                    binderror="onImageError"
+                  ></image>
+                </view>
+              </view>
+            </block>
+            
+            <view wx:else class="no-scenes">
+              <text>暂无插画内容</text>
+            </view>
+          </view>
+        </block>
       </view>
 
       <!-- 情绪评价 -->

@@ -78,7 +78,11 @@ Page({
       { label: '1.5x', value: 1.5 }
     ],
     currentRate: 1.0,
-    innerAudioContext: null
+    innerAudioContext: null,
+    
+    // 插画模式相关
+    isShowPic: false,
+    chapterScenes: []
   },
 
   onLoad(options) {
@@ -250,8 +254,13 @@ Page({
         // parsedContent: parsedContent
       });
 
-      // 获取评论和情绪评价
+      // 获取章节场景（插画模式需要）
+      this.fetchChapterScenes();
+      
+      // 加载评论
       this.fetchComments();
+      
+      // 加载用户情绪评价
       this.fetchUserFeeling();
     } catch (error) {
       console.error("获取章节详情失败:", error);
@@ -260,6 +269,39 @@ Page({
         title: "获取章节详情失败",
         icon: "none",
       });
+    }
+  },
+
+  // 获取章节场景（用于插画模式）
+  async fetchChapterScenes() {
+    if (!this.data.chapter || !this.data.chapter.current_version) return;
+    
+    try {
+      // 获取存储的认证令牌
+      const { data: authToken } = await wx
+        .getStorage({ key: "authToken" })
+        .catch(() => ({ data: null }));
+      
+      wx.request({
+        url: "https://idea.1024110.xyz/api/video/getSceneByChapterVersionID",
+        method: "GET",
+        data: { 
+          chapter_verison_id: this.data.chapter.current_version.ID 
+        },
+        header: authToken ? { Authorization: authToken } : {},
+        success: (res) => {
+          if (res.data && res.data.data) {
+            this.setData({
+              chapterScenes: res.data.data
+            });
+          }
+        },
+        fail: (err) => {
+          console.error('获取章节场景失败:', err);
+        }
+      });
+    } catch (error) {
+      console.error("获取章节场景失败:", error);
     }
   },
 
@@ -603,5 +645,21 @@ Page({
     } catch (error) {
       console.error('暂停音频播放失败:', error);
     }
+  },
+
+  // 切换插画模式/纯净模式
+  togglePicMode() {
+    this.setData({
+      isShowPic: !this.data.isShowPic
+    });
+  },
+
+  // 图片加载错误处理
+  onImageError(e) {
+    console.error('图片加载失败:', e);
+    wx.showToast({
+      title: '图片加载失败',
+      icon: 'none'
+    });
   },
 });

@@ -332,6 +332,7 @@
   animation: fadeIn 0.6s ease-out;
 }
 
+/* 字体大小控制样式 */
 .font-control {
   display: flex;
   align-items: center;
@@ -339,6 +340,12 @@
   gap: 20rpx;
   margin-bottom: 30rpx;
   color: #9ca3af;
+}
+
+.font-control text {
+  font-size: 28rpx;
+  color: #666;
+  margin-right: 16rpx;
 }
 
 .font-buttons {
@@ -362,6 +369,25 @@
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
+/* 插画模式控制按钮 */
+.pic-mode-control {
+  margin-left: 20rpx;
+}
+
+.pic-mode-btn {
+  font-size: 26rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  padding: 0 24rpx;
+  background-color: #6366f1;
+  color: white;
+  border-radius: 8rpx;
+}
+
+.pic-mode-btn.active {
+  background-color: #4f46e5;
+}
+
 .chapter-content {
   line-height: 1.8;
   color: #f3f4f6;
@@ -377,6 +403,57 @@
 
 .chapter-content.large {
   font-size: 36rpx;
+}
+
+/* 插画模式内容 */
+.illustration-mode {
+  padding: 0 10rpx;
+}
+
+.scene-item {
+  margin-bottom: 40rpx;
+}
+
+.scene-text {
+  margin-bottom: 20rpx;
+  line-height: 1.8;
+  color: #f3f4f6;
+}
+
+.scene-text.small {
+  font-size: 28rpx;
+}
+
+.scene-text.medium {
+  font-size: 32rpx;
+}
+
+.scene-text.large {
+  font-size: 36rpx;
+}
+
+.scene-image-container {
+  display: flex;
+  justify-content: center;
+  margin: 30rpx 0;
+}
+
+.scene-image {
+  width: 80%;
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s;
+}
+
+.scene-image:active {
+  transform: scale(1.02);
+}
+
+.no-scenes {
+  text-align: center;
+  padding: 60rpx 0;
+  color: #999;
+  font-size: 28rpx;
 }
 
 /* 情绪评价 */
