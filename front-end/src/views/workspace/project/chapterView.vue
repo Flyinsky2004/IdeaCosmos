@@ -25,9 +25,23 @@ const fontSizes = [
   { label: "中", value: "medium" },
   { label: "大", value: "large" },
 ];
-
+const options = reactive({
+  pics:[],
+  isShowPic: false
+})
 const currentFontSize = ref("medium");
+const fetchPics = () => {
+  console.log(chapter);
+  get('/api/video/getSceneByChapterVersionID',{
+   chapter_verison_id: 26
+  },(msg,data) => {
+    options.pics = data;
+  },(msg,data) => {
 
+  },(msg,data) => {
+
+})
+}
 // 获取章节详情
 const fetchChapterDetail = async () => {
   loading.value = true;
@@ -84,6 +98,7 @@ onMounted(() => {
   scrollToTop();
   // 然后获取章节详情
   fetchChapterDetail();
+  fetchPics();
 });
 
 // 监听路由变化，每次进入页面都滚动到顶部
@@ -429,27 +444,38 @@ onMounted(() => {
                   >
                 </div>
               </div>
-              <div class="space-y-4 select-text">
-                <div class="flex items-center justify-end gap-2 mb-3">
-                  <span class="text-sm text-gray-500 dark:text-gray-400">字体大小</span>
-                  <div class="flex items-center gap-1 bg-gray-100 dark:bg-zinc-900 rounded-lg p-1">
-                    <button
-                      v-for="size in fontSizes"
-                      :key="size.value"
-                      @click="currentFontSize = size.value"
-                      :class="[
-                        'px-3 py-1 text-sm rounded-md transition-colors',
-                        currentFontSize === size.value
-                          ? 'bg-blue-500 text-white'
-                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-zinc-800',
-                      ]"
-                    >
-                      {{ size.label }}
-                    </button>
-                  </div>
+              
+              <div class="flex items-center justify-end gap-2 mb-3">
+                <a-button type="primary" @click="options.isShowPic = !options.isShowPic">切换模式</a-button>
+                <span class="text-sm text-gray-500 dark:text-gray-400">字体大小</span>
+                <div class="flex items-center gap-1 bg-gray-100 dark:bg-zinc-900 rounded-lg p-1">
+                  <button
+                    v-for="size in fontSizes"
+                    :key="size.value"
+                    @click="currentFontSize = size.value"
+                    :class="[
+                      'px-3 py-1 text-sm rounded-md transition-colors',
+                      currentFontSize === size.value
+                        ? 'bg-blue-500 text-white'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-zinc-800',
+                    ]"
+                  >
+                    {{ size.label }}
+                  </button>
                 </div>
+              </div>
 
-                <div :class="['content-container', `font-${currentFontSize}`]">
+              <!-- 内容和插画布局 -->
+              <div class="flex flex-col lg:flex-row gap-6">
+                <!-- 章节内容 -->
+                <div 
+                  v-if="!options.isShowPic" 
+                  :class="['content-container flex-1', `font-${currentFontSize}`]"
+                  v-motion
+                  :initial="{ opacity: 0, y: 100 }"
+                  :enter="{ opacity: 1, y: 0, transition: { duration: 500 } }"
+                  :leave="{ opacity: 0, y: -100 }"
+                >
                   <MdPreview
                     style="background: transparent"
                     :theme="themeStore.currentTheme"
@@ -458,6 +484,32 @@ onMounted(() => {
                     previewTheme="github"
                     :previewOnly="true"
                   />
+                </div>
+                <div 
+                  v-else 
+                  :class="['content-container flex-1', `font-${currentFontSize}`]"
+                  v-motion
+                  :initial="{ opacity: 0, scale: 0.8 }"
+                  :enter="{ opacity: 1, scale: 1, transition: { duration: 500 } }"
+                  :leave="{ opacity: 0, scale: 1.2 }"
+                >
+                  <div 
+                    v-for="(pic, index) in options.pics" 
+                    :key="pic.id"
+                    v-motion
+                    :initial="{ opacity: 0, x: 100 }"
+                    :enter="{ opacity: 1, x: 0, transition: { delay: index * 200, duration: 500 } }"
+                  >
+                    <MdPreview
+                    style="background: transparent"
+                    :theme="themeStore.currentTheme"
+                    editorId="chapter-preview"
+                    :modelValue="pic.text"
+                    previewTheme="github"
+                    :previewOnly="true"
+                  />
+                  <img :src="`${BACKEND_DOMAIN}uploads/${pic.image_path}`" :alt="pic.text" class="w-1/2 mx-auto h-auto object-cover hover:scale-105 transition-transform duration-300" />
+                  </div>
                 </div>
               </div>
             </div>
