@@ -1016,14 +1016,14 @@ watch(
 
 /* 折叠功能样式 */
 .content-wrapper {
-  max-height: 1000px;
+  max-height: 2000px;
 }
 
 .content-wrapper.collapsed {
-  max-height: 150px;
+  max-height: 300px;
   position: relative;
-  mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
 }
 
 .rotate-180 {
