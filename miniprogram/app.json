@@ -1,6 +1,7 @@
 {
   "pages": [
     "pages/index/index",
+    "pages/video-feed/index",
     "pages/notification/index",
     "pages/message/index",
     "pages/profile/index",
@@ -30,10 +31,10 @@
         "selectedIconPath": "assets/images/home-active.png"
       },
       {
-        "pagePath": "pages/notification/index",
-        "text": "通知",
-        "iconPath": "assets/images/notification.png",
-        "selectedIconPath": "assets/images/notification-active.png"
+        "pagePath": "pages/video-feed/index",
+        "text": "视频",
+        "iconPath": "assets/images/video.png",
+        "selectedIconPath": "assets/images/video-active.png"
       },{
         "pagePath": "pages/chat/chat",
         "text": "创星全知",

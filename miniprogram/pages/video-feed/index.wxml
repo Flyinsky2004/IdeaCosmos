@@ -1,0 +1,147 @@
+<view class="video-feed-container">
+  <!-- 顶部导航栏 -->
+  <view class="navigation-bar">
+    <view class="title">视频内容</view>
+    <view class="close-btn" bindtap="goBack">
+      <text class="icon-close">×</text>
+    </view>
+  </view>
+
+  <!-- 视频容器 -->
+  <view class="video-content-wrapper">
+    <!-- 视频滑动区 - 只包含视频播放器 -->
+    <swiper 
+      class="video-swiper" 
+      vertical="{{true}}" 
+      current="{{currentVideoIndex}}"
+      bindchange="onSwiperChange"
+      circular="{{false}}"
+      duration="400"
+      easing-function="easeInOutCubic">
+      <swiper-item wx:for="{{videos}}" wx:key="index" class="video-item">
+        <video 
+          id="video-{{index}}"
+          class="video-player"
+          src="{{item.videoUrl}}"
+          object-fit="cover"
+          autoplay="{{currentVideoIndex === index}}"
+          loop="{{true}}"
+          controls="{{false}}"
+          show-play-btn="{{false}}"
+          show-center-play-btn="{{false}}"
+          enable-progress-gesture="{{false}}"
+          bindtap="togglePlay"
+          data-index="{{index}}">
+        </video>
+      </swiper-item>
+    </swiper>
+
+    <!-- 固定UI层 - 显示当前选中视频的信息 -->
+    <view class="fixed-ui-layer" wx:if="{{videos.length > 0}}">
+      <!-- 视频信息层 -->
+      <view class="video-info">
+        <!-- 用户信息 -->
+        <view class="user-info">
+          <image class="avatar" src="https://idea.1024110.xyz/assets/logo-iTLdVNwg.webp" mode="aspectFill"></image>
+          <view class="user-details">
+            <text class="username">创剧星球</text>
+            <text class="time">{{currentVideo.createdAt}}</text>
+          </view>
+          <button class="follow-btn" catchtap="followAuthor" data-id="{{currentVideo.author.id}}">关注</button>
+        </view>
+        
+        <!-- 视频标题和描述 -->
+        <view class="video-description">
+          <text class="title">{{currentVideo.title}}</text>
+          <text class="description">{{currentVideo.description}}...</text>
+        </view>
+      </view>
+
+      <!-- 交互按钮组 -->
+      <view class="interaction-buttons">
+        <!-- 点赞按钮 -->
+        <view class="interaction-item" catchtap="toggleLike" data-index="{{currentVideoIndex}}">
+          <view class="icon-container {{currentVideo.isLiked ? 'active' : ''}}">
+            <image class="icon" src="/assets/images/{{currentVideo.isLiked ? 'like-active.png' : 'like.png'}}"></image>
+          </view>
+          <text class="count">{{currentVideo.likes}}</text>
+        </view>
+        
+        <!-- 收藏按钮 -->
+        <view class="interaction-item" catchtap="toggleFavorite" data-index="{{currentVideoIndex}}">
+          <view class="icon-container {{currentVideo.isFavorited ? 'active' : ''}}">
+            <image class="icon" src="/assets/images/{{currentVideo.isFavorited ? 'star-active.png' : 'star.png'}}"></image>
+          </view>
+          <text class="count">{{currentVideo.favorites}}</text>
+        </view>
+        
+        <!-- 评论按钮 -->
+        <view class="interaction-item" catchtap="openCommentsModal" data-index="{{currentVideoIndex}}">
+          <view class="icon-container">
+            <image class="icon" src="/assets/images/comment.png"></image>
+          </view>
+          <text class="count">{{currentVideo.comments.length}}</text>
+        </view>
+        
+        <!-- 分享按钮 -->
+        <view class="interaction-item" catchtap="shareVideo" data-index="{{currentVideoIndex}}">
+          <view class="icon-container">
+            <image class="icon" src="/assets/images/share.png"></image>
+          </view>
+          <text class="count">分享</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 加载提示 -->
+  <view class="loading-container" wx:if="{{isLoading}}">
+    <view class="loading-spinner"></view>
+  </view>
+
+  <!-- 无视频提示 -->
+  <view class="no-videos" wx:if="{{!isLoading && videos.length === 0}}">
+    <image class="empty-icon" src="/assets/images/video-empty.png"></image>
+    <text class="empty-text">还没有视频内容</text>
+    <text class="empty-desc">暂时没有可播放的视频，请稍后再来查看</text>
+  </view>
+
+  <!-- 评论模态框 -->
+  <view class="comment-modal {{showCommentModal ? 'show' : ''}}" catchtouchmove="preventTouchMove">
+    <view class="modal-mask" bindtap="closeCommentsModal"></view>
+    <view class="modal-content">
+      <view class="modal-header">
+        <text class="modal-title">评论</text>
+        <view class="modal-close" bindtap="closeCommentsModal">×</view>
+      </view>
+      
+      <scroll-view class="comments-list" scroll-y="{{true}}">
+        <block wx:if="{{selectedVideo.comments.length > 0}}">
+          <view wx:for="{{selectedVideo.comments}}" wx:key="index" class="comment-item">
+            <image class="comment-avatar" src="{{item.author.avatar}}" mode="aspectFill"></image>
+            <view class="comment-content">
+              <text class="comment-username">{{item.author.username}}</text>
+              <text class="comment-text">{{item.content}}</text>
+              <view class="comment-footer">
+                <text class="comment-time">{{item.createdAt}}</text>
+                <view class="comment-like" catchtap="toggleCommentLike" data-id="{{item.id}}">
+                  <image class="like-icon" src="/assets/images/{{item.isLiked ? 'like-active.png' : 'like.png'}}"></image>
+                  <text class="like-count">{{item.likes}}</text>
+                </view>
+              </view>
+            </view>
+          </view>
+        </block>
+        <view wx:else class="empty-comments">
+          <image class="empty-comment-icon" src="/assets/images/comment-empty.png"></image>
+          <text class="empty-comment-text">还没有评论，快来发表第一条评论吧</text>
+        </view>
+      </scroll-view>
+      
+      <view class="comment-input-box">
+        <input class="comment-input" placeholder="写下你的评论..." value="{{newComment}}" bindinput="onCommentInput" placeholder-style="color: #999;"/>
+        <button class="send-btn {{newComment ? 'active' : ''}}" bindtap="addComment">发送</button>
+      </view>
+    </view>
+  </view>
+</view> 
