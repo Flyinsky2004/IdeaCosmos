@@ -194,6 +194,9 @@ func RegisterRoutes(r *gin.Engine) {
 	videoGroup := r.Group("/api/video", preHandler())
 	{
 		videoGroup.POST("generateScene", service.GenerateScene)
+		videoGroup.GET("getSceneByChapterVersionID", service.GetSceneByChapterVersionID)
+		videoGroup.GET("generateChapterImages", service.GenerateChapterImages)
+		videoGroup.GET("generateChapterVideo", service.GenerateChapterVideo)
 	}
 	// WebSocket路由
 	//r.GET("/ws/chat", service.HandleStreamChat)
