@@ -68,6 +68,7 @@ func main() {
 	}))
 	app.Static("/api/uploads", "./uploads")
 	app.Static("/api/audio", "./audio")
+	app.Static("/api/videos", "./video")
 	route.RegisterRoutes(app)
 	app.Run(config.Config.Gin.Port)
 }

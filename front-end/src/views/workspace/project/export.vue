@@ -1,5 +1,5 @@
 <script setup>
-import {onMounted, reactive} from "vue";
+import {onMounted, reactive, ref} from "vue";
 import {audioModels, BACKEND_DOMAIN, femaleAvatar, FRONTEND_DOMAIN, maleAvatar} from "@/util/VARRIBLES.js";
 import {get} from "@/util/request.js";
 import {message} from "ant-design-vue";
@@ -22,6 +22,11 @@ const options = reactive({
   audioGenerating: false,
   exportLoading: false,
   loading: true,
+  videoGenerating: false,
+  sceneGenerating: false,
+  imagesGenerating: false,
+  scenes: [],
+  videoPath: '',
 })
 onMounted(() => {
   fetchChapters()
@@ -44,6 +49,14 @@ const chapterClickHandler = (chapter, versionID) => {
     options.currentChapter = chapter
     if (chapter.current_version !== undefined) {
       fetchAudioResource()
+      // 获取场景数据
+      getScenes()
+      // 设置视频路径
+      if (chapter.current_version.video_path) {
+        options.videoPath = chapter.current_version.video_path
+      } else {
+        options.videoPath = ''
+      }
     }
   } else {
     message.info("该篇章还没有创作版本，请前往创作板块创作！")
@@ -84,7 +97,7 @@ const stopAudio = () => {
 }
 const fetchAudioResource = async () => {
   // 发送请求，获取MP3文件流
-  const response = await axios.get(BACKEND_DOMAIN + 'audio/' + options.currentAudioFileName, {
+  const response = await axios.get(BACKEND_DOMAIN + 'audio/' + options.currentChapter.current_version.audio_path, {
     responseType: 'arraybuffer', // 确保获取的是二进制数据
   });
 
@@ -94,6 +107,143 @@ const fetchAudioResource = async () => {
   // 将 Blob 转化为临时URL
   options.audioUrl = URL.createObjectURL(blob);
 
+}
+
+// 生成视频场景
+const generateScenes = () => {
+  if (!options.currentChapterId) {
+    message.warning('请先选择篇章');
+    return;
+  }
+  
+  options.sceneGenerating = true;
+  get('/api/video/generateScene', {
+    chapter_verison_id: options.currentChapter.current_version.ID
+  }, (messageer, data) => {
+    options.scenes = data;
+    message.success('场景生成成功');
+    options.sceneGenerating = false;
+  }, (messageer) => {
+    message.warning(messageer);
+    options.sceneGenerating = false;
+  }, (messageer) => {
+    message.error(messageer);
+    options.sceneGenerating = false;
+  });
+}
+
+// 获取现有场景
+const getScenes = () => {
+  if (!options.currentChapterId || !options.currentChapter.current_version) {
+    return;
+  }
+  
+  get('/api/video/getSceneByChapterVersionID', {
+    chapter_verison_id: options.currentChapter.current_version.ID
+  }, (messageer, data) => {
+    options.scenes = data;
+  }, (messageer) => {
+    message.warning(messageer);
+  }, (messageer) => {
+    message.error(messageer);
+  });
+}
+
+// 生成场景图片
+const generateImages = () => {
+  if (!options.currentChapterId || !options.scenes || options.scenes.length === 0) {
+    message.warning('请先生成场景');
+    return;
+  }
+  
+  options.imagesGenerating = true;
+  get('/api/video/generateChapterImages', {
+    chapter_verison_id: options.currentChapter.current_version.ID
+  }, (messageer, data) => {
+    options.scenes = data;
+    message.success('图片生成成功');
+    options.imagesGenerating = false;
+  }, (messageer) => {
+    message.warning(messageer);
+    options.imagesGenerating = false;
+  }, (messageer) => {
+    message.error(messageer);
+    options.imagesGenerating = false;
+  });
+}
+
+// 生成视频
+const generateVideo = () => {
+  if (!options.currentChapterId || !options.scenes || options.scenes.length === 0) {
+    message.warning('请先生成场景和图片');
+    return;
+  }
+  
+  options.videoGenerating = true;
+  get('/api/video/generateChapterVideo', {
+    chapter_verison_id: options.currentChapter.current_version.ID
+  }, (messageer, data) => {
+    options.videoPath = data;
+    options.currentChapter.current_version.video_path = data;
+    message.success('视频生成成功');
+    options.videoGenerating = false;
+  }, (messageer) => {
+    message.warning(messageer);
+    options.videoGenerating = false;
+  }, (messageer) => {
+    message.error(messageer);
+    options.videoGenerating = false;
+  });
+}
+
+// 社交媒体分享方法
+const shareToDouyin = () => {
+  if (!options.videoPath) {
+    message.error('请先生成视频');
+    return;
+  }
+  const videoUrl = `${BACKEND_DOMAIN}video/${options.videoPath}`;
+  window.open(`https://creator.douyin.com/creator-micro/content/upload`);
+}
+import bilibili from '@/assets/img/bilibili.ico'
+import douyin from '@/assets/img/douyin.ico'
+import xiaohongshu from '@/assets/img/xiaohongshu.ico'
+import wechatChannels from '@/assets/img/shipinhao.ico'
+import qqXiaoshijie from '@/assets/img/qvideo_tob_icon_mcn.png'
+const shareToBilibili = () => {
+  if (!options.videoPath) {
+    message.error('请先生成视频');
+    return;
+  }
+  const videoUrl = `${BACKEND_DOMAIN}video/${options.videoPath}`;
+  window.open(`https://member.bilibili.com/platform/upload/video/frame`);
+}
+
+const shareToXiaohongshu = () => {
+  if (!options.videoPath) {
+    message.error('请先生成视频');
+    return;
+  }
+  const videoUrl = `${BACKEND_DOMAIN}video/${options.videoPath}`;
+  window.open(`https://creator.xiaohongshu.com/publish/publish`);
+}
+
+const shareToWechatChannels = () => {
+  if (!options.videoPath) {
+    message.error('请先生成视频');
+    return;
+  }
+  const videoUrl = `${BACKEND_DOMAIN}video/${options.videoPath}`;
+  window.open(`https://channels.weixin.qq.com/platform/post/create`);
+}
+
+const shareToQQXiaoshijie = () => {
+  if (!options.videoPath) {
+    message.error('请先生成视频');
+    return;
+  }
+  const videoUrl = `${BACKEND_DOMAIN}video/${options.videoPath}`;
+  window.open(`https://qqzz.qq.com/publish`);
 }
 </script>
 
@@ -112,6 +262,7 @@ const fetchAudioResource = async () => {
             v-for="tab in [
               { key: 'chapters', text: '选择篇章', icon: 'M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292' },
               { key: 'audio', text: '音频导出', icon: 'M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a2.25 2.25 0 001.632-2.163zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 01-.99-3.467l2.31-.66A2.25 2.25 0 009 15.553z' },
+              { key: 'video', text: '视频导出', icon: 'M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z' },
               { key: 'export', text: '文件导出', icon: 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z' }
             ]"
             :key="tab.key"
@@ -391,6 +542,330 @@ const fetchAudioResource = async () => {
             </div>
           </div>
         </div>
+
+        <!-- 视频导出 -->
+        <div v-show="options.activeTab === 'video'" class="space-y-6 animate__animated animate__fadeIn animate__delay-3s">
+          <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            视频导出
+          </h2>
+          
+          <!-- 无选择章节提示 -->
+          <div v-if="!options.currentChapterId" class="p-8 text-center bg-gray-50 dark:bg-zinc-900/50 rounded-xl border border-gray-200 dark:border-zinc-700/80">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+            </svg>
+            <p class="mt-4 text-gray-600 dark:text-gray-400">请先选择要生成视频的章节</p>
+            <a-button 
+              class="mt-4" 
+              type="primary" 
+              @click="options.activeTab = 'chapters'"
+            >
+              前往选择章节
+            </a-button>
+          </div>
+          
+          <!-- 视频生成步骤 -->
+          <div v-else class="space-y-8">
+            <!-- 步骤指示器 -->
+            <div class="flex justify-between items-center pt-8 pb-12">
+              <div class="w-full flex items-center">
+                <div class="relative flex items-center justify-center">
+                  <div class="h-12 w-12 rounded-full border-2 flex items-center justify-center"
+                       :class="options.videoPath ? 'bg-blue-500 text-white border-blue-500' : 'bg-blue-500 text-white border-blue-500'">
+                    1
+                  </div>
+                  <div class="absolute -bottom-6 w-max text-xs font-medium"
+                       :class="options.videoPath ? 'text-blue-500' : 'text-blue-500'">
+                    生成场景
+                  </div>
+                </div>
+                <div class="flex-auto border-t-2"
+                     :class="options.videoPath ? 'border-blue-500' : 'border-blue-500'"></div>
+                <div class="relative flex items-center justify-center">
+                  <div class="h-12 w-12 rounded-full border-2 flex items-center justify-center"
+                       :class="options.videoPath || (options.scenes && options.scenes.length > 0) ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-400 border-gray-300 dark:bg-zinc-900 dark:border-gray-700'">
+                    2
+                  </div>
+                  <div class="absolute -bottom-6 w-max text-xs font-medium"
+                       :class="options.videoPath || (options.scenes && options.scenes.length > 0) ? 'text-blue-500' : 'text-gray-400'">
+                    生成图片
+                  </div>
+                </div>
+                <div class="flex-auto border-t-2"
+                     :class="options.videoPath ? 'border-blue-500' : options.scenes && options.scenes.length > 0 ? 'border-blue-500' : 'border-gray-300 dark:border-gray-700'">
+                </div>
+                <div class="relative flex items-center justify-center">
+                  <div class="h-12 w-12 rounded-full border-2 flex items-center justify-center"
+                       :class="options.videoPath ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-400 border-gray-300 dark:bg-zinc-900 dark:border-gray-700'">
+                    3
+                  </div>
+                  <div class="absolute -bottom-6 w-max text-xs font-medium"
+                       :class="options.videoPath ? 'text-blue-500' : 'text-gray-400'">
+                    生成视频
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 所选章节信息 -->
+            <div class="p-4 bg-gray-50 dark:bg-zinc-900/50 rounded-xl border border-gray-200 dark:border-zinc-700/80">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    {{ options.currentChapter.Title }}
+                  </h3>
+                  <p class="text-sm text-gray-600 dark:text-gray-400">
+                    版本: {{ options.currentChapter.current_version?.ID || '-' }}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 步骤1：生成场景 -->
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  第一步：生成场景
+                </h3>
+                <div v-if="options.videoPath" class="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>已完成</span>
+                </div>
+                <a-button 
+                  v-else
+                  type="primary"
+                  :loading="options.sceneGenerating"
+                  @click="generateScenes"
+                >
+                  生成场景
+                </a-button>
+              </div>
+              
+              <!-- 场景列表 -->
+              <div v-if="options.scenes && options.scenes.length > 0" class="space-y-4">
+                <div 
+                  v-for="(scene, index) in options.scenes" 
+                  :key="index"
+                  class="p-4 bg-white dark:bg-zinc-800 rounded-lg border theme-border"
+                >
+                  <div class="flex items-start gap-4">
+                    <div class="flex-shrink-0 text-sm font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 rounded-full h-6 w-6 flex items-center justify-center">
+                      {{ index + 1 }}
+                    </div>
+                    <div class="flex-1 space-y-2">
+                      <div class="text-sm text-gray-700 dark:text-gray-300">{{ scene.text }}</div>
+                      <div class="text-xs text-gray-500">
+                        <span class="font-medium">时间: </span>
+                        {{ scene.start_time }}s - {{ scene.end_time }}s
+                      </div>
+                    </div>
+                    <div class="flex-shrink-0 w-16 h-16 rounded bg-gray-100 dark:bg-gray-700 overflow-hidden" v-if="scene.image_path">
+                      <img 
+                        :src="`${BACKEND_DOMAIN}uploads/${scene.image_path}`" 
+                        class="w-full h-full object-cover"
+                        alt="场景图片"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div v-else-if="!options.sceneGenerating" class="text-center py-8 bg-gray-50 dark:bg-zinc-900/50 rounded-lg border border-dashed theme-border">
+                <p class="text-gray-500">请点击"生成场景"按钮开始生成</p>
+              </div>
+            </div>
+            
+            <!-- 步骤2：生成图片 -->
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  第二步：生成场景图片
+                </h3>
+                <div v-if="options.videoPath" class="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>已完成</span>
+                </div>
+                <a-button 
+                  v-else
+                  type="primary"
+                  :disabled="!options.scenes || options.scenes.length === 0"
+                  :loading="options.imagesGenerating"
+                  @click="generateImages"
+                >
+                  生成图片
+                </a-button>
+              </div>
+              
+              <div v-if="options.scenes && options.scenes.length > 0 && options.scenes.some(s => s.image_path)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div 
+                  v-for="(scene, index) in options.scenes.filter(s => s.image_path)" 
+                  :key="`img-${index}`"
+                  class="bg-white dark:bg-zinc-800 rounded-lg overflow-hidden border theme-border"
+                >
+                  <div class="aspect-w-16 aspect-h-9 bg-gray-100 dark:bg-gray-700">
+                    <img 
+                      :src="`${BACKEND_DOMAIN}uploads/${scene.image_path}`" 
+                      class="w-full h-full object-cover"
+                      alt="场景图片"
+                    />
+                  </div>
+                  <div class="p-3">
+                    <div class="text-xs text-gray-500 truncate">
+                      {{ scene.text.substring(0, 50) }}{{ scene.text.length > 50 ? '...' : '' }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div 
+                v-else-if="options.scenes && options.scenes.length > 0" 
+                class="text-center py-8 bg-gray-50 dark:bg-zinc-900/50 rounded-lg border border-dashed theme-border"
+              >
+                <p class="text-gray-500">请点击"生成图片"按钮开始生成场景图片</p>
+              </div>
+              
+              <div 
+                v-else 
+                class="text-center py-8 bg-gray-50 dark:bg-zinc-900/50 rounded-lg border border-dashed theme-border"
+              >
+                <p class="text-gray-500">请先完成场景生成</p>
+              </div>
+            </div>
+            
+            <!-- 步骤3：生成视频 -->
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  第三步：生成视频
+                </h3>
+                <a-button 
+                  v-if="!options.videoPath"
+                  type="primary"
+                  :disabled="!options.scenes || options.scenes.length === 0 || !options.scenes.every(s => s.image_path)"
+                  :loading="options.videoGenerating"
+                  @click="generateVideo"
+                >
+                  生成视频
+                </a-button>
+                <div v-else class="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>视频已生成</span>
+                </div>
+              </div>
+              
+              <div v-if="options.videoPath" class="rounded-lg overflow-hidden border theme-border">
+                <div class="aspect-w-16 aspect-h-9 bg-black">
+                  <video 
+                    :src="`${BACKEND_DOMAIN}videos/${options.videoPath}`" 
+                    class="w-full h-full" 
+                    controls
+                  ></video>
+                </div>
+                <div class="p-4 bg-white dark:bg-zinc-800">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h4 class="font-medium text-gray-900 dark:text-gray-100">
+                        {{ options.currentChapter.Title }} - 视频
+                      </h4>
+                      <p class="text-sm text-gray-500 mt-1">
+                        点击播放按钮即可观看
+                      </p>
+                    </div>
+                    <div class="flex gap-2">
+                      <a-button
+                        danger
+                        v-if="options.videoPath"
+                        @click="generateVideo"
+                        :loading="options.videoGenerating"
+                      >
+                        重新生成
+                      </a-button>
+                      <a 
+                        :href="`${BACKEND_DOMAIN}videos/${options.videoPath}`" 
+                        download
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 transition-colors rounded-lg text-white text-sm"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        下载视频
+                      </a>
+                    </div>
+                  </div>
+                  
+                  <!-- 社交媒体分享按钮 -->
+                  <div class="mt-4 flex flex-wrap gap-2">
+                    <a 
+                      href="#" 
+                      @click.prevent="shareToDouyin" 
+                      class="inline-flex items-center gap-1 px-3 py-1.5 bg-black hover:bg-gray-800 transition-colors rounded-lg text-white text-xs"
+                    >
+                    <img :src="douyin" class="w-4 h-4">
+                      <span>发布至抖音</span>
+                    </a>
+                    <a 
+                      href="#" 
+                      @click.prevent="shareToBilibili" 
+                      class="inline-flex items-center gap-1 px-3 py-1.5 bg-pink-500 hover:bg-pink-600 transition-colors rounded-lg text-white text-xs"
+                    >
+                    <img :src="bilibili" class="w-4 h-4">
+                      <span>发布至哔哩哔哩</span>
+                    </a>
+                    <a 
+                      href="#" 
+                      @click.prevent="shareToXiaohongshu" 
+                      class="inline-flex items-center gap-1 px-3 py-1.5 bg-red-500 hover:bg-red-600 transition-colors rounded-lg text-white text-xs"
+                    >
+                    <img :src="xiaohongshu" class="w-4 h-4">
+                      <span>发布至小红书</span>
+                    </a>
+                    <a 
+                      href="#" 
+                      @click.prevent="shareToWechatChannels" 
+                      class="inline-flex items-center gap-1 px-3 py-1.5 bg-green-500 hover:bg-green-600 transition-colors rounded-lg text-white text-xs"
+                    >
+                    <img :src="wechatChannels" class="w-4 h-4">
+                      <span>发布至微信视频号</span>
+                    </a>
+                    <a 
+                      href="#" 
+                      @click.prevent="shareToQQXiaoshijie" 
+                      class="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-400 hover:bg-blue-500 transition-colors rounded-lg text-white text-xs"
+                    >
+                    <img :src="qqXiaoshijie" class="w-4 h-4">
+                      <span>发布至QQ小世界</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+              
+              <div 
+                v-else-if="options.scenes && options.scenes.length > 0 && options.scenes.every(s => s.image_path)" 
+                class="text-center py-8 bg-gray-50 dark:bg-zinc-900/50 rounded-lg border border-dashed theme-border"
+              >
+                <p class="text-gray-500">请点击"生成视频"按钮开始生成视频</p>
+              </div>
+              
+              <div 
+                v-else 
+                class="text-center py-8 bg-gray-50 dark:bg-zinc-900/50 rounded-lg border border-dashed theme-border"
+              >
+                <p class="text-gray-500">请先完成场景图片生成</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </template>
     </div>
   </div>
@@ -435,5 +910,25 @@ const fetchAudioResource = async () => {
   animation: fadeIn 0.5s ease-out forwards;
   animation-delay: calc(var(--index) * 0.1s);
   opacity: 0;
+}
+
+/* 视频容器样式 */
+.aspect-w-16 {
+  position: relative;
+  padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+}
+
+.aspect-h-9 {
+  position: relative;
+}
+
+.aspect-w-16 > * {
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
 }
 </style>
