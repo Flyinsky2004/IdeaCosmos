@@ -607,7 +607,7 @@ func GenerateCharacterRS(c *gin.Context) {
 			Model:    util.AgentModelName,
 			Messages: message,
 			Prompt: "你是一个" + project.Types + "角色关系设计师，我会提供现有的：社会背景(social_story),开始情景(start),高潮和冲突(high_point)和解决结局(resolved),你需要基于给出的剧情以及角色背景设计两个角色之间的关系。最后，你需要返回一个json，包含生成的角色关系信息,角色关系属性如下，属性名为括号中的英文单词:" +
-				"关系名称(name),关系内容(content)，关系名称例如合作伙伴,兄弟,父子,同学等等，关系内容即两名角色之间的故事",
+				"关系名称(name),关系内容(content)，关系名称例如合作伙伴,兄弟,父子,同学等等，关系内容即两名角色之间的故事。你只需要返回一个关系对象json即可，不能是一个数组。",
 			Question:    prompt,
 			Temperature: util.GlobalTemperature,
 			MaxTokens:   8000,
@@ -627,7 +627,7 @@ func GenerateCharacterRS(c *gin.Context) {
 		time.Sleep(time.Second * time.Duration(attempt+1))
 	}
 
-	c.JSON(http.StatusOK, dto.SuccessResponse(res))
+	c.JSON(http.StatusOK, dto.SuccessResponse(res.Choices[0].Message.Content))
 }
 
 // GenerateCharacterAvatar 生成封面
@@ -1639,12 +1639,12 @@ func ModifyChapterVersionStream(c *gin.Context) {
 
 	// 调用流式聊天
 	streamChan, err := util.StreamChatCompletion(ctx, util.ChatRequest{
-		Model:       util.AgentModelName,
+		Model:       util.UseModelName,
 		Messages:    []util.Message{},
 		Prompt:      systemPrompt,
 		Question:    prompt,
 		Temperature: util.GlobalTemperature,
-		MaxTokens:   8192,
+		MaxTokens:   16384,
 	})
 
 	if err != nil {

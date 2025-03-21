@@ -183,12 +183,13 @@ const generateCharacterRS = () => {
     },
     (messager, data) => {
       let  raw;
-      const content = data.choices[0].message.content;
+      const content = data;
       if (content.includes("<think>") && content.includes("</think>")) {
         raw = content.replace(/<think>.*?<\/think>/gs, "");
       } else {
         raw = content;
       }
+      
       const washed = JSON.parse(washJSONStr(raw));
       console.log(washed);
       editRSForm.name = washed.name;
@@ -239,7 +240,6 @@ const generateMainCharacters = () => {
       } else {
         raw = content;
       }
-      console.log(raw);
       options.generateResults = JSON.parse(washJSONStr(raw));
       for (let i = 0; i < options.generateResults.length; i++) {
         options.generateResults[i].project_id = project.ID;

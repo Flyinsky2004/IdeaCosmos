@@ -608,12 +608,53 @@ const projectStats = ref({})
 
 // 初始化风格和类型图表
 const initStyleAndTypeCharts = () => {
-  const styleChart = echarts.init(document.getElementById('styleChart'))
-  const typeChart = echarts.init(document.getElementById('typeChart'))
+  // 检查DOM元素和数据是否存在
+  const styleChartEl = document.getElementById('styleChart')
+  const typeChartEl = document.getElementById('typeChart')
+  
+  if (!styleChartEl || !typeChartEl || !styleData.value || styleData.value.length === 0) {
+    console.warn('图表DOM元素不存在或数据未加载')
+    return
+  }
+  
+  const styleChart = echarts.init(styleChartEl)
+  const typeChart = echarts.init(typeChartEl)
   
   const dates = [...new Set(styleData.value.map(item => item.date))].sort()
   const styles = [...new Set(styleData.value.map(item => item.style))]
   const types = [...new Set(styleData.value.map(item => item.type))]
+  
+  // 检查是否有有效数据
+  if (dates.length === 0 || (styles.length === 0 && types.length === 0)) {
+    // 显示无数据状态
+    styleChart.setOption({
+      title: {
+        text: '暂无风格数据',
+        left: 'center',
+        top: 'center',
+        textStyle: {
+          fontSize: 16,
+          fontWeight: 'normal',
+          color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#333'
+        }
+      }
+    })
+    
+    typeChart.setOption({
+      title: {
+        text: '暂无类型数据',
+        left: 'center',
+        top: 'center',
+        textStyle: {
+          fontSize: 16,
+          fontWeight: 'normal',
+          color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#333'
+        }
+      }
+    })
+    
+    return
+  }
 
   // 风格数据系列
   const styleSeries = styles.map((style, index) => {
@@ -966,13 +1007,18 @@ const initStyleAndTypeCharts = () => {
 const fetchStyleData = async () => {
   try {
     get('/api/project/analysis/style-type', {}, (messageer, data) => {
-      styleData.value = data
+      styleData.value = data || []
+      // 确保在数据加载完成后再初始化图表
       nextTick(() => {
         initStyleAndTypeCharts()
       })
     })
   } catch (error) {
     message.error('获取数据失败')
+    styleData.value = []
+    nextTick(() => {
+      initStyleAndTypeCharts() // 即使失败也初始化图表，显示无数据状态
+    })
   }
 }
 
@@ -980,20 +1026,49 @@ const fetchStyleData = async () => {
 const fetchEmotionData = async () => {
   try {
     get('/api/user/analysis/emotions', {}, (messageer, data) => {
-      emotionData.value = data
+      emotionData.value = data || []
+      // 确保在数据加载完成后再初始化图表
       nextTick(() => {
         initEmotionChart()
       })
     })
   } catch (error) {
     message.error('获取情绪分析数据失败')
+    emotionData.value = []
+    nextTick(() => {
+      initEmotionChart() // 即使失败也初始化图表，显示无数据状态
+    })
   }
 }
 
 // 初始化情绪分析图表
 const initEmotionChart = () => {
-  const emotionChart = echarts.init(document.getElementById('emotionChart'))
+  const emotionChartEl = document.getElementById('emotionChart')
   
+  if (!emotionChartEl) {
+    console.warn('情绪图表DOM元素不存在')
+    return
+  }
+  
+  const emotionChart = echarts.init(emotionChartEl)
+  
+  // 检查数据是否有效
+  if (!emotionData.value || emotionData.value.length === 0) {
+    emotionChart.setOption({
+      title: {
+        text: '暂无情绪数据',
+        left: 'center',
+        top: 'center',
+        textStyle: {
+          fontSize: 16,
+          fontWeight: 'normal',
+          color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#333'
+        }
+      }
+    })
+    return
+  }
+
   const projects = [...new Set(emotionData.value.map(item => item.project_name))]
   const dates = [...new Set(emotionData.value.map(item => item.date))].sort()
   const emotions = ["喜悦", "感动", "惊喜", "期待", "伤感", "愤怒", "恐惧", "平静"]
@@ -1412,9 +1487,47 @@ const initAdvancedCharts = () => {
 }
 
 onMounted(() => {
+  // 先获取数据
   fetchData()
   fetchStyleData()
   fetchEmotionData()
+  
+  // 监听DOM变化，确保图表容器存在后才初始化
+  const observer = new MutationObserver((mutations) => {
+    // 检查是否存在图表容器
+    const styleChartEl = document.getElementById('styleChart')
+    const typeChartEl = document.getElementById('typeChart')
+    const emotionChartEl = document.getElementById('emotionChart')
+    
+    if (styleChartEl && typeChartEl) {
+      // 如果数据已加载完成，初始化图表
+      if (styleData.value && styleData.value.length > 0) {
+        nextTick(() => {
+          initStyleAndTypeCharts()
+        })
+      }
+    }
+    
+    if (emotionChartEl) {
+      // 如果数据已加载完成，初始化情绪图表
+      if (emotionData.value && emotionData.value.length > 0) {
+        nextTick(() => {
+          initEmotionChart()
+        })
+      }
+    }
+  })
+  
+  // 观察整个文档的变化
+  observer.observe(document.body, { 
+    childList: true, 
+    subtree: true 
+  })
+  
+  // 组件销毁时停止观察
+  onUnmounted(() => {
+    observer.disconnect()
+  })
 })
 
 // 添加 watch 来监听数据变化

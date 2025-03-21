@@ -25,6 +25,7 @@ function parseDateTime(dateTimeString) {
 }
 
 const washJSONStr = (raw) => {
+    raw = raw.replace(/\n/g, '').replace(/\\n/g, '')
     return raw.replace(/\\"/g, '"').replace(/\\n/g, '').replace(/^"|"$|\\t/g, '').replace(/```json|```/g, '');
 }
 

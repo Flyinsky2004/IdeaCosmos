@@ -358,7 +358,6 @@ const validateStep = (step) => {
               {{ tag }}
             </a-checkable-tag>
           </div>
-          {{ selectTags }}
         </div>
       </div>
 
@@ -372,7 +371,7 @@ const validateStep = (step) => {
               v-for="type in [
                 '电影剧本', '短视频脚本', '剧情短片脚本', '连载小说',
                 '喜剧小品剧本', 'Vlog脚本', '广告脚本', '商品测评视频脚本',
-                '品牌故事视频', '创意动画脚本', '电竞或游戏视频脚本'
+                '品牌故事视频', '创意动画脚本', '电竞或游戏视频脚本', '儿童绘本'
               ]" 
               :key="type" 
               :value="type"

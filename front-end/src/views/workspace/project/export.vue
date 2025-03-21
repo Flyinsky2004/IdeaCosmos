@@ -1,7 +1,7 @@
 <script setup>
 import {onMounted, reactive, ref} from "vue";
 import {audioModels, BACKEND_DOMAIN, femaleAvatar, FRONTEND_DOMAIN, maleAvatar} from "@/util/VARRIBLES.js";
-import {get} from "@/util/request.js";
+import {get, post} from "@/util/request.js";
 import {message} from "ant-design-vue";
 import {parseDateTime} from "@/util/common.js";
 import {useUserStore} from "@/stores/user.js";

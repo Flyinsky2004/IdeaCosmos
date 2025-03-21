@@ -56,6 +56,7 @@ const generateChapters = () => {
   }, (messageer, data) => {
     const raw = data.choices[0].message.content
     options.generatedChapters = JSON.parse(washJSONStr(raw))
+    console.log(options.generatedChapters)
     message.success("篇章生成成功！")
     options.isChapterGenerating = false
   }, (messageer, data) => {

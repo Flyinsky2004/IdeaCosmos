@@ -16,13 +16,15 @@ const activeTab = computed(() => {
   if (path.includes('/hot')) return '热门'
   if (path.includes('/categories')) return '分类'
   if (path.includes('/search')) return '搜索'
+  if (path.includes('/videofeed') || path.includes('/video/')) return '视频'
   return ''
 })
 
 const tabs = [
   { name: '推荐', path: '/community' },
   { name: '热门', path: '/community/hot' },
-  { name: '分类', path: '/community/categories' }
+  { name: '分类', path: '/community/categories' },
+  { name: '视频', path: '/community/videofeed' }
 ]
 
 const handleSearch = () => {

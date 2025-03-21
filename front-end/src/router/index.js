@@ -124,6 +124,12 @@ const router = createRouter({
                 },{
                     path: 'chatS',
                     component: () => import('@/views/community/Chat.vue')
+                },{
+                    path: 'videofeed',
+                    component: () => import('@/views/community/VideoFeed.vue')
+                },{
+                    path: 'video/:id',
+                    component: () => import('@/views/community/VideoFeed.vue')
                 }
             ]
         },{

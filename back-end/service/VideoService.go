@@ -143,23 +143,114 @@ func GenerateChapterImages(c *gin.Context) {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取场景数据失败，请稍后重试"))
 		return
 	}
+	var chapterVersion pojo.ChapterVersion
+	if err := config.MysqlDataBase.Where("id = ?", chapterVersionID).First(&chapterVersion).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取章节版本失败，请稍后重试"))
+		return
+	}
 	tx := config.MysqlDataBase.Begin()
-	baseURL := "https://api1.zhtec.xyz"
-	apiKey := "sk-SwmvMY9looEOO7KcEd1a18D8Ad8b413c8c019809586cB842"
-	for _, scene := range scenes {
-		if scene.ImagePath == "" {
-			imageURL, err := util.GenerateImage(scene.IllustrationPrompt, baseURL, apiKey)
-			if err != nil {
-				c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "生成图片失败，请稍后重试"))
-				return
+	baseURL := "https://api.vveai.com"
+	apiKey := "sk-lijrdJEIw6ouogL710450051C43d4dE8Bb9fAc0b2418Ae9c"
+	var chapter pojo.Chapter
+	if err := config.MysqlDataBase.Where("id = ?", chapterVersion.ChapterID).First(&chapter).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取章节失败，请稍后重试"))
+		return
+	}
+	var project pojo.Project
+	if err := config.MysqlDataBase.Where("id = ?", chapter.ProjectID).First(&project).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取项目失败，请稍后重试"))
+		return
+	}
+	// 使用worker池和通道实现并发处理
+	concurrency := 10 // 最大并发数量
+	type sceneJob struct {
+		scene pojo.Scene
+		index int
+	}
+
+	// 创建任务通道和结果通道
+	jobs := make(chan sceneJob, len(scenes))
+	results := make(chan struct {
+		scene pojo.Scene
+		index int
+		err   error
+	}, len(scenes))
+
+	// 启动worker
+	for w := 1; w <= concurrency; w++ {
+		go func() {
+			for job := range jobs {
+				scene := job.scene
+				if scene.ImagePath == "" {
+					imageURL, err := util.GenerateImage(scene.IllustrationPrompt+" 风格为"+project.Style.String()+"类型为"+project.Types, baseURL, apiKey)
+					if err != nil {
+						// 生成图片失败，直接发送错误结果并继续下一个任务
+						results <- struct {
+							scene pojo.Scene
+							index int
+							err   error
+						}{scene, job.index, err}
+						continue
+					}
+
+					imagePath, err := util.DownloadImage(imageURL)
+					if err != nil {
+						// 下载图片失败，直接发送错误结果并继续下一个任务
+						results <- struct {
+							scene pojo.Scene
+							index int
+							err   error
+						}{scene, job.index, err}
+						continue
+					}
+
+					scene.ImagePath = imagePath
+					results <- struct {
+						scene pojo.Scene
+						index int
+						err   error
+					}{scene, job.index, nil}
+				} else {
+					// 如果已有图片，直接返回结果
+					results <- struct {
+						scene pojo.Scene
+						index int
+						err   error
+					}{scene, job.index, nil}
+				}
 			}
-			imagePath, _ := util.DownloadImage(imageURL)
-			scene.ImagePath = imagePath
+		}()
+	}
+
+	// 发送任务
+	for i, scene := range scenes {
+		jobs <- sceneJob{scene, i}
+	}
+	close(jobs)
+
+	// 收集结果并处理错误
+	updatedScenes := make([]pojo.Scene, 0, len(scenes))
+	for i := 0; i < len(scenes); i++ {
+		result := <-results
+		if result.err != nil {
+			// 忽略错误，继续处理其他场景
+			fmt.Printf("场景处理失败 (index: %d, ID: %d): %v\n", result.index, result.scene.ID, result.err)
+			continue
+		}
+
+		// 只保存处理成功的场景
+		updatedScenes = append(updatedScenes, result.scene)
+	}
+
+	// 更新数据库
+	for _, scene := range updatedScenes {
+		if scene.ImagePath != "" {
 			tx.Save(&scene)
 		}
 	}
+
 	tx.Commit()
-	c.JSON(http.StatusOK, dto.SuccessResponse(scenes))
+	c.JSON(http.StatusOK, dto.SuccessResponse(updatedScenes))
 }
 
 func GenerateChapterVideo(c *gin.Context) {
@@ -174,7 +265,6 @@ func GenerateChapterVideo(c *gin.Context) {
 		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取场景数据失败，请稍后重试"))
 		return
 	}
-
 	// 获取当前工作目录
 	workDir, err := os.Getwd()
 	if err != nil {
@@ -251,4 +341,13 @@ func GenerateChapterVideo(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto.SuccessResponse(videoFilename))
+}
+
+func GetVideosChapterVersion(c *gin.Context) {
+	var chapterVersion []pojo.ChapterVersion
+	if err := config.MysqlDataBase.Where("video_path != ''").Find(&chapterVersion).Error; err != nil {
+		c.JSON(http.StatusOK, dto.ErrorResponse[string](500, "获取视频数据失败，请稍后重试"))
+		return
+	}
+	c.JSON(http.StatusOK, dto.SuccessResponse(chapterVersion))
 }
