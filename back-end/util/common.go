@@ -4,6 +4,7 @@ import (
 	"back-end/entity/pojo"
 	"fmt"
 	"math/rand"
+	"strconv"
 	"strings"
 	"time"
 
@@ -155,4 +156,24 @@ func CleanJSONResponse(response string) string {
 	response = strings.TrimSpace(response)
 
 	return response
+}
+
+// GetUserIDFromContext 从上下文中获取用户ID并转换为int类型
+func GetUserIDFromContext(userID interface{}) int {
+	switch v := userID.(type) {
+	case uint:
+		return int(v)
+	case int:
+		return v
+	case float64:
+		return int(v)
+	case string:
+		id, err := strconv.Atoi(v)
+		if err != nil {
+			return 0
+		}
+		return id
+	default:
+		return 0
+	}
 }

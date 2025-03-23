@@ -209,7 +209,7 @@ func HandleGroupChat(c *gin.Context) {
 		Timestamp: time.Now(),
 		Nickname:  user.Username,
 		AvatarURL: user.Avatar,
-		Content:   fmt.Sprintf("%s 加入了群聊", user.Username),
+		Content:   fmt.Sprintf("%s 上线了", user.Username),
 	}
 
 	// 广播加入消息

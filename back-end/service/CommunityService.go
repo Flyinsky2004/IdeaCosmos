@@ -4,6 +4,7 @@ import (
 	"back-end/config"
 	"back-end/entity/dto"
 	"back-end/entity/pojo"
+	"back-end/util"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -151,11 +152,18 @@ func GetProjectDetail(c *gin.Context) {
 	}
 
 	projectDetail.Project = project
-	projectDetail.WatchCount = watchCount
+	projectDetail.WatchCount = watchCount + 1
 	projectDetail.FavoriteCount = favoriteCount
 	projectDetail.ChapterCount = chapterCount
 	projectDetail.IsFavorite = isFavorite
-
+	tx := config.MysqlDataBase.Begin()
+	tx.Model(&pojo.Project{}).Where("id = ?", id).Update("watches", watchCount+1)
+	userIdInt := util.GetUserIDFromContext(userId)
+	tx.Create(&pojo.Watch{
+		ProjectId: project.ID,
+		UserId:    uint(userIdInt),
+	})
+	tx.Commit()
 	c.JSON(http.StatusOK, dto.SuccessResponse(projectDetail))
 }
 
