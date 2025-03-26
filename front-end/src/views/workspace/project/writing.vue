@@ -97,11 +97,9 @@ const generateNewVersion = (wordsCount) => {
 
   // 创建 WebSocket 连接
   const token = localStorage.getItem("authToken");
+  const baseUrl = BACKEND_DOMAIN.replace(/^http/, 'ws').replace(/\/$/, '')
   const ws = new WebSocket(
-    `ws://${BACKEND_DOMAIN.replace(
-      "http://",
-      ""
-    )}ws/generateNewChapterVersionStream`
+    `${baseUrl}/ws/generateNewChapterVersionStream`
   );
   ws.onopen = (event) => {
     ws.send(
